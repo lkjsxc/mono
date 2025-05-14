@@ -26,7 +26,6 @@
   - [Instruction Set](#instruction-set)
 - [Examples](#examples)
 - [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
@@ -438,7 +437,3 @@ Contributions are welcome! If you find bugs, have suggestions for improvements, 
 5.  Open a Pull Request against the main repository.
 
 Please ensure any C code contributions adhere to a consistent style and include comments where necessary.
-
-## License
-
-This project is currently unlicensed. You are free to use, modify, and distribute the code as per standard copyright law, but there are no explicit permissions or restrictions granted by a formal license. If a license is added in the future, it will be available in a `LICENSE` file in the repository.
