@@ -1,6 +1,15 @@
 # Overview
 An organic RPG server built without data packs, plugins, or Skript.
 
+# Usage
+in Windows. Use minecraft and cmd.exe
+```bash
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install pynput
+python main.py
+```
+
 # kind
 Items possess a list of `kind` tags.
 
