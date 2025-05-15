@@ -1,6 +1,6 @@
 #include "lkjscript.h"
 #include "readsrc.c"
-#include "token.c"
+#include "tokenize.c"
 #include "parse.c"
 
 static mem_t mem;
@@ -14,7 +14,7 @@ result_t compile() {
         write(STDERR_FILENO, "Error tokenizing source\n", 24);
         return ERR;
     }
-    if (parse(mem.compile.token, &mem.compile) == ERR) {
+    if (parse(mem.compile.token, mem.compile.node) == ERR) {
         write(STDERR_FILENO, "Error parsing tokens\n", 21);
         return ERR;
     }

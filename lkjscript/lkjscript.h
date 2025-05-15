@@ -77,8 +77,9 @@ typedef enum {
     NODETYPE_LABEL_SCOPE_CLOSE,
 } nodetype_t;
 
-typedef struct {
+typedef struct node_t {
     nodetype_t nodetype;
+    struct node_t* next;
     token_t* token;
 
     // local variable
@@ -87,10 +88,24 @@ typedef struct {
 
     // flags
     int64_t is_function;
+    int64_t is_type;
+    int64_t is_struct;
+
+    // type
+    int64_t type_size;
+    struct node_t* type_ptr;
 
     //function
     int64_t arg_size;
     int64_t stack_size;
+
+    // struct
+    int64_t struct_size;
+    int64_t struct_offset;
+    struct node_t* struct_next;
+
+    // goto
+    struct node_t* goto_node;
 } node_t;
 
 typedef struct {
