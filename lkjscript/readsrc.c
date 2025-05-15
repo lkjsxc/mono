@@ -1,4 +1,4 @@
-#include "../lkjscript.h"
+#include "lkjscript.h"
 
 result_t readsrc(const char *filename, char* dst, int64_t max_size) {
     int64_t fd = open(filename, O_RDONLY);
