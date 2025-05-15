@@ -1,5 +1,5 @@
 fn main() {
     // プログラムの才能
-    print("おはよう世界 Good Morning World!🌅")
+    print("おはよう世界\n\"Good Morning World!🌅\"")
     print("俺俺俺俺‼️Ahh～↑↑↑💥💥真夏🌞🌴🏄🎇🎆🌺のJamboree〜〜〜〜‼️‼️レゲエ🇯🇲💃🙌🏻砂浜🌺🌺🏖🏖🌴🌞Big Wave🌊🌊🌊🌊🌊🌊🌊💥💥💥")
 }

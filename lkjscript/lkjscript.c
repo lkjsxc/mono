@@ -21,9 +21,14 @@ int main() {
         write(STDERR_FILENO, "Compilation failed\n", 19);
         return 1;
     }
-    for(token_t* itr = mem.compile.token; itr->data != NULL; itr++) {
-        write(STDOUT_FILENO, itr->data, itr->size);
-        write(STDOUT_FILENO, "\n", 1);
+    for (token_t* itr = mem.compile.token; itr->data != NULL; itr++) {
+        if (itr->data[0] == '\n') {
+            write(STDOUT_FILENO, "\\n\n", 3);
+            continue;
+        } else {
+            write(STDOUT_FILENO, itr->data, itr->size);
+            write(STDOUT_FILENO, "\n", 1);
+        }
     }
     return 0;
 }
