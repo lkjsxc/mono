@@ -97,14 +97,14 @@ typedef struct {
     int64_t val;
     int64_t argcnt;
     int64_t stacksize;
-} pair_t;
+} map_t;
 
 typedef struct {
     int64_t bin[MEM_SIZE / sizeof(int64_t) / 6];
     char src[MEM_SIZE / sizeof(char) / 6];
     token_t token[MEM_SIZE / sizeof(token_t) / 6];
     node_t node[MEM_SIZE / sizeof(node_t) / 6];
-    pair_t map[MEM_SIZE / sizeof(pair_t) / 6];
+    map_t map[MEM_SIZE / sizeof(map_t) / 6];
 } compile_t;
 
 typedef union {
