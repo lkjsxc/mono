@@ -13,7 +13,7 @@ typedef long long int64_t;
 typedef enum {
     FALSE = 0,
     TRUE = 1,
-} bool_t;
+} bool;
 
 typedef enum {
     OK = 0,
@@ -29,68 +29,103 @@ typedef enum {
 
 typedef enum {
 
-    TY_NULL,
+    INST_NULL,
 
-    TY_INST_NOP,
-    TY_INST_END,
+    INST_NOP,
 
-    TY_INST_PUSH_CONST,
-    TY_INST_PUSH_LOCAL_VAL,
-    TY_INST_PUSH_LOCAL_ADDR,
-    TY_INST_JMP,
-    TY_INST_JZ,
-    TY_INST_CALL,
-    TY_INST_RETURN,
+    INST_START,
+    INST_END,
 
-    TY_INST_ASSIGN1,
-    TY_INST_ASSIGN2,
-    TY_INST_ASSIGN3,
-    TY_INST_ASSIGN4,
+    INST_PUSH_CONST,
+    INST_PUSH_LOCAL_VAL,
+    INST_PUSH_LOCAL_ADDR,
+    INST_JMP,
+    INST_JZ,
+    INST_CALL,
+    INST_RETURN,
 
-    TY_INST_OR,
-    TY_INST_AND,
-    TY_INST_EQ,
-    TY_INST_NE,
-    TY_INST_LT,
-    TY_INST_LE,
-    TY_INST_GT,
-    TY_INST_GE,
-    TY_INST_NOT,
-    TY_INST_ADD,
-    TY_INST_SUB,
-    TY_INST_MUL,
-    TY_INST_DIV,
-    TY_INST_MOD,
-    TY_INST_SHL,
-    TY_INST_SHR,
-    TY_INST_BITOR,
-    TY_INST_BITXOR,
-    TY_INST_BITAND,
+    INST_ASSIGN1,
+    INST_ASSIGN2,
+    INST_ASSIGN3,
+    INST_ASSIGN4,
 
-    TY_INST_DEREF,
-    TY_INST_NEG,
-    TY_INST_BITNOT,
+    INST_OR,
+    INST_AND,
+    INST_EQ,
+    INST_NE,
+    INST_LT,
+    INST_LE,
+    INST_GT,
+    INST_GE,
+    INST_NOT,
+    INST_ADD,
+    INST_SUB,
+    INST_MUL,
+    INST_DIV,
+    INST_MOD,
+    INST_SHL,
+    INST_SHR,
+    INST_BITOR,
+    INST_BITXOR,
+    INST_BITAND,
 
-    TY_INST_READ,
-    TY_INST_WRITE,
-    TY_INST_USLEEP,
+    INST_DEREF,
+    INST_NEG,
+    INST_BITNOT,
 
-    TY_LABEL,
-    TY_LABEL_FN_OPEN,
-    TY_LABEL_FN_CLOSE,
+    INST_READ,
+    INST_WRITE,
+    INST_USLEEP,
+} inst_t;
 
-} type_t;
+typedef enum {
+    TYPE_VOID,
+    TYPE_I64,
+    TYPE_PTR,
+    TYPE_FN,
+    TYPE_STRUCT,
+} typekind_t;
+
+typedef enum {
+    TK_NULL,
+    TK_IDENT,
+    TK_STR,
+    TK_NUM,
+} tokenkind_t;
 
 typedef struct {
+    tokenkind_t kind;
     const char* data;
     int64_t size;
 } token_t;
 
-typedef struct {
-    type_t type;
+typedef struct node_t node_t;
+struct node_t{
+    // node type
+    inst_t inst;
+
+    // token
     token_t* token;
-    int64_t val;
-} node_t;
+
+    // type
+    typekind_t typekind;
+    node_t* typeptr;
+    
+    // flags
+    bool is_fn;
+    bool is_struct;
+
+    // local variable
+    int64_t local_offset;
+
+    // function
+    int64_t argcnt;
+    int64_t stacksize;
+
+    // struct
+    node_t* struct_next;
+    int64_t struct_offset;
+};
 
 typedef struct {
     token_t* key;
@@ -108,7 +143,7 @@ typedef struct {
 } compile_t;
 
 typedef union {
-    int64_t bin[MEM_SIZE / sizeof(int64_t)];
+    int64_t i64[MEM_SIZE / sizeof(int64_t)];
     compile_t compile;
 } mem_t;
 
