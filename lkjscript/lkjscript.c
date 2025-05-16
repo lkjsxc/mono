@@ -1,4 +1,5 @@
 #include "lkjscript.h"
+#include "token.c"
 #include "readsrc.c"
 #include "tokenize.c"
 #include "parse.c"

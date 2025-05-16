@@ -84,10 +84,7 @@ typedef struct node_t {
     nodetype_t nodetype;
     struct node_t* next;
     token_t* token;
-
-    // local variable
-    int64_t var_offset;
-    int64_t var_size;
+    int64_t val;
 
     // flags
     int64_t is_function;
@@ -122,5 +119,8 @@ typedef union {
     int64_t i64[MEM_SIZE];
     compile_t compile;
 } mem_t;
+
+int64_t token_eq(token_t* token1, token_t* token2);
+int64_t token_eqstr(token_t* token, const char* str);
 
 #endif

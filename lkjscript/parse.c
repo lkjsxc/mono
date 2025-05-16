@@ -28,12 +28,12 @@ static result_t parse_pre(stat_t* stat) {
     node_t** node_global_rbegin = stat->node_global_rbegin;
 
     while ((*token_itr)->data != NULL) {
-        if (token_iseqstr(*token_itr, "struct")) {
+        if (token_eqstr(*token_itr, "struct")) {
             *token_itr += 1;
             node_t* node_struct = node_new(node_itr);
             node_push(node_global_rbegin, node_struct);
             *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .next = NULL, .token = *token_itr};
-        } else if (token_iseqstr(*token_itr, "fn")) {
+        } else if (token_eqstr(*token_itr, "fn")) {
             *token_itr += 1;
             node_t* node_struct = node_new(node_itr);
             node_push(node_global_rbegin, node_struct);
@@ -65,7 +65,7 @@ result_t parse(token_t* token, node_t* node) {
     }
 
     // parse
-    token_itr = token;
-    while (token_itr->data != NULL) {
-    }
+    // token_itr = token;
+    // while (token_itr->data != NULL) {
+    // }
 }
