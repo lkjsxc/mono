@@ -106,7 +106,7 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
 
 static result_t parse_expr(stat_t stat) {
     node_t* findfn_result = node_find_fn(stat.varlist_begin, *stat.token_itr);
-    if (token_eqstr(*stat.token_itr, "(")) {
+    if (token_eqstr(*stat.token_itr, "(")) {    // ( <expr>, <expr>, ... )
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: '(' expected\n", 20);
             return ERR;
@@ -127,7 +127,7 @@ static result_t parse_expr(stat_t stat) {
             write(STDERR_FILENO, "Error: ')' expected\n", 20);
             return ERR;
         }
-    } else if (findfn_result != NULL && token_eqstr(*stat.token_itr + 1, "(")) {
+    } else if (findfn_result != NULL && token_eqstr(*stat.token_itr + 1, "(")) {    // <ident> ( <expr>, <expr>, ... )
         node_t* fn_call = node_new(stat.node_itr);
         *fn_call = (node_t){.nodetype = NODETYPE_CALL, .next = NULL, .token = *stat.token_itr, .child = findfn_result};
         node_pushback(stat.execlist_rbegin, fn_call);
@@ -155,7 +155,6 @@ static result_t parse_expr(stat_t stat) {
             write(STDERR_FILENO, "Error: ')' expected\n", 20);
             return ERR;
         }
-    } else if (findfn_result != NULL && token_eqstr(*stat.token_itr, "{")) {
     } else {
     }
 }
