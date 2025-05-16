@@ -4,6 +4,7 @@ typedef struct {
     token_t** token_itr;
     node_t** node_itr;
     node_t** varlist_begin;
+    node_t** varlist_rbegin;
     node_t** execlist_rbegin;
     node_t* label_continue;
     node_t* label_break;
@@ -75,8 +76,10 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
     return OK;
 }
 
-static result_t parse_stat(stat_t* stat) {
-    
+static result_t parse_expr(stat_t stat) {
+}
+
+static result_t parse_stat(stat_t stat) {
 }
 
 result_t parse(token_t* token, node_t* node) {
@@ -93,8 +96,6 @@ result_t parse(token_t* token, node_t* node) {
     *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .next = NULL, .token = NULL};
     *varlist_root = (node_t){.nodetype = NODETYPE_NOP, .next = NULL, .token = NULL};
 
-    stat_t stat = (stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .execlist_rbegin = &execlist_rbegin, .label_continue = NULL, .label_break = NULL};
-
     // preparse
     if (parse_pre(&token_itr, &node_itr, &varlist_root) == ERR) {
         write(STDERR_FILENO, "Error: parse_pre failed\n", 24);
@@ -103,11 +104,11 @@ result_t parse(token_t* token, node_t* node) {
 
     // parse
     token_itr = token;
-    while(1) {
-        if(tokenitr_next(&token_itr) == ERR) {
+    while (1) {
+        if (tokenitr_next(&token_itr) == ERR) {
             break;
         }
-        if(parse_stat(&stat) == ERR) {
+        if (parse_stat((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
             write(STDERR_FILENO, "Error: parse_stat failed\n", 25);
             return ERR;
         }
