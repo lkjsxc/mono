@@ -119,8 +119,8 @@ static result_t parse_statement(stat_t stat) {
         }
         node_pushback(stat.execlist_rbegin, scope_close);
     } else if (token_eqstr(*stat.token_itr, "return")) {  // return <expr>
-        node_t* return_node = node_new(stat.node_itr);
-        *return_node = (node_t){.nodetype = NODETYPE_RETURN, .next = NULL, .token = *stat.token_itr};
+        node_t* node_return = node_new(stat.node_itr);
+        *node_return = (node_t){.nodetype = NODETYPE_RETURN, .next = NULL, .token = *stat.token_itr};
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: return value expected\n", 30);
             return ERR;
@@ -129,18 +129,18 @@ static result_t parse_statement(stat_t stat) {
             write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
             return ERR;
         }
-        node_pushback(stat.execlist_rbegin, return_node);
+        node_pushback(stat.execlist_rbegin, node_return);
     } else if (token_eqstr(*stat.token_itr, "continue")) {  // continue
-        node_t* continue_node = node_new(stat.node_itr);
-        *continue_node = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_continue};
-        node_pushback(stat.execlist_rbegin, continue_node);
+        node_t* node_continue = node_new(stat.node_itr);
+        *node_continue = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_continue};
+        node_pushback(stat.execlist_rbegin, node_continue);
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: continue value expected\n", 30);
             return ERR;
         }
     } else if (token_eqstr(*stat.token_itr, "break")) {  // break <expr>
-        node_t* break_node = node_new(stat.node_itr);
-        *break_node = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_break};
+        node_t* node_break = node_new(stat.node_itr);
+        *node_break = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_break};
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: break value expected\n", 28);
             return ERR;
@@ -149,7 +149,7 @@ static result_t parse_statement(stat_t stat) {
             write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
             return ERR;
         }
-        node_pushback(stat.execlist_rbegin, break_node);
+        node_pushback(stat.execlist_rbegin, node_break);
     } else if (token_eqstr(*stat.token_itr, "struct")) {  // struct <ident> (<decls>)
     } else if (token_eqstr(*stat.token_itr, "fn")) {      // fn <ident> (<decls>) <statement>
     } else {                                              // <expr> or <decls>
