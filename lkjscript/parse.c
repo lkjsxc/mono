@@ -79,7 +79,78 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
 static result_t parse_expr(stat_t stat) {
 }
 
-static result_t parse_stat(stat_t stat) {
+static result_t parse_decls(stat_t stat) {
+}
+
+static result_t parse_statement(stat_t stat) {
+    if (token_eqstr(*stat.token_itr, "(")) {  // ( <statement>* )
+        node_t* scope_open = node_new(stat.node_itr);
+        node_t* scope_close = node_new(stat.node_itr);
+        *scope_open = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_OPEN, .next = NULL, .token = *stat.token_itr};
+        *scope_close = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_CLOSE, .next = NULL, .token = *stat.token_itr};
+        node_pushback(stat.execlist_rbegin, scope_open);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: '(' expected\n", 20);
+            return ERR;
+        }
+        while (token_eqstr(*stat.token_itr, ")") == 0) {
+            if (parse_statement(stat) == ERR) {
+                write(STDERR_FILENO, "Error: parse_statement failed\n", 25);
+                return ERR;
+            }
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: ')' expected\n", 20);
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, scope_close);
+    } else if (token_eqstr(*stat.token_itr, "return")) {  // return <expr>
+        node_t* return_node = node_new(stat.node_itr);
+        *return_node = (node_t){.nodetype = NODETYPE_RETURN, .next = NULL, .token = *stat.token_itr};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: return value expected\n", 30);
+            return ERR;
+        }
+        if (parse_expr(stat) == ERR) {
+            write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, return_node);
+    } else if (token_eqstr(*stat.token_itr, "continue")) {  // continue
+        node_t* continue_node = node_new(stat.node_itr);
+        *continue_node = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_continue};
+        node_pushback(stat.execlist_rbegin, continue_node);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: continue value expected\n", 30);
+            return ERR;
+        }
+    } else if (token_eqstr(*stat.token_itr, "break")) {  // break <expr>
+        node_t* break_node = node_new(stat.node_itr);
+        *break_node = (node_t){.nodetype = NODETYPE_JMP, .next = NULL, .token = *stat.token_itr, .child = stat.label_break};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: break value expected\n", 28);
+            return ERR;
+        }
+        if (parse_expr(stat) == ERR) {
+            write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, break_node);
+    } else if (token_eqstr(*stat.token_itr, "struct")) {                    // struct <ident> (<decls>)
+    } else if (token_eqstr(*stat.token_itr, "fn")) {                        // fn <ident> (<decls>) <statement>
+    } else {                                                                // <expr> or <decls>
+        if (node_find_type(stat.varlist_begin, *stat.token_itr) != NULL) {  // <decls>
+            if (parse_decls(stat) == ERR) {
+                write(STDERR_FILENO, "Error: parse_decls failed\n", 26);
+                return ERR;
+            }
+        } else {    // <expr>
+            if (parse_expr(stat) == ERR) {
+                write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+                return ERR;
+            }
+        }
+    }
 }
 
 result_t parse(token_t* token, node_t* node) {
@@ -108,8 +179,8 @@ result_t parse(token_t* token, node_t* node) {
         if (tokenitr_next(&token_itr) == ERR) {
             break;
         }
-        if (parse_stat((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
-            write(STDERR_FILENO, "Error: parse_stat failed\n", 25);
+        if (parse_statement((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
+            write(STDERR_FILENO, "Error: parse_statement failed\n", 25);
             return ERR;
         }
     }
