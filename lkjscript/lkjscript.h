@@ -78,6 +78,7 @@ typedef enum {
     NODETYPE_LABEL,
     NODETYPE_LABEL_SCOPE_OPEN,
     NODETYPE_LABEL_SCOPE_CLOSE,
+    NODETYPE_LABEL_GLOBAL_END,
 } nodetype_t;
 
 typedef struct node_t {

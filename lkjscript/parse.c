@@ -28,7 +28,21 @@ static void node_pushfront(node_t** begin, node_t* node) {
 static node_t* node_find(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
-        if (itr->token == token) {
+        if (token_eq(itr->token, token)) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
+
+static node_t* node_find_type(node_t** begin, token_t* token) {
+    node_t* itr = *begin;
+    while (itr != NULL) {
+        if (itr->nodetype == NODETYPE_LABEL_GLOBAL_END) {
+            break;
+        }
+        if (token_eq(itr->token, token) && itr->nodetype == NODETYPE_STRUCT) {
             return itr;
         }
         itr = itr->next;
@@ -136,20 +150,9 @@ static result_t parse_statement(stat_t stat) {
             return ERR;
         }
         node_pushback(stat.execlist_rbegin, break_node);
-    } else if (token_eqstr(*stat.token_itr, "struct")) {                    // struct <ident> (<decls>)
-    } else if (token_eqstr(*stat.token_itr, "fn")) {                        // fn <ident> (<decls>) <statement>
-    } else {                                                                // <expr> or <decls>
-        if (node_find_type(stat.varlist_begin, *stat.token_itr) != NULL) {  // <decls>
-            if (parse_decls(stat) == ERR) {
-                write(STDERR_FILENO, "Error: parse_decls failed\n", 26);
-                return ERR;
-            }
-        } else {    // <expr>
-            if (parse_expr(stat) == ERR) {
-                write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
-                return ERR;
-            }
-        }
+    } else if (token_eqstr(*stat.token_itr, "struct")) {  // struct <ident> (<decls>)
+    } else if (token_eqstr(*stat.token_itr, "fn")) {      // fn <ident> (<decls>) <statement>
+    } else {                                              // <expr> or <decls>
     }
 }
 
@@ -163,17 +166,22 @@ result_t parse(token_t* token, node_t* node) {
     node_t* varlist_root = node_new(&node_itr);
     node_t* varlist_begin = varlist_root;
     node_t* varlist_rbegin = varlist_root;
+    node_t* globalend = node_new(&node_itr);
 
     *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .next = NULL, .token = NULL};
     *varlist_root = (node_t){.nodetype = NODETYPE_NOP, .next = NULL, .token = NULL};
+    *globalend = (node_t){.nodetype = NODETYPE_LABEL_GLOBAL_END, .next = NULL, .token = NULL};
 
-    // preparse
+    // pre parse
     if (parse_pre(&token_itr, &node_itr, &varlist_root) == ERR) {
         write(STDERR_FILENO, "Error: parse_pre failed\n", 24);
         return ERR;
     }
 
-    // parse
+    // push back global end
+    node_pushback(&execlist_rbegin, globalend);
+
+    // main parse
     token_itr = token;
     while (1) {
         if (tokenitr_next(&token_itr) == ERR) {
