@@ -1,12 +1,9 @@
+struct pairpair_t (
+    pair_t a
+    pair_t b
+)
+
 struct pair_t (
     i64 a
     i64 b
-)
-
-fn pair_add(pair_t a, pair_t b) -> pair_t (
-
-)
-
-fn main() (
-    
 )

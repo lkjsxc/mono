@@ -74,6 +74,7 @@ typedef enum {
 
     NODETYPE_FN,
     NODETYPE_STRUCT,
+    NODETYPE_STRUCT_MEMBER,
 
     NODETYPE_LABEL,
     NODETYPE_LABEL_SCOPE_OPEN,
@@ -92,7 +93,6 @@ typedef struct node_t {
     int64_t is_struct;
 
     // type
-    int64_t type_size;
     struct node_t* type_ptr;
 
     //function
@@ -101,8 +101,7 @@ typedef struct node_t {
 
     // struct
     int64_t struct_size;
-    int64_t struct_offset;
-    struct node_t* struct_next;
+    struct node_t* struct_member_next;
 
     // goto
     struct node_t* goto_node;

@@ -6,14 +6,15 @@ result_t readsrc(const char *filename, char* dst, int64_t max_size) {
         write(STDERR_FILENO, "Error opening file\n", 19);
         return ERR;
     }
-    int64_t n = read(fd, dst, max_size - 2);
+    dst[0] = '\n';
+    int64_t n = read(fd, dst + 1, max_size - 3);
     if (n < 0) {
         close(fd);
         write(STDERR_FILENO, "Error reading file\n", 19);
         return ERR;
     }
-    dst[n + 0] = '\n';
-    dst[n + 1] = '\0';
+    dst[n + 1] = '\n';
+    dst[n + 2] = '\0';
     close(fd);
     return OK;
 }
