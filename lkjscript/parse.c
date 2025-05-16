@@ -36,13 +36,27 @@ static node_t* node_find(node_t** begin, token_t* token) {
     return NULL;
 }
 
-static node_t* node_find_type(node_t** begin, token_t* token) {
+static node_t* node_find_struct(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
         if (itr->nodetype == NODETYPE_LABEL_GLOBAL_END) {
             break;
         }
         if (token_eq(itr->token, token) && itr->nodetype == NODETYPE_STRUCT) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
+
+static node_t* node_find_fn(node_t** begin, token_t* token) {
+    node_t* itr = *begin;
+    while (itr != NULL) {
+        if (itr->nodetype == NODETYPE_LABEL_GLOBAL_END) {
+            break;
+        }
+        if (token_eq(itr->token, token) && itr->nodetype == NODETYPE_FN) {
             return itr;
         }
         itr = itr->next;
@@ -91,6 +105,59 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
 }
 
 static result_t parse_expr(stat_t stat) {
+    node_t* findfn_result = node_find_fn(stat.varlist_begin, *stat.token_itr);
+    if (token_eqstr(*stat.token_itr, "(")) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: '(' expected\n", 20);
+            return ERR;
+        }
+        while (!token_eqstr(*stat.token_itr, ")")) {
+            if (parse_expr(stat) == ERR) {
+                write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+                return ERR;
+            }
+            if (token_eqstr(*stat.token_itr, ",")) {
+                if (tokenitr_next(stat.token_itr) == ERR) {
+                    write(STDERR_FILENO, "Error: ',' expected\n", 20);
+                    return ERR;
+                }
+            }
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: ')' expected\n", 20);
+            return ERR;
+        }
+    } else if (findfn_result != NULL && token_eqstr(*stat.token_itr + 1, "(")) {
+        node_t* fn_call = node_new(stat.node_itr);
+        *fn_call = (node_t){.nodetype = NODETYPE_CALL, .next = NULL, .token = *stat.token_itr, .child = findfn_result};
+        node_pushback(stat.execlist_rbegin, fn_call);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: '(' expected\n", 20);
+            return ERR;
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: '(' expected\n", 20);
+            return ERR;
+        }
+        while (!token_eqstr(*stat.token_itr, ")")) {
+            if (parse_expr(stat) == ERR) {
+                write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+                return ERR;
+            }
+            if (token_eqstr(*stat.token_itr, ",")) {
+                if (tokenitr_next(stat.token_itr) == ERR) {
+                    write(STDERR_FILENO, "Error: ',' expected\n", 20);
+                    return ERR;
+                }
+            }
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: ')' expected\n", 20);
+            return ERR;
+        }
+    } else if (findfn_result != NULL && token_eqstr(*stat.token_itr, "{")) {
+    } else {
+    }
 }
 
 static result_t parse_decls(stat_t stat) {
