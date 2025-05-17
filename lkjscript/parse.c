@@ -36,6 +36,7 @@ static node_t* node_find(node_t** begin, token_t* token) {
     return NULL;
 }
 
+// when not found, return NULL
 static node_t* node_find_struct(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
@@ -50,6 +51,7 @@ static node_t* node_find_struct(node_t** begin, token_t* token) {
     return NULL;
 }
 
+// when not found, return NULL
 static node_t* node_find_fn(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
@@ -139,17 +141,9 @@ static result_t parse_expr(stat_t stat) {
             write(STDERR_FILENO, "Error: '(' expected\n", 20);
             return ERR;
         }
-        while (!token_eqstr(*stat.token_itr, ")")) {
-            if (parse_expr(stat) == ERR) {
-                write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
-                return ERR;
-            }
-            if (token_eqstr(*stat.token_itr, ",")) {
-                if (tokenitr_next(stat.token_itr) == ERR) {
-                    write(STDERR_FILENO, "Error: ',' expected\n", 20);
-                    return ERR;
-                }
-            }
+        if(parse_expr(stat) == ERR) {
+            write(STDERR_FILENO, "Error: parse_expr failed\n", 25);
+            return ERR;
         }
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: ')' expected\n", 20);
@@ -157,6 +151,7 @@ static result_t parse_expr(stat_t stat) {
         }
     } else {
     }
+    
 }
 
 static result_t parse_decls(stat_t stat) {
