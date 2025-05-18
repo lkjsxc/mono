@@ -9,6 +9,10 @@
 006 = any tmp02
 007 = any tmp03
 008 = any tmp04
+009 = any tmp05
+010 = any tmp06
+011 = any tmp07
+012 = any tmp08
 
 ## tmp vec
 017 = vec<any> tmp_vec1
