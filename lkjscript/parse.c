@@ -111,6 +111,7 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
 
 static result_t parse_expr(stat_t stat) {
     node_t* findfn_result = node_find_fn(stat.varlist_begin, *stat.token_itr);
+    node_t* findstruct_result = node_find_struct(stat.varlist_begin, *stat.token_itr);
     if (token_eqstr(*stat.token_itr, "(")) {  // ( <expr>, <expr>, ... )
         if (tokenitr_next(stat.token_itr) == ERR) {
             write(STDERR_FILENO, "Error: '(' expected\n", 20);
