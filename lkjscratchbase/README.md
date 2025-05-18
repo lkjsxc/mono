@@ -1,21 +1,33 @@
 # global_val
 
-01 = f64 0
-02 = f64 stack pointer
-03 = f64 base pointer
-04 = f64 global pointer
-05 = any tmp01
-06 = any tmp02
-07 = any tmp03
-08 = any tmp04
+## register
+001 = f64 0
+002 = f64 stack pointer
+003 = f64 base pointer
+004 = f64 global pointer
+005 = any tmp01
+006 = any tmp02
+007 = any tmp03
+008 = any tmp04
 
-17 = vec<any> tmp_vec1
-18 = vec<any> tmp_vec2
+## tmp vec
+017 = vec<any> tmp_vec1
+018 = vec<any> tmp_vec2
+019 = vec<any> tmp_vec3
+020 = vec<any> tmp_vec4
 
-33 = vec<node> node_data
-34 = vec<node*> node_free
-35 = vec<obj> obj_data
-36 = vec<obj*> obj_free
+## global struct
+033 = vec<node> node_data
+034 = vec<node*> node_free
+035 = vec<obj> obj_data
+036 = vec<obj*> obj_free
 
-49 = map type_debug01
-50 = map type_debug02
+## debug
+049 = map type_debug01
+050 = map type_debug02
+
+## global tmp
+256 = map01
+257 = map02
+258 = map03
+259 = map04
