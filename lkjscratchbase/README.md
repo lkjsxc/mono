@@ -30,7 +30,7 @@
 ## obj
 0035. = vec<obj> obj_data
 0036. = vec<obj*> obj_free
-0037. = map<obj*, NULL> obj_all
+0037. = map<uid, obj*> obj_all
 
 ## clone
 0049. = vec<obj*> obj_clone
@@ -39,12 +39,15 @@
 0065. = vec<typetable> type_table
 
 ## time
-0257. = float time_now
+0257. = float utc_started
+0258. = float utc_now
+0259. = float utc_delta
 
 ## type
 ### debug
-0513. = map<obj*, NULL> debug01
-0514. = map<obj*, NULL> debug02
+0513. = map<uid, obj*> debug01
+0514. = map<uid, obj*> debug02
+0515. = map<uid, obj*> global
 
 ## global_obj
 0769. = obj* obj_origin
@@ -54,8 +57,10 @@
 
 ## all type
 00. int type
-01. float created_at
-02. float obj_priority
+01. float uid
+02. float created_at
+
+## link
 03. obj* next
 04. obj* prev
 
