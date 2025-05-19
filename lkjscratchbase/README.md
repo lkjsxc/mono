@@ -5,7 +5,7 @@
 0001. = int zero
 0002. = int stack_pointer
 0003. = int base_pointer
-0004. = int global_pointer
+0004. = int obj_pointer
 
 ## tmp_any
 0005. = any tmp01
@@ -31,6 +31,7 @@
 0035. = vec<obj> obj_data
 0036. = vec<obj*> obj_free
 0037. = map<uid, obj*> obj_all
+0038. = map<uid, obj*> obj_all_rendering
 
 ## clone
 0049. = vec<obj*> obj_clone
@@ -48,6 +49,7 @@
 0513. = map<uid, obj*> debug01
 0514. = map<uid, obj*> debug02
 0515. = map<uid, obj*> global
+0516. = map<uid, obj*> particle
 
 ## global_obj
 0769. = obj* obj_origin
@@ -73,10 +75,6 @@
 22. str costume
 23. float visibility
 24. int color
-25. int brightness
+25. float brightness
 
 # TODO
-
-## clone
-
-## 
