@@ -73,6 +73,7 @@
 22. str costume
 23. float visibility
 24. int color
+25. int brightness
 
 # TODO
 
