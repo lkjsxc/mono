@@ -25,13 +25,20 @@
 034 = vec<node*> node_free
 035 = vec<obj> obj_data
 036 = vec<obj*> obj_free
+037 = map<obj*, NULL> obj_all
 
-## debug
-049 = map type_debug01
-050 = map type_debug02
+## clone
+049 = 
 
 ## global tmp
-256 = map01
-257 = map02
-258 = map03
-259 = map04
+257 = map01
+258 = map02
+259 = map03
+260 = map04
+
+## debug
+513 = map<obj*, NULL> type_debug01
+514 = map<obj*, NULL> type_debug02
+
+## stack
+1025 ~
