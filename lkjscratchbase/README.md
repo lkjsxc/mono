@@ -73,3 +73,11 @@
 22. str costume
 23. float visibility
 24. int color
+
+# TODO
+
+## clone
+-   camera_init
+-   clone_tick
+
+## 
