@@ -1,10 +1,12 @@
 # global_val
 
 ## register
-001 = f64 0
+001 = f64 zero
 002 = f64 stack pointer
 003 = f64 base pointer
 004 = f64 global pointer
+
+## tmp
 005 = any tmp01
 006 = any tmp02
 007 = any tmp03
@@ -36,7 +38,8 @@
 259 = map03
 260 = map04
 
-## debug
+## type
+### debug
 513 = map<obj*, NULL> type_debug01
 514 = map<obj*, NULL> type_debug02
 
