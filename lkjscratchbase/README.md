@@ -77,7 +77,5 @@
 # TODO
 
 ## clone
--   camera_init
--   clone_tick
 
 ## 
