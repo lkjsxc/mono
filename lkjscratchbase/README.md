@@ -1,52 +1,70 @@
 # global_val
+1 ~ 1024
 
 ## register
-001. = f64 zero
-002. = f64 stack pointer
-003. = f64 base pointer
-004. = f64 global pointer
+0001. = int zero
+0002. = int stack_pointer
+0003. = int base_pointer
+0004. = int global_pointer
 
-## tmp
-005. = any tmp01
-006. = any tmp02
-007. = any tmp03
-008. = any tmp04
-009. = any tmp05
-010. = any tmp06
-011. = any tmp07
-012. = any tmp08
+## tmp_any
+0005. = any tmp01
+0006. = any tmp02
+0007. = any tmp03
+0008. = any tmp04
+0009. = any tmp05
+0010. = any tmp06
+0011. = any tmp07
+0012. = any tmp08
 
-## tmp vec
-017. = vec<any> tmp_vec1
-018. = vec<any> tmp_vec2
-019. = vec<any> tmp_vec3
-020. = vec<any> tmp_vec4
+## tmp_vec
+0017. = vec<any> tmp_vec1
+0018. = vec<any> tmp_vec2
+0019. = vec<any> tmp_vec3
+0020. = vec<any> tmp_vec4
 
-## global struct
-033. = vec<node> node_data
-034. = vec<node*> node_free
-035. = vec<obj> obj_data
-036. = vec<obj*> obj_free
-037. = map<obj*, NULL> obj_all
+## node
+0033. = vec<node> node_data
+0034. = vec<node*> node_free
+
+## obj
+0035. = vec<obj> obj_data
+0036. = vec<obj*> obj_free
+0037. = map<obj*, NULL> obj_all
 
 ## clone
-049. = vec<obj*> obj_clone
+0049. = vec<obj*> obj_clone
 
-## global tmp
-257. = map01
-258. = map02
-259. = map03
-260. = map04
+## table
+0065. = vec<typetable> type_table
+
+## time
+0257. = float time_now
 
 ## type
 ### debug
-513. = map<obj*, NULL> type_debug01
-514. = map<obj*, NULL> type_debug02
+0513. = map<obj*, NULL> debug01
+0514. = map<obj*, NULL> debug02
 
-## stack
-1025. ~
+## global_obj
+0769. = obj* obj_origin
+0770. = obj* obj_camera
 
 # obj
-00. type
-01. x
-02. y
+
+## all type
+00. int type
+01. float created_at
+02. float obj_priority
+03. obj* next
+04. obj* prev
+
+## visible
+17. float layer_priority
+18. float pos_x
+19. float pos_y
+20. float scale
+21. float dir
+22. str costume
+23. float visibility
+24. int color
