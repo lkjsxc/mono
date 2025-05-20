@@ -52,7 +52,7 @@
 0516. = map<uid, obj*> particle
 
 ## global_obj
-0769. = obj* obj_origin
+<!-- 0769. = obj* obj_origin -->
 0770. = obj* obj_camera
 
 # obj
