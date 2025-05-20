@@ -31,7 +31,7 @@
 0035. = vec<obj> obj_data
 0036. = vec<obj*> obj_free
 0037. = map<uid, obj*> obj_all
-0038. = map<uid, obj*> obj_all_rendering
+0038. = map<float, obj*> obj_all_rendering
 
 ## clone
 0049. = vec<obj*> obj_clone
