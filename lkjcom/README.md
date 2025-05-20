@@ -46,6 +46,7 @@ The project should be organized into the following file structure:
 ├── README.md
 ├── include/
 │   ├── http_parser.h
+│   ├── json_parser.h
 │   ├── http_response.h
 │   ├── request_handler.h
 │   ├── server_socket.h
@@ -55,6 +56,7 @@ The project should be organized into the following file structure:
 │   └── utils.h
 ├── src/
 │   ├── main.c
+│   ├── json_parser.c
 │   ├── http_parser.c
 │   ├── http_response.c
 │   ├── request_handler.c
