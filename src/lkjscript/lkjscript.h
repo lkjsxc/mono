@@ -86,7 +86,7 @@ typedef struct node_t {
     struct node_t* next;
     token_t* token;
 
-    // PUSH_CONST: val, PUSH_LOCAL: offset, LABEL: bin addr
+    // PUSH_CONST: val, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
 
     // function, struct, goto
