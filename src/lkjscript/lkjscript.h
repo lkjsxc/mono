@@ -85,6 +85,7 @@ typedef enum {
     NODETYPE_WRITE,
     NODETYPE_USLEEP,
 
+    // ident
     NODETYPE_VAR,
     NODETYPE_FN,
     NODETYPE_STRUCT,
@@ -97,8 +98,8 @@ typedef enum {
 
 typedef struct node_t {
     nodetype_t nodetype;
-    struct node_t* next;
     token_t* token;
+    struct node_t* next;
 
     // PUSH_CONST: val, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
