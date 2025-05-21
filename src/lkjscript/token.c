@@ -20,3 +20,19 @@ int64_t token_eqstr(token_t* token, const char* str) {
     token_t token2 = {.data = str, .size = len};
     return token_eq(token, &token2);
 }
+
+int64_t token_isdigit(token_t* token) {
+    for(int64_t i = 0; i < token->size; i++) {
+        if (token->data[i] < '0' || token->data[i] > '9') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int64_t token_ischar(token_t* token) {
+    if(token->data[0] == '"') {
+        return 1;
+    }
+    return 0;
+}
