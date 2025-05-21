@@ -1,4 +1,4 @@
 .vscode
 .venv
-lkjscript/lkjscript
-lkjscript/lkjscript.exe
+src/lkjscript/lkjscript
+src/lkjscript/lkjscript.exe
