@@ -85,6 +85,7 @@ typedef enum {
     NODETYPE_WRITE,
     NODETYPE_USLEEP,
 
+    NODETYPE_VAR,
     NODETYPE_FN,
     NODETYPE_STRUCT,
 
@@ -113,7 +114,7 @@ typedef struct node_t {
     int64_t stack_size;
 
     // struct
-    int64_t struct_size;
+    int64_t type_size;
 } node_t;
 
 typedef struct {

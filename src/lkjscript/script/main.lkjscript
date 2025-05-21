@@ -1,9 +1,2 @@
-struct pairpair_t (
-    pair_t a
-    pair_t b
-)
-
-struct pair_t (
-    i64 a
-    i64 b
-)
+var i64 a
+var i64 b
