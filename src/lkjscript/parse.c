@@ -69,11 +69,20 @@ static node_t* node_find_fn(node_t** begin, token_t* token) {
 // when token_itr is at the end of the file, return ERR
 static result_t tokenitr_next(token_t** token_itr) {
     *token_itr += 1;
+    if ((*token_itr)->data == NULL) {
+        write(STDERR_FILENO, "Error: parse.c:073\n", 19);
+        return ERR;
+    }
+}
+
+static result_t tokenitr_skipsplit(token_t** token_itr) {
     while (1) {
         if ((*token_itr)->data == NULL) {
-            write(STDERR_FILENO, "Error: unexpected end of file\n", 30);
+            write(STDERR_FILENO, "Error: parse.c:081\n", 19);
             return ERR;
         } else if (token_eqstr(*token_itr, "\n")) {
+            *token_itr += 1;
+        } else if (token_eqstr(*token_itr, ",")) {
             *token_itr += 1;
         } else {
             return OK;
@@ -85,7 +94,7 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
     while ((*token_itr)->data != NULL) {
         if (token_eqstr(*token_itr, "struct")) {
             if (tokenitr_next(token_itr) == ERR) {
-                write(STDERR_FILENO, "Error: struct name expected\n", 28);
+                write(STDERR_FILENO, "Error: parse.c:097\n", 19);
                 return ERR;
             }
             node_t* struct_node = node_new(node_itr);
@@ -93,7 +102,7 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varli
             node_pushback(varlist_rbegin, struct_node);
         } else if (token_eqstr(*token_itr, "fn")) {
             if (tokenitr_next(token_itr) == ERR) {
-                write(STDERR_FILENO, "Error: function name expected\n", 30);
+                write(STDERR_FILENO, "Error: parse.c:105\n", 19);
                 return ERR;
             }
             node_t* fn_node = node_new(node_itr);
@@ -112,6 +121,42 @@ static result_t parse_decl(stat_t stat, node_t* decl_node) {
 static result_t parse_expr(stat_t stat) {
     node_t* findfn_result = node_find_fn(stat.varlist_begin, *stat.token_itr);
     node_t* findstruct_result = node_find_struct(stat.varlist_begin, *stat.token_itr);
+    if (token_eqstr(*stat.token_itr, "(")) {  // "(" <expr> ")"
+        node_t* scope_open = node_new(stat.node_itr);
+        node_t* scope_close = node_new(stat.node_itr);
+        *scope_open = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_OPEN, .next = NULL, .token = *stat.token_itr};
+        *scope_close = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_CLOSE, .next = NULL, .token = *stat.token_itr};
+        node_pushback(stat.execlist_rbegin, scope_open);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:131\n", 19);
+            return ERR;
+        }
+        if (tokenitr_skipsplit(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:135\n", 19);
+            return ERR;
+        }
+        if (parse_expr(stat) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:139\n", 19);
+            return ERR;
+        }
+        if(!token_eqstr(*stat.token_itr, ")")) {
+            write(STDERR_FILENO, "Error: parse.c:143\n", 19);
+            return ERR;
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:147\n", 19);
+            return ERR;
+        }
+        if (tokenitr_skipsplit(stat.token_itr) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:151\n", 19);
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, scope_close);
+    } else {
+        write(STDERR_FILENO, "Error: parse.c:156\n", 19);
+        return ERR;
+    }
+    return OK;
 }
 
 result_t parse(token_t* token, node_t* node) {
@@ -132,7 +177,7 @@ result_t parse(token_t* token, node_t* node) {
 
     // pre parse
     if (parse_pre(&token_itr, &node_itr, &varlist_root) == ERR) {
-        write(STDERR_FILENO, "Error: parse_pre failed\n", 24);
+        write(STDERR_FILENO, "Error: parse.c:\n", 19);
         return ERR;
     }
 
@@ -142,11 +187,20 @@ result_t parse(token_t* token, node_t* node) {
     // main parse
     token_itr = token;
     while (1) {
-        if (tokenitr_next(&token_itr) == ERR) {
-            break;
+        while (1) {
+            if ((token_itr)->data == NULL) {
+                return OK;
+                ;
+            } else if (token_eqstr(token_itr, "\n")) {
+                token_itr += 1;
+            } else if (token_eqstr(token_itr, ",")) {
+                token_itr += 1;
+            } else {
+                break;
+            }
         }
-        if (parse_exprs((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
-            write(STDERR_FILENO, "Error: parse_statement failed\n", 25);
+        if (parse_expr((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
+            write(STDERR_FILENO, "Error: parse.c:\n", 19);
             return ERR;
         }
     }

@@ -1,6 +1,9 @@
 #include "lkjscript.h"
 
 int64_t token_eq(token_t* token1, token_t* token2) {
+    if(token1 == NULL || token2 == NULL) {
+        return 0;
+    }
     if (token1->size != token2->size) {
         return 0;
     }
