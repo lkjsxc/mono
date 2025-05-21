@@ -7,6 +7,19 @@
 #define MEM_SIZE (1024 * 1024)
 #define SRC_PATH "script/main.lkjscript"
 
+#define ERROUT3(n) #n
+#define ERROUT2(n) ERROUT3(n)
+#define ERROUT                                          \
+    {                                                     \
+        write(STDERR_FILENO, "{Error: { file: \"", 18);      \
+        write(STDERR_FILENO, __FILE__, sizeof(__FILE__)); \
+        write(STDERR_FILENO, "\", func: \"", 11);            \
+        write(STDERR_FILENO, __func__, sizeof(__func__)); \
+        write(STDERR_FILENO, "\", line: ", 10);            \
+        write(STDERR_FILENO, ERROUT2(__LINE__), sizeof(ERROUT2(__LINE__))); \
+        write(STDERR_FILENO, "}}\n", 4);                  \
+    }
+
 typedef long long int int64_t;
 
 typedef enum {
@@ -95,7 +108,7 @@ typedef struct node_t {
     // type
     struct node_t* type_ptr;
 
-    //function
+    // function
     int64_t arg_size;
     int64_t stack_size;
 

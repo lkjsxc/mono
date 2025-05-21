@@ -37,21 +37,6 @@ static node_t* node_find(node_t** begin, token_t* token) {
 }
 
 // when not found, return NULL
-static node_t* node_find_struct(node_t** begin, token_t* token) {
-    node_t* itr = *begin;
-    while (itr != NULL) {
-        if (itr->nodetype == NODETYPE_LABEL_GLOBAL_END) {
-            break;
-        }
-        if (token_eq(itr->token, token) && itr->nodetype == NODETYPE_STRUCT) {
-            return itr;
-        }
-        itr = itr->next;
-    }
-    return NULL;
-}
-
-// when not found, return NULL
 static node_t* node_find_fn(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
@@ -66,23 +51,36 @@ static node_t* node_find_fn(node_t** begin, token_t* token) {
     return NULL;
 }
 
+// when not found, return NULL
+static node_t* node_find_struct(node_t** begin, token_t* token) {
+    node_t* itr = *begin;
+    while (itr != NULL) {
+        if (itr->nodetype == NODETYPE_LABEL_GLOBAL_END) {
+            break;
+        }
+        if (token_eq(itr->token, token) && itr->nodetype == NODETYPE_STRUCT) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
+
 // when token_itr is at the end of the file, return ERR
 static result_t tokenitr_next(token_t** token_itr) {
     *token_itr += 1;
     if ((*token_itr)->data == NULL) {
-        write(STDERR_FILENO, "Error: parse.c:073\n", 19);
+        ERROUT;
         return ERR;
     }
 }
 
-static result_t tokenitr_skipsplit(token_t** token_itr) {
+static result_t tokenitr_skiplinebreak(token_t** token_itr) {
     while (1) {
         if ((*token_itr)->data == NULL) {
-            write(STDERR_FILENO, "Error: parse.c:081\n", 19);
+            ERROUT;
             return ERR;
         } else if (token_eqstr(*token_itr, "\n")) {
-            *token_itr += 1;
-        } else if (token_eqstr(*token_itr, ",")) {
             *token_itr += 1;
         } else {
             return OK;
@@ -92,22 +90,23 @@ static result_t tokenitr_skipsplit(token_t** token_itr) {
 
 static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** varlist_rbegin) {
     while ((*token_itr)->data != NULL) {
-        if (token_eqstr(*token_itr, "struct")) {
+        if (token_eqstr(*token_itr, "fn")) {
             if (tokenitr_next(token_itr) == ERR) {
-                write(STDERR_FILENO, "Error: parse.c:097\n", 19);
-                return ERR;
-            }
-            node_t* struct_node = node_new(node_itr);
-            *struct_node = (node_t){.nodetype = NODETYPE_STRUCT, .next = NULL, .token = *token_itr};
-            node_pushback(varlist_rbegin, struct_node);
-        } else if (token_eqstr(*token_itr, "fn")) {
-            if (tokenitr_next(token_itr) == ERR) {
-                write(STDERR_FILENO, "Error: parse.c:105\n", 19);
+                ERROUT;
                 return ERR;
             }
             node_t* fn_node = node_new(node_itr);
             *fn_node = (node_t){.nodetype = NODETYPE_FN, .next = NULL, .token = *token_itr};
             node_pushback(varlist_rbegin, fn_node);
+        } else if (token_eqstr(*token_itr, "struct")) {
+            if (tokenitr_next(token_itr) == ERR) {
+                ERROUT;
+                ERROUT;
+                return ERR;
+            }
+            node_t* struct_node = node_new(node_itr);
+            *struct_node = (node_t){.nodetype = NODETYPE_STRUCT, .next = NULL, .token = *token_itr};
+            node_pushback(varlist_rbegin, struct_node);
         } else {
             *token_itr += 1;
         }
@@ -121,43 +120,68 @@ static result_t parse_decl(stat_t stat, node_t* decl_node) {
 static result_t parse_expr(stat_t stat) {
     node_t* findfn_result = node_find_fn(stat.varlist_begin, *stat.token_itr);
     node_t* findstruct_result = node_find_struct(stat.varlist_begin, *stat.token_itr);
-    if (token_eqstr(*stat.token_itr, "(")) {  // "(" <expr> ")"
+    if (token_eqstr(*stat.token_itr, "(")) {  // "(" <linebreak>* <expr> ")" <linebreak>*
         node_t* scope_open = node_new(stat.node_itr);
         node_t* scope_close = node_new(stat.node_itr);
         *scope_open = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_OPEN, .next = NULL, .token = *stat.token_itr};
         *scope_close = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_CLOSE, .next = NULL, .token = *stat.token_itr};
         node_pushback(stat.execlist_rbegin, scope_open);
         if (tokenitr_next(stat.token_itr) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:131\n", 19);
+            ERROUT;
             return ERR;
         }
-        if (tokenitr_skipsplit(stat.token_itr) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:135\n", 19);
+        if (tokenitr_skiplinebreak(stat.token_itr) == ERR) {
+            ERROUT;
             return ERR;
         }
         if (parse_expr(stat) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:139\n", 19);
+            ERROUT;
             return ERR;
         }
-        if(!token_eqstr(*stat.token_itr, ")")) {
-            write(STDERR_FILENO, "Error: parse.c:143\n", 19);
+        if (!token_eqstr(*stat.token_itr, ")")) {
+            ERROUT;
             return ERR;
         }
         if (tokenitr_next(stat.token_itr) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:147\n", 19);
+            ERROUT;
             return ERR;
         }
-        if (tokenitr_skipsplit(stat.token_itr) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:151\n", 19);
+        if (tokenitr_skiplinebreak(stat.token_itr) == ERR) {
+            ERROUT;
             return ERR;
         }
         node_pushback(stat.execlist_rbegin, scope_close);
+    } else if (token_eqstr(*stat.token_itr, "fn")) {        // "fn" <fn_name> "(" <split>* <expr> <split>* ")" "->" <type> <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "struct")) {    // "struct" <type> <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "if")) {        // "if" <expr> <expr> | if <expr> <expr> "else" <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "loop")) {      // "loop" <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "return")) {    // "return" <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "break")) {     // "break" <expr>
+            ERROUT;
+            return ERR;
+    } else if (token_eqstr(*stat.token_itr, "continue")) {  // "continue"
+            ERROUT;
+            return ERR;
     } else {
-        write(STDERR_FILENO, "Error: parse.c:156\n", 19);
+        ERROUT;
         return ERR;
     }
     return OK;
 }
+
+// あとでがんばる
+// <expr> ::= "(" <expr> ")" | <expr> <split>+ <expr> | "fn" <fn_name> <expr> "->" <type> <expr> | "struct" <type> <expr> | <type> <var> | <fn_name> "(" <expr> ")" | "if" <expr> <expr> | "loop" <expr> | "if" <expr> <expr> "else" <expr> | "return" <expr> | "break" <expr> | "continue"
+// <operator> ::= "<<" | ">>" | "<=" | ">=" | "==" | "!=" | "&&" | "||" | "(" | ")" | "." | "*" | "%" | "&" | "|" | "^" | "~" | "<" | ">" | "!" | "+" | "-" | "/"
 
 result_t parse(token_t* token, node_t* node) {
     token_t* token_itr = token;
@@ -177,7 +201,7 @@ result_t parse(token_t* token, node_t* node) {
 
     // pre parse
     if (parse_pre(&token_itr, &node_itr, &varlist_root) == ERR) {
-        write(STDERR_FILENO, "Error: parse.c:\n", 19);
+        ERROUT;
         return ERR;
     }
 
@@ -190,7 +214,6 @@ result_t parse(token_t* token, node_t* node) {
         while (1) {
             if ((token_itr)->data == NULL) {
                 return OK;
-                ;
             } else if (token_eqstr(token_itr, "\n")) {
                 token_itr += 1;
             } else if (token_eqstr(token_itr, ",")) {
@@ -200,7 +223,7 @@ result_t parse(token_t* token, node_t* node) {
             }
         }
         if (parse_expr((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .varlist_begin = &varlist_begin, .varlist_rbegin = &varlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
-            write(STDERR_FILENO, "Error: parse.c:\n", 19);
+            ERROUT;
             return ERR;
         }
     }
