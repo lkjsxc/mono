@@ -101,6 +101,9 @@ static result_t parse_unary(stat_t stat) {
 static result_t parse_binary(stat_t stat) {
 }
 
+static result_t parse_assign(stat_t stat) {
+}
+
 static result_t parse_expr(stat_t stat) {
     node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
     node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
