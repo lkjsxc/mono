@@ -1,7 +1,10 @@
 (
-    var a: i64
-    var b: i64*
-)
-(
-    var c: i64
+    struct pair_int (
+        var a: i64
+        var b: i64
+    )
+    struct pair_pair_int (
+        var a: pair_int
+        var b: pair_int
+    )
 )

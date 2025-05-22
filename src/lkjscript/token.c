@@ -33,7 +33,7 @@ int64_t token_isdigit(token_t* token) {
     return 1;
 }
 
-int64_t token_ischar(token_t* token) {
+int64_t token_isstr(token_t* token) {
     if(token->data[0] == '"') {
         return 1;
     }

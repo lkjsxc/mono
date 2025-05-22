@@ -52,6 +52,7 @@ typedef enum {
     NODETYPE_CALL,
     NODETYPE_RETURN,
 
+    NODETYPE_ASSIGN,
     NODETYPE_ASSIGN1,
     NODETYPE_ASSIGN2,
     NODETYPE_ASSIGN3,
@@ -128,5 +129,7 @@ typedef union {
 
 int64_t token_eq(token_t* token1, token_t* token2);
 int64_t token_eqstr(token_t* token, const char* str);
+int64_t token_isdigit(token_t* token);
+int64_t token_isstr(token_t* token);
 
 #endif

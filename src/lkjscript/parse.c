@@ -76,41 +76,199 @@ static result_t tokenitr_next(token_t** token_itr) {
     }
 }
 
-static result_t parse_expr_pre(stat_t stat) {
+static result_t parse_stat_pre(stat_t stat) {
+    token_t* token_itr = *stat.token_itr;
+    int64_t nest = 0;
+    while (nest >= 0) {
+        if (token_itr->data == NULL) {
+            return OK;
+        } else if (token_eqstr(token_itr, "(")) {
+            nest += 1;
+            token_itr += 1;
+        } else if (token_eqstr(token_itr, ")")) {
+            nest -= 1;
+            token_itr += 1;
+        } else if (nest != 0) {
+            token_itr += 1;
+        } else if (token_eqstr(token_itr, "fn")) {
+            node_t* node_fn = node_new(stat.node_itr);
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = token_itr};
+            node_pushfront(stat.identlist_begin, node_fn);
+            token_itr += 1;
+        } else if (token_eqstr(token_itr, "struct")) {
+            node_t* node_struct = node_new(stat.node_itr);
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .token = token_itr};
+            node_pushfront(stat.identlist_begin, node_struct);
+            token_itr += 1;
+        } else {
+            token_itr += 1;
+        }
+    }
 }
 
 static result_t parse_primary(stat_t stat) {
+    node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
+    node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
+    if (findvar_result != NULL) {
+        node_t* node_var = node_new(stat.node_itr);
+        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, node_var);
+    } else if (findfn_result != NULL) {
+    } else if (token_isdigit(*stat.token_itr)) {
+    } else if (token_isstr(*stat.token_itr)) {
+    } else {
+        ERROUT;
+        return ERR;
+    }
+    return OK;
 }
 
 static result_t parse_unary(stat_t stat) {
+    if (token_eqstr(*stat.token_itr, "&")) {
+    } else if (token_eqstr(*stat.token_itr, "*")) {
+    } else if (token_eqstr(*stat.token_itr, "-")) {
+    } else if (token_eqstr(*stat.token_itr, "!")) {
+    } else {
+        if (parse_primary(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+    }
 }
 
 static result_t parse_binary(stat_t stat) {
+    struct {
+        const char* operator;
+        nodetype_t nodetype;
+    } binary_operators[] = {
+        {"||", NODETYPE_OR},
+        {"&&", NODETYPE_AND},
+        {"==", NODETYPE_EQ},
+        {"!=", NODETYPE_NE},
+        {"<", NODETYPE_LT},
+        {"<=", NODETYPE_LE},
+        {">", NODETYPE_GT},
+        {">=", NODETYPE_GE},
+        {"+", NODETYPE_ADD},
+        {"-", NODETYPE_SUB},
+        {"*", NODETYPE_MUL},
+        {"/", NODETYPE_DIV},
+        {"%", NODETYPE_MOD},
+        {"<<", NODETYPE_SHL},
+        {">>", NODETYPE_SHR},
+        {"|", NODETYPE_BITOR},
+        {"^", NODETYPE_BITXOR},
+        {"&", NODETYPE_BITAND}};
+    if (parse_unary(stat) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    while (1) {
+        int64_t operator_found = 0;
+        for (int64_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
+            if (token_eqstr(*stat.token_itr, binary_operators[i].operator)) {
+                operator_found = 1;
+                node_t* node_binary = node_new(stat.node_itr);
+                *node_binary = (node_t){.nodetype = binary_operators[i].nodetype, .token = *stat.token_itr};
+                if (tokenitr_next(stat.token_itr) == ERR) {
+                    ERROUT;
+                    return ERR;
+                }
+                if (parse_unary(stat) == ERR) {
+                    ERROUT;
+                    return ERR;
+                }
+                node_pushback(stat.execlist_rbegin, node_binary);
+            }
+        }
+        if (operator_found == 0) {
+            return OK;
+        }
+    }
 }
 
 static result_t parse_assign(stat_t stat) {
+    if (parse_binary(stat) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (token_eqstr(*stat.token_itr, "=")) {
+        node_t* node_assign = node_new(stat.node_itr);
+        *node_assign = (node_t){.nodetype = NODETYPE_ASSIGN, .token = *stat.token_itr};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (parse_binary(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        node_pushback(stat.execlist_rbegin, node_assign);
+    }
+    return OK;
 }
 
 static result_t parse_expr(stat_t stat) {
+    if (token_eqstr(*stat.token_itr, "(")) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        while (!token_eqstr(*stat.token_itr, ")")) {
+            if (parse_expr(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+    } else {
+        parse_assign(stat);
+    }
+    return OK;
+}
+
+static result_t parse_stat(stat_t stat) {
     while (1) {
-        node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
-        node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
-        node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
-        if (findvar_result != NULL) {
-        } else if (findfn_result != NULL) {
-        } else if (findstruct_result != NULL) {
+        while (1) {
+            if ((*stat.token_itr)->data == NULL) {
+                return OK;
+            } else if (token_eqstr(*stat.token_itr, ",")) {
+                *stat.token_itr += 1;
+            } else if (token_eqstr(*stat.token_itr, "\n")) {
+                *stat.token_itr += 1;
+            } else {
+                break;
+            }
+        }
+        if (token_eqstr(*stat.token_itr, ")")) {
+            return OK;
         } else if (token_eqstr(*stat.token_itr, "(")) {
-            node_t* scope_execlist = stat.execlist_rbegin;
-            node_t* scope_identlist = stat.identlist_rbegin;
+            node_t* scope_execlist = *stat.execlist_rbegin;
+            node_t* scope_identlist = *stat.identlist_rbegin;
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
             }
-            if (parse_expr_pre(stat) == ERR) {
+            if (parse_stat_pre(stat) == ERR) {
                 ERROUT;
                 return ERR;
             }
-            if (parse_expr(stat) == ERR) {
+            if (parse_stat(stat) == ERR) {
                 ERROUT;
                 return ERR;
             }
@@ -122,28 +280,19 @@ static result_t parse_expr(stat_t stat) {
                 ERROUT;
                 return ERR;
             }
-            stat.execlist_rbegin = scope_execlist;
-            stat.identlist_rbegin = scope_identlist;
+            *stat.execlist_rbegin = scope_execlist;
+            *stat.identlist_rbegin = scope_identlist;
+        } else if (token_eqstr(*stat.token_itr, "return")) {
+        } else if (token_eqstr(*stat.token_itr, "break")) {
+        } else if (token_eqstr(*stat.token_itr, "continue")) {
         } else if (token_eqstr(*stat.token_itr, "var")) {
         } else if (token_eqstr(*stat.token_itr, "fn")) {
         } else if (token_eqstr(*stat.token_itr, "struct")) {
         } else {
-            ERROUT;
-            return ERR;
-        }
-        while (1) {
-            if (*stat.token_itr == NULL) {
-                return OK;
-            } else if (token_eqstr(*stat.token_itr, ",")) {
-                *stat.token_itr += 1;
-            } else if (token_eqstr(*stat.token_itr, "\n")) {
-                *stat.token_itr += 1;
-            } else {
-                break;
+            if (parse_expr(stat) == ERR) {
+                ERROUT;
+                return ERR;
             }
-        }
-        if (token_eqstr(stat.token_itr, ")")) {
-            return OK;
         }
     }
 }
@@ -162,7 +311,19 @@ result_t parse(token_t* token, node_t* node) {
     *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
     *identlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
 
-    if (parse_expr((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .execlist_rbegin = &execlist_rbegin, .identlist_rbegin = &identlist_rbegin, .label_continue = NULL, .label_break = NULL}) == ERR) {
+    stat_t stat = {
+        .token_itr = &token_itr,
+        .node_itr = &node_itr,
+        .identlist_begin = &identlist_begin,
+        .identlist_rbegin = &identlist_rbegin,
+        .execlist_rbegin = &execlist_rbegin,
+    };
+
+    if (parse_stat_pre(stat) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (parse_stat(stat) == ERR) {
         ERROUT;
         return ERR;
     }
