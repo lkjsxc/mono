@@ -25,6 +25,7 @@ static void node_pushfront(node_t** begin, node_t* node) {
     *begin = node;
 }
 
+// when not found, return NULL
 static node_t* node_find_var(node_t** begin, token_t* token) {
     node_t* itr = *begin;
     while (itr != NULL) {
@@ -88,40 +89,57 @@ static result_t tokenitr_skiplinebreak(token_t** token_itr) {
     }
 }
 
-static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** identlist_rbegin) {
-    node_t* globalend = node_new(node_itr);
-    *globalend = (node_t){.nodetype = NODETYPE_LABEL_GLOBAL_END, .token = NULL};
-    while ((*token_itr)->data != NULL) {
-        if (token_eqstr(*token_itr, "fn")) {
-            if (tokenitr_next(token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            node_t* fn_node = node_new(node_itr);
-            *fn_node = (node_t){.nodetype = NODETYPE_FN, .token = *token_itr};
-            node_pushback(identlist_rbegin, fn_node);
-        } else if (token_eqstr(*token_itr, "struct")) {
-            if (tokenitr_next(token_itr) == ERR) {
-                ERROUT;
-                ERROUT;
-                return ERR;
-            }
-            node_t* struct_node = node_new(node_itr);
-            *struct_node = (node_t){.nodetype = NODETYPE_STRUCT, .token = *token_itr};
-            node_pushback(identlist_rbegin, struct_node);
-        } else {
-            *token_itr += 1;
-        }
-    }
-    // push back global end
-    node_pushback(identlist_rbegin, globalend);
-    return OK;
+static result_t parse_expr_pre(stat_t stat) {
+}
+
+static result_t parse_primary(stat_t stat) {
+}
+
+static result_t parse_unary(stat_t stat) {
+}
+
+static result_t parse_binary(stat_t stat) {
 }
 
 static result_t parse_expr(stat_t stat) {
     node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
     node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
     node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
+    if (findvar_result != NULL) {
+    } else if (findfn_result != NULL) {
+    } else if (findstruct_result != NULL) {
+    } else if (token_eqstr(*stat.token_itr, "(")) {
+        node_t* scope_execlist = stat.execlist_rbegin;
+        node_t* scope_identlist = stat.identlist_rbegin;
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (parse_expr_pre(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (parse_expr(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (!token_eqstr(*stat.token_itr, ")")) {
+            ERROUT;
+            return ERR;
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        stat.execlist_rbegin = scope_execlist;
+        stat.identlist_rbegin = scope_identlist;
+    } else if (token_eqstr(*stat.token_itr, "var")) {
+    } else if (token_eqstr(*stat.token_itr, "fn")) {
+    } else if (token_eqstr(*stat.token_itr, "struct")) {
+    } else {
+        ERROUT;
+        return ERR;
+    }
 }
 
 result_t parse(token_t* token, node_t* node) {
@@ -138,15 +156,8 @@ result_t parse(token_t* token, node_t* node) {
     *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
     *identlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
 
-    // pre parse
-    if (parse_pre(&token_itr, &node_itr, &identlist_root) == ERR) {
+    if (parse_expr((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .execlist_rbegin = &execlist_rbegin, .identlist_rbegin = &identlist_rbegin, .label_continue = NULL, .label_break = NULL}) == ERR) {
         ERROUT;
         return ERR;
-    }
-
-    // main parse
-    token_itr = token;
-    while (token_itr->data != NULL) {
-        
     }
 }
