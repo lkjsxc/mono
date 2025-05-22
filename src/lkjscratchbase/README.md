@@ -77,4 +77,16 @@
 24. int color
 25. float brightness
 
-# TODO
+# struct
+
+```
+vec {
+    int capacity
+    int size
+    any data[capacity]
+}
+map {
+    node* root
+    int size
+}
+```
