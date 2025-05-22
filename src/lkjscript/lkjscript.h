@@ -104,15 +104,11 @@ typedef struct node_t {
     // PUSH_CONST: val, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
 
-    // function, struct, goto
+    // struct: member, goto: target
     struct node_t* child;
 
     // type
     struct node_t* type_ptr;
-
-    // function
-    int64_t arg_size;
-    int64_t stack_size;
 
     // struct
     int64_t type_size;

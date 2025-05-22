@@ -119,7 +119,7 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** ident
 }
 
 // <type> ::= i64 "*"* | <type> "*"*
-static result_t parse_type(stat_t stat, node_t* parent) {
+static result_t parse_type(stat_t stat, node_t* ident) {
     node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
     node_t* node_type = node_new(stat.node_itr);
     node_t* node_head = node_type;
@@ -138,41 +138,15 @@ static result_t parse_type(stat_t stat, node_t* parent) {
     while (token_eqstr(*stat.token_itr, "*")) {
         node_t* node_deref = node_new(stat.node_itr);
         *node_deref = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-        node_pushfront(&node_head, node_deref);
+        node_deref->type_ptr = node_head;
+        node_head = node_deref;
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
         }
     }
-    parent->type_ptr = node_head;
+    ident->type_ptr = node_head;
     return OK;
-}
-
-// <decl> ::= "var" <define_var> ":" <type>
-static result_t parse_decl(stat_t stat, node_t** node_var) {
-    if (tokenitr_next(stat.token_itr) == ERR) {
-        ERROUT;
-        return ERR;
-    }
-    **node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
-    node_pushfront(stat.identlist_begin, *node_var);
-    if (tokenitr_next(stat.token_itr) == ERR) {
-        ERROUT;
-        return ERR;
-    }
-    if (token_eqstr(*stat.token_itr, ":")) {
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        if (parse_type(stat, *node_var) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-    } else {
-        ERROUT;
-        return ERR;
-    }
 }
 
 static result_t parse_expr(stat_t stat) {
@@ -209,7 +183,7 @@ static result_t parse_expr(stat_t stat) {
     } else if (token_eqstr(*stat.token_itr, "fn")) {  // "fn" <fn_name> "(" <split>* <expr> <split>* ")" "->" <type> <expr>
         ERROUT;
         return ERR;
-    } else if (token_eqstr(*stat.token_itr, "struct")) {  // "struct" <type> <expr>
+    } else if (token_eqstr(*stat.token_itr, "struct")) {  // "struct" <struct_name> <expr>
         ERROUT;
         return ERR;
     } else if (token_eqstr(*stat.token_itr, "if")) {  // "if" <expr> <expr> | if <expr> <expr> "else" <expr>
@@ -229,7 +203,26 @@ static result_t parse_expr(stat_t stat) {
         return ERR;
     } else if (token_eqstr(*stat.token_itr, "var")) {  // "var" <define_var> | "var" <define_var> "=" <expr>
         node_t* node_var = node_new(stat.node_itr);
-        if (parse_decl(stat, &node_var) == ERR) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
+        node_pushback(stat.identlist_rbegin, node_var);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (token_eqstr(*stat.token_itr, ":")) {
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_type(stat, node_var) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+        } else {
             ERROUT;
             return ERR;
         }
