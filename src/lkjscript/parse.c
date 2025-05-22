@@ -76,19 +76,6 @@ static result_t tokenitr_next(token_t** token_itr) {
     }
 }
 
-static result_t tokenitr_skiplinebreak(token_t** token_itr) {
-    while (1) {
-        if ((*token_itr)->data == NULL) {
-            ERROUT;
-            return ERR;
-        } else if (token_eqstr(*token_itr, "\n")) {
-            *token_itr += 1;
-        } else {
-            return OK;
-        }
-    }
-}
-
 static result_t parse_expr_pre(stat_t stat) {
 }
 
@@ -105,43 +92,59 @@ static result_t parse_assign(stat_t stat) {
 }
 
 static result_t parse_expr(stat_t stat) {
-    node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
-    node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
-    node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
-    if (findvar_result != NULL) {
-    } else if (findfn_result != NULL) {
-    } else if (findstruct_result != NULL) {
-    } else if (token_eqstr(*stat.token_itr, "(")) {
-        node_t* scope_execlist = stat.execlist_rbegin;
-        node_t* scope_identlist = stat.identlist_rbegin;
-        if (tokenitr_next(stat.token_itr) == ERR) {
+    while (1) {
+        node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
+        node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
+        node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
+        if (findvar_result != NULL) {
+        } else if (findfn_result != NULL) {
+        } else if (findstruct_result != NULL) {
+        } else if (token_eqstr(*stat.token_itr, "(")) {
+            node_t* scope_execlist = stat.execlist_rbegin;
+            node_t* scope_identlist = stat.identlist_rbegin;
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_expr_pre(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_expr(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (!token_eqstr(*stat.token_itr, ")")) {
+                ERROUT;
+                return ERR;
+            }
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            stat.execlist_rbegin = scope_execlist;
+            stat.identlist_rbegin = scope_identlist;
+        } else if (token_eqstr(*stat.token_itr, "var")) {
+        } else if (token_eqstr(*stat.token_itr, "fn")) {
+        } else if (token_eqstr(*stat.token_itr, "struct")) {
+        } else {
             ERROUT;
             return ERR;
         }
-        if (parse_expr_pre(stat) == ERR) {
-            ERROUT;
-            return ERR;
+        while (1) {
+            if (*stat.token_itr == NULL) {
+                return OK;
+            } else if (token_eqstr(*stat.token_itr, ",")) {
+                *stat.token_itr += 1;
+            } else if (token_eqstr(*stat.token_itr, "\n")) {
+                *stat.token_itr += 1;
+            } else {
+                break;
+            }
         }
-        if (parse_expr(stat) == ERR) {
-            ERROUT;
-            return ERR;
+        if (token_eqstr(stat.token_itr, ")")) {
+            return OK;
         }
-        if (!token_eqstr(*stat.token_itr, ")")) {
-            ERROUT;
-            return ERR;
-        }
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        stat.execlist_rbegin = scope_execlist;
-        stat.identlist_rbegin = scope_identlist;
-    } else if (token_eqstr(*stat.token_itr, "var")) {
-    } else if (token_eqstr(*stat.token_itr, "fn")) {
-    } else if (token_eqstr(*stat.token_itr, "struct")) {
-    } else {
-        ERROUT;
-        return ERR;
     }
 }
 
