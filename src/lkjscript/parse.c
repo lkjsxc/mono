@@ -118,135 +118,10 @@ static result_t parse_pre(token_t** token_itr, node_t** node_itr, node_t** ident
     return OK;
 }
 
-// <type> ::= i64 "*"* | <type> "*"*
-static result_t parse_type(stat_t stat, node_t* ident) {
-    node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
-    node_t* node_type = node_new(stat.node_itr);
-    node_t* node_head = node_type;
-    if (token_eqstr(*stat.token_itr, "i64")) {
-        *node_type = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr, .type_size = sizeof(int64_t)};
-    } else if (findstruct_result != NULL) {
-        *node_type = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-    } else {
-        ERROUT;
-        return ERR;
-    }
-    if (tokenitr_next(stat.token_itr) == ERR) {
-        ERROUT;
-        return ERR;
-    }
-    while (token_eqstr(*stat.token_itr, "*")) {
-        node_t* node_deref = node_new(stat.node_itr);
-        *node_deref = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-        node_deref->type_ptr = node_head;
-        node_head = node_deref;
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-    }
-    ident->type_ptr = node_head;
-    return OK;
-}
-
 static result_t parse_expr(stat_t stat) {
     node_t* findvar_result = node_find_var(stat.identlist_begin, *stat.token_itr);
     node_t* findfn_result = node_find_fn(stat.identlist_begin, *stat.token_itr);
     node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
-    if (token_eqstr(*stat.token_itr, "(")) {  // "(" <linebreak>* <expr> ")"
-        node_t* scope_open = node_new(stat.node_itr);
-        node_t* scope_close = node_new(stat.node_itr);
-        *scope_open = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_OPEN, .token = *stat.token_itr};
-        *scope_close = (node_t){.nodetype = NODETYPE_LABEL_SCOPE_CLOSE, .token = *stat.token_itr};
-        node_pushback(stat.execlist_rbegin, scope_open);
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        if (tokenitr_skiplinebreak(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        if (parse_expr(stat) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        if (!token_eqstr(*stat.token_itr, ")")) {
-            ERROUT;
-            return ERR;
-        }
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        node_pushback(stat.execlist_rbegin, scope_close);
-    } else if (token_eqstr(*stat.token_itr, "fn")) {  // "fn" <fn_name> "(" <split>* <expr> <split>* ")" "->" <type> <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "struct")) {  // "struct" <struct_name> <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "if")) {  // "if" <expr> <expr> | if <expr> <expr> "else" <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "loop")) {  // "loop" <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "return")) {  // "return" <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "break")) {  // "break" <expr>
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "continue")) {  // "continue"
-        ERROUT;
-        return ERR;
-    } else if (token_eqstr(*stat.token_itr, "var")) {  // "var" <define_var> | "var" <define_var> "=" <expr>
-        node_t* node_var = node_new(stat.node_itr);
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
-        node_pushback(stat.identlist_rbegin, node_var);
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-        if (token_eqstr(*stat.token_itr, ":")) {
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (parse_type(stat, node_var) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-        } else {
-            ERROUT;
-            return ERR;
-        }
-        if (token_eqstr(*stat.token_itr, "=")) {  // "var" <define_var> "=" <expr>
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            node_t* node_pushlocaladdr = node_new(stat.node_itr);
-            node_t* node_assign = node_new(stat.node_itr);
-            *node_pushlocaladdr = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_ADDR, .token = *stat.token_itr, .val = node_var->val};
-            *node_assign = (node_t){.nodetype = NODETYPE_ASSIGN1, .token = *stat.token_itr};
-            node_pushback(stat.execlist_rbegin, node_pushlocaladdr);
-            if (parse_expr(stat) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            node_pushback(stat.execlist_rbegin, node_assign);
-        }
-    } else {
-        ERROUT;
-        return ERR;
-    }
-    return OK;
 }
 
 result_t parse(token_t* token, node_t* node) {
@@ -271,21 +146,7 @@ result_t parse(token_t* token, node_t* node) {
 
     // main parse
     token_itr = token;
-    while (1) {
-        while (1) {
-            if ((token_itr)->data == NULL) {
-                return OK;
-            } else if (token_eqstr(token_itr, "\n")) {
-                token_itr += 1;
-            } else if (token_eqstr(token_itr, ",")) {
-                token_itr += 1;
-            } else {
-                break;
-            }
-        }
-        if (parse_expr((stat_t){.token_itr = &token_itr, .node_itr = &node_itr, .identlist_begin = &identlist_begin, .identlist_rbegin = &identlist_rbegin, .execlist_rbegin = &execlist_rbegin}) == ERR) {
-            ERROUT;
-            return ERR;
-        }
+    while (token_itr->data != NULL) {
+        
     }
 }
