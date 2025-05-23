@@ -221,25 +221,20 @@ static result_t parse_assign(stat_t stat) {
 }
 
 static result_t parse_expr(stat_t stat) {
-    if (token_eqstr(*stat.token_itr, "(")) {
-        if (tokenitr_next(stat.token_itr) == ERR) {
+    while (1) {
+        if (parse_assign(stat) == ERR) {
             ERROUT;
             return ERR;
         }
-        while (!token_eqstr(*stat.token_itr, ")")) {
-            if (parse_expr(stat) == ERR) {
+        if (token_eqstr(*stat.token_itr, ",")) {
+            if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
             }
+        } else {
+            return OK;
         }
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
-    } else {
-        parse_assign(stat);
     }
-    return OK;
 }
 
 static result_t parse_stat(stat_t stat) {
