@@ -50,6 +50,6 @@ summon item ~ ~1 ~ {NoGravity:1b,Item:{id:"minecraft:iron_axe",Count:1b,tag:{lkj
 
 # comment, python
 
-# comment, # move, 05, 01, 08
+# comment, # move, 02, 01, 11
 # comment, say test
 # comment, execute unless data block ~ ~ ~ {Command:""} run data merge block ~ ~-1 ~ {Command:""}
