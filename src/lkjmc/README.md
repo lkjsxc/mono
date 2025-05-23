@@ -26,6 +26,12 @@ Activates command blocks when it exists as an entity.
 ## kind-3
 Activates command blocks when held in the player's main hand.
 
+## kind-4
+**gui item:** Activates command blocks when players clicked this item. (talked villager kind-5)
+
+## kind-5
+**gui villager:** gui villager with kind-4
+
 ## kind-
 Has an assigned owner (player).
 -   Cannot be picked up by players other than its owner if they are nearby.

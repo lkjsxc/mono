@@ -6,17 +6,18 @@
 # On Linux, additional packages (e.g., python3-xlib or xlib-dev, python3-dev, libudev-dev, libinput-dev)
 # may be required depending on your environment.
 
-from pynput.keyboard import Key, Controller
+from pynput.keyboard import Key, Controller as KeyboardController
+from pynput.mouse import Button, Controller as MouseController
 import time
 import re
 
-# --- Global Keyboard Controller ---
-keyboard = Controller()
+# --- Global Controllers ---
+keyboard = KeyboardController()
+mouse = MouseController()
 
 # --- Settings ---
 MINECRAFT_ACTIVATE_WAIT = 3
 COMMAND_EXEC_WAIT = 0.3
-CHAT_OPEN_KEY = '/'
 COMMAND_FILE_PATH = "cb.mcfunction"
 
 INITIAL_BASE_X = 0
@@ -25,7 +26,6 @@ INITIAL_BASE_Z = 0
 
 COMMAND_BLOCK_FACING = "up"
 COMMAND_BLOCK_CONDITION = "false"
-# CHAIN_COMMAND_BLOCK_AUTO is for setting chain command blocks to 'Always Active'
 CHAIN_COMMAND_BLOCK_AUTO = "true"
 
 # --- Function Definitions ---
@@ -37,8 +37,8 @@ def focus_minecraft_window():
     time.sleep(MINECRAFT_ACTIVATE_WAIT)
 
 def send_minecraft_command(command_text):
-    keyboard.press(CHAT_OPEN_KEY)
-    keyboard.release(CHAT_OPEN_KEY)
+    mouse.press(Button.right)
+    mouse.release(Button.right)
     time.sleep(0.1)
 
     for char_to_type in command_text:
@@ -85,7 +85,8 @@ def parse_commands_from_file(filepath):
 # --- Main Processing ---
 if __name__ == "__main__":
     print("Minecraft Automatic Command Block Placement Script (Repeating: Needs Power / Chain: Always Active, uses pynput)")
-    
+    print("Chat open action is set to MOUSE RIGHT CLICK.")
+
     focus_minecraft_window()
     
     print(f"Command file: {COMMAND_FILE_PATH}")
@@ -113,17 +114,34 @@ if __name__ == "__main__":
     try:
         for instruction in parsed_instructions:
             if instruction['type'] == 'move':
-                current_base_x, new_y, current_base_z = instruction['value']
-                current_base_y = new_y
-                print(f"\nMoving: Will move to new base coordinates ({current_base_x}, Y from {current_base_y}, {current_base_z}).")
+                move_x, move_y, move_z = instruction['value']
+
+                # --- Added: Execute /fill command to clear area ---
+                # The fill command will use the X and Z from the #move command,
+                # and clear from the Y specified in #move up to Y=128.
+                if move_y <= 128: # Only fill if the starting Y is not above 128
+                    fill_command = f"fill {move_x} {move_y} {move_z} {move_x} 128 {move_z} minecraft:air replace"
+                    print(f"Clearing area with command: {fill_command}")
+                    send_minecraft_command(fill_command)
+                else:
+                    print(f"Skipping area clearing for move to ({move_x}, {move_y}, {move_z}) as Y ({move_y}) is above 128.")
+                # --- End of added code ---
+
+                current_base_x = move_x
+                current_base_y = move_y # This is the starting Y for placing command blocks
+                current_base_z = move_z
+                
+                print(f"\nMoving: New base coordinates for command blocks ({current_base_x}, Y from {current_base_y}, {current_base_z}).")
                 block_counter_current_stack = 0
                 continue
 
             elif instruction['type'] == 'command':
                 cmd_to_set_in_block = instruction['value']
                 
+                # Target coordinates for the current command block
+                # Note: current_base_y is incremented after each block placement
                 target_x = current_base_x
-                target_y = current_base_y
+                target_y = current_base_y 
                 target_z = current_base_z
                 
                 block_counter_overall += 1
@@ -136,15 +154,15 @@ if __name__ == "__main__":
                 block_id_str = ""
                 block_states_str = f"[facing={COMMAND_BLOCK_FACING.lower()},conditional={COMMAND_BLOCK_CONDITION.lower()}]"
                 
-                auto_setting_str = "" # Variable to store auto setting
+                auto_setting_str = "" 
 
                 if block_counter_current_stack == 1:
                     block_id_str = "minecraft:repeating_command_block"
-                    auto_setting_str = "0b" # Repeating needs power
+                    auto_setting_str = "0b" 
                     print(f" -> Type: Repeating (Facing:{COMMAND_BLOCK_FACING}, Conditional:{COMMAND_BLOCK_CONDITION}, Execution:Needs Power)")
                 else:
                     block_id_str = "minecraft:chain_command_block"
-                    auto_setting_str = '1b' if CHAIN_COMMAND_BLOCK_AUTO.lower() == 'true' else '0b' # Chain follows setting
+                    auto_setting_str = '1b' if CHAIN_COMMAND_BLOCK_AUTO.lower() == 'true' else '0b'
                     chain_auto_text = "Always Active" if CHAIN_COMMAND_BLOCK_AUTO.lower() == 'true' else "Needs Power"
                     print(f" -> Type: Chain (Facing:{COMMAND_BLOCK_FACING}, Conditional:{COMMAND_BLOCK_CONDITION}, Execution:{chain_auto_text})")
                 
@@ -157,7 +175,7 @@ if __name__ == "__main__":
                 
                 send_minecraft_command(minecraft_setblock_cmd)
                 
-                current_base_y += 1
+                current_base_y += 1 # Increment Y for the next block in the stack
                 
         print("\nAll instructions have been processed.")
 
