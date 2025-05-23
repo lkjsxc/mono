@@ -7,7 +7,7 @@ typedef struct {
     node_t** identlist_rbegin;
     node_t** execlist_rbegin;
     node_t* parent;
-    node_t* child_head;
+    node_t* member_rbegin;
     node_t* label_continue;
     node_t* label_break;
 } stat_t;
@@ -25,6 +25,16 @@ static void node_pushback(node_t** rbegin, node_t* node) {
 static void node_pushfront(node_t** begin, node_t* node) {
     node->next = *begin;
     *begin = node;
+}
+
+static void node_addmember(stat_t* stat, node_t* node) {
+    if(stat->member_rbegin == NULL) {
+        stat->parent->child = node;
+        stat->member_rbegin = node;
+    } else {
+        stat->member_rbegin->next = node;
+        stat->member_rbegin = node;
+    }
 }
 
 // when not found, return NULL
@@ -96,16 +106,25 @@ static result_t parse_stat_pre(stat_t stat) {
     token_t* token_itr = *stat.token_itr;
     int64_t nest = 0;
     while (nest >= 0) {
-        if (token_itr->data == NULL) {
+        if ((token_itr+1)->data == NULL) {
             return OK;
         } else if (token_eqstr(token_itr, "(")) {
             nest += 1;
-            token_itr += 1;
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
         } else if (token_eqstr(token_itr, ")")) {
             nest -= 1;
-            token_itr += 1;
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
         } else if (nest != 0) {
-            token_itr += 1;
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
         } else if (token_eqstr(token_itr, "fn")) {
             node_t* node_fn = node_new(stat.node_itr);
             if (tokenitr_next(&token_itr) == ERR) {
@@ -113,8 +132,7 @@ static result_t parse_stat_pre(stat_t stat) {
                 return ERR;
             }
             *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = token_itr};
-            node_pushfront(stat.identlist_begin, node_fn);
-            token_itr += 1;
+            node_addmember(&stat, node_fn);
         } else if (token_eqstr(token_itr, "struct")) {
             node_t* node_struct = node_new(stat.node_itr);
             if (tokenitr_next(&token_itr) == ERR) {
@@ -122,10 +140,12 @@ static result_t parse_stat_pre(stat_t stat) {
                 return ERR;
             }
             *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .token = token_itr};
-            node_pushfront(stat.identlist_begin, node_struct);
-            token_itr += 1;
+            node_addmember(&stat, node_struct);
         } else {
-            token_itr += 1;
+            if (tokenitr_next(&token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
         }
     }
 }
@@ -451,7 +471,7 @@ result_t parse(token_t* token, node_t* node) {
         .identlist_rbegin = &identlist_rbegin,
         .execlist_rbegin = &execlist_rbegin,
         .parent = struct_root,
-        .child_head = NULL,
+        .member_rbegin = NULL,
     };
 
     if (parse_stat_pre(stat) == ERR) {
