@@ -102,17 +102,11 @@ typedef struct node_t {
     token_t* token;
     struct node_t* next;
 
-    // PUSH_CONST: val, PUSH_LOCAL: offset, LABEL: bin_addr
+    // PUSH_CONST: val, STRUCT: size, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
 
-    // struct: member, goto: target
+    // STRUCT: member, (JMP,JZE): target, decl: type
     struct node_t* child;
-
-    // type
-    struct node_t* type_ptr;
-
-    // struct
-    int64_t type_size;
 } node_t;
 
 typedef struct {

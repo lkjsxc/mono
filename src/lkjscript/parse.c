@@ -76,6 +76,20 @@ static result_t tokenitr_next(token_t** token_itr) {
     }
 }
 
+static result_t tokenitr_skipsplit(token_t** token_itr) {
+    while (1) {
+        if ((*token_itr)->data == NULL) {
+            return OK;
+        } else if (token_eqstr(*token_itr, "\n")) {
+            *token_itr += 1;
+        } else if (token_eqstr(*token_itr, ",")) {
+            *token_itr += 1;
+        } else {
+            break;
+        }
+    }
+}
+
 static result_t parse_stat_pre(stat_t stat) {
     token_t* token_itr = *stat.token_itr;
     int64_t nest = 0;
@@ -112,6 +126,69 @@ static result_t parse_stat_pre(stat_t stat) {
             token_itr += 1;
         }
     }
+}
+
+static result_t parse_decl(stat_t stat, node_t** node_result) {
+    node_t* node_name = node_new(stat.node_itr);
+    node_t* node_type_body = node_new(stat.node_itr);
+    node_t* node_type_head = node_type_body;
+
+    // var, const
+    if (token_eqstr(*stat.token_itr, "var")) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        *node_name = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+    } else {
+        ERROUT;
+        return ERR;
+    }
+
+    // Explicit or not
+    if(token_eqstr(*stat.token_itr, ":")) {
+        if(tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+    } else {
+        ERROUT;
+        return ERR;
+    }
+
+    // i64, i32, i16, i8
+    if (token_eqstr(*stat.token_itr, "i64")) {
+        *node_type_body = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+    } else {
+        ERROUT;
+        return ERR;
+    }
+
+    // ptr
+    while (1) {
+        if (token_eqstr(*stat.token_itr, "*")) {
+            node_t* node_type_ptr = node_new(stat.node_itr);
+            *node_type_ptr = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
+            node_type_ptr->child = node_type_head;
+            node_type_head = node_type_ptr;
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+        } else {
+            break;
+        }
+    }
+    node_name->child = node_type_head;
+    *node_result = node_name;
 }
 
 static result_t parse_primary(stat_t stat) {
@@ -276,11 +353,66 @@ static result_t parse_stat(stat_t stat) {
             }
             *stat.identlist_rbegin = scope_identlist;
         } else if (token_eqstr(*stat.token_itr, "return")) {
+            node_t* node_return = node_new(stat.node_itr);
+            *node_return = (node_t){.nodetype = NODETYPE_RETURN, .token = *stat.token_itr};
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_expr(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            node_pushback(stat.execlist_rbegin, node_return);
+        } else if (token_eqstr(*stat.token_itr, "if")) {
+        } else if (token_eqstr(*stat.token_itr, "else")) {
+        } else if (token_eqstr(*stat.token_itr, "while")) {
         } else if (token_eqstr(*stat.token_itr, "break")) {
         } else if (token_eqstr(*stat.token_itr, "continue")) {
         } else if (token_eqstr(*stat.token_itr, "var")) {
         } else if (token_eqstr(*stat.token_itr, "fn")) {
         } else if (token_eqstr(*stat.token_itr, "struct")) {
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            node_t* node_struct = node_new(stat.node_itr);
+            node_t* node_member_rbegin = NULL;
+            *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .token = *stat.token_itr};
+            node_pushfront(stat.identlist_begin, node_struct);
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (!token_eqstr(*stat.token_itr, "(")) {
+                ERROUT;
+                return ERR;
+            }
+            while (1) {
+                node_t* node_member;
+                if (tokenitr_next(stat.token_itr) == ERR) {
+                    ERROUT;
+                    return ERR;
+                }
+                if (tokenitr_skipsplit(stat.token_itr) == ERR) {
+                    ERROUT;
+                    return ERR;
+                }
+                if (token_eqstr(*stat.token_itr, ")")) {
+                    break;
+                }
+                if (parse_decl(stat, &node_member) == ERR) {
+                    ERROUT;
+                    return ERR;
+                }
+                if (node_member_rbegin == NULL) {
+                    node_struct->child = node_member;
+                    node_member_rbegin = node_member;
+                } else {
+                    node_member_rbegin->next = node_member;
+                    node_member_rbegin = node_member;
+                }
+            }
         } else {
             if (parse_expr(stat) == ERR) {
                 ERROUT;

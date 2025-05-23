@@ -3,8 +3,13 @@
         var a: i64
         var b: i64
     )
-    struct pair_pair_int (
+    struct pair_intptr (
+        var a: i64*
+        var b: i64*
+    )
+    struct pairpair_int (
         var a: pair_int
         var b: pair_int
     )
+    return 123
 )
