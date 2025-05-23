@@ -1,11 +1,18 @@
-(
+struct obj (
+    var id: i64
+)
+
+struct pi (
+    var a: i64
+    var b: i64
+)
+
+struct stat (
     struct pi (
-        var a: i64
-        var b: i64
+        var a: i64*
     )
-    struct ppi (
-        var a: pi
-        var b: pi
+    struct g_obj (
+        var origin: pi
+        var root: obj 
     )
-    return 123
 )

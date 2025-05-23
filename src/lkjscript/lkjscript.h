@@ -107,6 +107,7 @@ typedef struct node_t {
 
     // STRUCT: member, (JMP,JZE): target, decl: type
     struct node_t* child;
+    struct node_t* parent;
 } node_t;
 
 typedef struct {
