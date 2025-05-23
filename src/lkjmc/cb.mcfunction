@@ -16,8 +16,7 @@ tag @e[type=item,tag=i1,tag=kind1,nbt={Item:{tag:{lkjmc:{kind:[2s]}}}}] add kind
 
 # comment, kind4_init
 tag @e[type=item,tag=i1,tag=kind1,nbt={Item:{tag:{lkjmc:{kind:[4s]}}}}] add kind4
-execute positioned as @e[type=item,tag=i1,tag=kind4] run summon villager ~ ~-0.4 ~ {NoGravity:1b,Silent:1b,Invulnerable:1b,NoAI:1b,CanPickUpLoot:0b,age:-2147483647,active_effects:[{id:"minecraft:invisibility",amplifier:0,duration:2147483647,show_particles:0b}]}
-
+execute positioned as @e[type=item,tag=i1,tag=kind4] run summon villager ~ ~-0.66 ~ {NoGravity:1b,Silent:1b,Invulnerable:1b,NoAI:1b,CanPickUpLoot:0b,ActiveEffects:[{Id:14b,Amplifier:0b,Duration:2147483647,ShowParticles:0b}]}
 
 # comment, kind3_tick
 execute as @a[nbt={SelectedItem:{tag:{lkjmc:{kind:[3s]}}}}] positioned as @s run summon area_effect_cloud ~ ~ ~ {Tags:["a1"]}
