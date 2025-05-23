@@ -258,7 +258,6 @@ static result_t parse_stat(stat_t stat) {
         if (token_eqstr(*stat.token_itr, ")")) {
             return OK;
         } else if (token_eqstr(*stat.token_itr, "(")) {
-            node_t* scope_execlist = *stat.execlist_rbegin;
             node_t* scope_identlist = *stat.identlist_rbegin;
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
@@ -280,7 +279,6 @@ static result_t parse_stat(stat_t stat) {
                 ERROUT;
                 return ERR;
             }
-            *stat.execlist_rbegin = scope_execlist;
             *stat.identlist_rbegin = scope_identlist;
         } else if (token_eqstr(*stat.token_itr, "return")) {
         } else if (token_eqstr(*stat.token_itr, "break")) {
