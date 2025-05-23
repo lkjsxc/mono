@@ -1,15 +1,11 @@
 (
-    struct pair_int (
+    struct pi (
         var a: i64
         var b: i64
     )
-    struct pair_intptr (
-        var a: i64*
-        var b: i64*
-    )
-    struct pairpair_int (
-        var a: pair_int
-        var b: pair_int
+    struct ppi (
+        var a: pi
+        var b: pi
     )
     return 123
 )

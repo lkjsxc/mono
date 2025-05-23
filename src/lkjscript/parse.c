@@ -6,6 +6,8 @@ typedef struct {
     node_t** identlist_begin;
     node_t** identlist_rbegin;
     node_t** execlist_rbegin;
+    node_t* parent;
+    node_t* child_head;
     node_t* label_continue;
     node_t* label_break;
 } stat_t;
@@ -130,8 +132,7 @@ static result_t parse_stat_pre(stat_t stat) {
 
 static result_t parse_decl(stat_t stat, node_t** node_result) {
     node_t* node_name = node_new(stat.node_itr);
-    node_t* node_type_body = node_new(stat.node_itr);
-    node_t* node_type_head = node_type_body;
+    node_t* node_type_head;
 
     // var, const
     if (token_eqstr(*stat.token_itr, "var")) {
@@ -150,8 +151,8 @@ static result_t parse_decl(stat_t stat, node_t** node_result) {
     }
 
     // Explicit or not
-    if(token_eqstr(*stat.token_itr, ":")) {
-        if(tokenitr_next(stat.token_itr) == ERR) {
+    if (token_eqstr(*stat.token_itr, ":")) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
         }
@@ -160,14 +161,19 @@ static result_t parse_decl(stat_t stat, node_t** node_result) {
         return ERR;
     }
 
-    // i64, i32, i16, i8
-    if (token_eqstr(*stat.token_itr, "i64")) {
+    // i64, struct
+    node_t* findstruct_result = node_find_struct(stat.identlist_begin, *stat.token_itr);
+    if (findstruct_result != NULL) {
+        node_type_head = findstruct_result;
+    } else if (token_eqstr(*stat.token_itr, "i64")) {
+        node_t* node_type_body = node_new(stat.node_itr);
         *node_type_body = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-        if (tokenitr_next(stat.token_itr) == ERR) {
-            ERROUT;
-            return ERR;
-        }
+        node_type_head = node_type_body;
     } else {
+        ERROUT;
+        return ERR;
+    }
+    if (tokenitr_next(stat.token_itr) == ERR) {
         ERROUT;
         return ERR;
     }
@@ -227,7 +233,7 @@ static result_t parse_unary(stat_t stat) {
 
 static result_t parse_binary(stat_t stat) {
     struct {
-        const char* operator;
+        const char* str;
         nodetype_t nodetype;
     } binary_operators[] = {
         {"||", NODETYPE_OR},
@@ -255,7 +261,7 @@ static result_t parse_binary(stat_t stat) {
     while (1) {
         int64_t operator_found = 0;
         for (int64_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
-            if (token_eqstr(*stat.token_itr, binary_operators[i].operator)) {
+            if (token_eqstr(*stat.token_itr, binary_operators[i].str)) {
                 operator_found = 1;
                 node_t* node_binary = node_new(stat.node_itr);
                 *node_binary = (node_t){.nodetype = binary_operators[i].nodetype, .token = *stat.token_itr};
@@ -388,12 +394,12 @@ static result_t parse_stat(stat_t stat) {
                 ERROUT;
                 return ERR;
             }
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
             while (1) {
                 node_t* node_member;
-                if (tokenitr_next(stat.token_itr) == ERR) {
-                    ERROUT;
-                    return ERR;
-                }
                 if (tokenitr_skipsplit(stat.token_itr) == ERR) {
                     ERROUT;
                     return ERR;
@@ -432,9 +438,11 @@ result_t parse(token_t* token, node_t* node) {
     node_t* identlist_root = node_new(&node_itr);
     node_t* identlist_begin = identlist_root;
     node_t* identlist_rbegin = identlist_root;
+    node_t* struct_root = node_new(&node_itr);
 
     *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
     *identlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
+    *struct_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
 
     stat_t stat = {
         .token_itr = &token_itr,
@@ -442,6 +450,8 @@ result_t parse(token_t* token, node_t* node) {
         .identlist_begin = &identlist_begin,
         .identlist_rbegin = &identlist_rbegin,
         .execlist_rbegin = &execlist_rbegin,
+        .parent = struct_root,
+        .child_head = NULL,
     };
 
     if (parse_stat_pre(stat) == ERR) {
