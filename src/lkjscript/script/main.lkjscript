@@ -1,18 +1,29 @@
-struct obj (
+struct obj_t (
     var id: i64
 )
 
-struct pi (
-    var a: i64
-    var b: i64
+struct pi_t (
+    var a: i64*
 )
 
-struct stat (
-    struct pi (
-        var a: i64*
+struct stat_t (
+    struct pi_t (
+        var a: i64
+        var b: i64
     )
-    struct g_obj (
-        var origin: pi
-        var root: obj 
+    struct gobj_t (
+        var origin: pi_t
+        var root: obj_t
     )
+    var data: gobj_t
+    fn print(var stat: stat_t*) (
+        _print(stat->a.origin.a)
+        _print(stat->a.origin.b)
+        _print(stat->a.obj.id)
+    )
+)
+
+fn main() (
+    var stat: stat_t
+    stat.print()
 )
