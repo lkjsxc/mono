@@ -10,6 +10,9 @@ typedef struct {
     node_t* label_break;
 } stat_t;
 
+static result_t parse_expr(stat_t stat);
+static result_t parse_stat(stat_t stat);
+
 static node_t* node_new(node_t** node_itr) {
     node_t* node = (*node_itr)++;
     return node;
@@ -124,6 +127,7 @@ static result_t parse_stat_pre(stat_t stat) {
             }
         }
     }
+    return OK;
 }
 
 static result_t parse_var(stat_t stat) {
@@ -192,6 +196,51 @@ static result_t parse_var(stat_t stat) {
         }
     }
     node_var->child = node_type_head;
+    return OK;
+}
+
+static result_t parse_struct(stat_t stat) {
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    node_t* node_struct = node_find(stat.parent, *stat.token_itr, NODETYPE_STRUCT);
+    if (node_struct == NULL) {
+        ERROUT;
+        return ERR;
+    }
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    stat_t stat2 = {
+        .token_itr = stat.token_itr,
+        .node_itr = stat.node_itr,
+        .execlist_rbegin = stat.execlist_rbegin,
+        .parent = node_struct,
+        .member_rbegin = NULL,
+    };
+    if (!token_eqstr(*stat.token_itr, "(")) {
+        ERROUT;
+        return ERR;
+    }
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (parse_stat(stat2) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (!token_eqstr(*stat.token_itr, ")")) {
+        ERROUT;
+        return ERR;
+    }
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    return OK;
 }
 
 static result_t parse_primary(stat_t stat) {
@@ -318,10 +367,10 @@ static result_t parse_expr(stat_t stat) {
 }
 
 static result_t parse_stat(stat_t stat) {
-            if (parse_stat_pre(stat) == ERR) {
-                ERROUT;
-                return ERR;
-            }
+    if (parse_stat_pre(stat) == ERR) {
+        ERROUT;
+        return ERR;
+    }
     while (1) {
         while (1) {
             if ((*stat.token_itr)->data == NULL) {
@@ -387,43 +436,7 @@ static result_t parse_stat(stat_t stat) {
             }
         } else if (token_eqstr(*stat.token_itr, "fn")) {
         } else if (token_eqstr(*stat.token_itr, "struct")) {
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            node_t* node_struct = node_find(stat.parent, *stat.token_itr, NODETYPE_STRUCT);
-            if (node_struct == NULL) {
-                ERROUT;
-                return ERR;
-            }
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            stat_t stat2 = {
-                .token_itr = stat.token_itr,
-                .node_itr = stat.node_itr,
-                .execlist_rbegin = stat.execlist_rbegin,
-                .parent = node_struct,
-                .member_rbegin = NULL,
-            };
-            if (!token_eqstr(*stat.token_itr, "(")) {
-                ERROUT;
-                return ERR;
-            }
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (parse_stat(stat2) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (!token_eqstr(*stat.token_itr, ")")) {
-                ERROUT;
-                return ERR;
-            }
-            if (tokenitr_next(stat.token_itr) == ERR) {
+            if (parse_struct(stat) == ERR) {
                 ERROUT;
                 return ERR;
             }
@@ -455,11 +468,7 @@ result_t parse(token_t* token, node_t* node) {
         .parent = root,
         .member_rbegin = NULL,
     };
-
-    if (parse_stat_pre(stat) == ERR) {
-        ERROUT;
-        return ERR;
-    }
+    
     if (parse_stat(stat) == ERR) {
         ERROUT;
         return ERR;
