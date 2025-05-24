@@ -20,6 +20,7 @@
         write(STDERR_FILENO, "}}\n", 4);                  \
     }
 
+typedef unsigned char uint8_t;
 typedef long long int int64_t;
 
 typedef enum {
@@ -86,7 +87,7 @@ typedef enum {
     NODETYPE_WRITE,
     NODETYPE_USLEEP,
 
-    // ident
+    // parse
     NODETYPE_VAR,
     NODETYPE_FN,
     NODETYPE_STRUCT,
@@ -111,14 +112,14 @@ typedef struct node_t {
 } node_t;
 
 typedef struct {
-    int64_t bin[MEM_SIZE / sizeof(int64_t) / 6];
+    uint8_t bin[MEM_SIZE / sizeof(uint8_t) / 6];
     char src[MEM_SIZE / 6];
     token_t token[MEM_SIZE / sizeof(token_t) / 6];
     node_t node[MEM_SIZE / sizeof(node_t) / 6];
 } compile_t;
 
 typedef union {
-    int64_t i64[MEM_SIZE];
+    uint8_t u8[MEM_SIZE];
     compile_t compile;
 } mem_t;
 
