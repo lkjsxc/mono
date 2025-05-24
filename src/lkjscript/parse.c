@@ -318,6 +318,10 @@ static result_t parse_expr(stat_t stat) {
 }
 
 static result_t parse_stat(stat_t stat) {
+            if (parse_stat_pre(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
     while (1) {
         while (1) {
             if ((*stat.token_itr)->data == NULL) {
@@ -344,10 +348,6 @@ static result_t parse_stat(stat_t stat) {
                 .member_rbegin = NULL,
             };
             if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (parse_stat_pre(stat2) == ERR) {
                 ERROUT;
                 return ERR;
             }
@@ -407,11 +407,11 @@ static result_t parse_stat(stat_t stat) {
                 .parent = node_struct,
                 .member_rbegin = NULL,
             };
-            if (tokenitr_next(stat.token_itr) == ERR) {
+            if (!token_eqstr(*stat.token_itr, "(")) {
                 ERROUT;
                 return ERR;
             }
-            if (parse_stat_pre(stat2) == ERR) {
+            if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
             }
