@@ -32,6 +32,9 @@ Activates command blocks when held in the player's main hand.
 ## kind-5
 **gui villager:** gui villager with kind-4
 
+## kind-6
+Activates command blocks and kind6 tag will be removed from this item. when it exists as an entity. 
+
 ## kind-
 Has an assigned owner (player).
 -   Cannot be picked up by players other than its owner if they are nearby.

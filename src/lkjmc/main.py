@@ -39,7 +39,7 @@ def focus_minecraft_window():
 def send_minecraft_command(command_text):
     mouse.press(Button.right)
     mouse.release(Button.right)
-    time.sleep(0.1)
+    time.sleep(0.4)
 
     for char_to_type in command_text:
         keyboard.type(char_to_type)
