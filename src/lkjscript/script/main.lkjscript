@@ -17,9 +17,9 @@ struct stat_t (
     )
     var data: gobj_t
     fn print(var stat: stat_t*) (
-        _print(stat->a.origin.a)
-        _print(stat->a.origin.b)
-        _print(stat->a.obj.id)
+        _print(stat->origin.a)
+        _print(stat->origin.b)
+        _print(stat->obj.id)
     )
 )
 
