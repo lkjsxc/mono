@@ -57,7 +57,7 @@ tag @e[type=item,tag=i1] remove i1
 execute store result block ~ ~ ~ auto byte 0 as @e[type=item,nbt={Item:{tag:{lkjmc:{cbpos:[2.0d,1.0d,5.0d]}}}}] run say Good Morning World!!
 
 # move, 02, 01, 08
-summon item ~ ~1 ~ {NoGravity:1b,PickupDelay:32767,Item:{id:"minecraft:iron_axe",Count:1b,tag:{lkjmc:{k00:1b,k01:1b,k04:1b,cbpos:[2.0d,1.0d,5.0d]}}}}
+summon item ~ ~1 ~ {NoGravity:1b,Age:-32768,PickupDelay:32767,Item:{id:"minecraft:iron_axe",Count:1b,tag:{lkjmc:{k00:1b,k01:1b,k04:1b,cbpos:[2.0d,1.0d,5.0d]}}}}
 
 # comment, </test>
 
