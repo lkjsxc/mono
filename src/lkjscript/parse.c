@@ -129,7 +129,7 @@ static result_t parse_stat_pre(stat_t stat) {
 static result_t parse_var(stat_t stat) {
     node_t* node_var = node_new(stat.node_itr);
     node_t* node_type_head;
-    
+
     // var, const
     if (token_eqstr(*stat.token_itr, "var")) {
         if (tokenitr_next(stat.token_itr) == ERR) {
@@ -140,7 +140,7 @@ static result_t parse_var(stat_t stat) {
         ERROUT;
         return ERR;
     }
-    
+
     // ident
     *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
     if (tokenitr_next(stat.token_itr) == ERR) {
@@ -148,7 +148,7 @@ static result_t parse_var(stat_t stat) {
         return ERR;
     }
     node_addmember(stat.parent, node_var);
-    
+
     // auto type
     if (!token_eqstr(*stat.token_itr, ":")) {
         ERROUT;
@@ -333,15 +333,25 @@ static result_t parse_stat(stat_t stat) {
         if (token_eqstr(*stat.token_itr, ")")) {
             return OK;
         } else if (token_eqstr(*stat.token_itr, "(")) {
+            node_t* node_scope = node_new(stat.node_itr);
+            *node_scope = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
+            node_addmember(stat.parent, node_scope);
+            stat_t stat2 = {
+                .token_itr = stat.token_itr,
+                .node_itr = stat.node_itr,
+                .execlist_rbegin = stat.execlist_rbegin,
+                .parent = node_scope,
+                .member_rbegin = NULL,
+            };
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
             }
-            if (parse_stat_pre(stat) == ERR) {
+            if (parse_stat_pre(stat2) == ERR) {
                 ERROUT;
                 return ERR;
             }
-            if (parse_stat(stat) == ERR) {
+            if (parse_stat(stat2) == ERR) {
                 ERROUT;
                 return ERR;
             }
@@ -382,6 +392,10 @@ static result_t parse_stat(stat_t stat) {
                 return ERR;
             }
             node_t* node_struct = node_find(stat.parent, *stat.token_itr, NODETYPE_STRUCT);
+            if (node_struct == NULL) {
+                ERROUT;
+                return ERR;
+            }
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
@@ -393,7 +407,23 @@ static result_t parse_stat(stat_t stat) {
                 .parent = node_struct,
                 .member_rbegin = NULL,
             };
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_stat_pre(stat2) == ERR) {
+                ERROUT;
+                return ERR;
+            }
             if (parse_stat(stat2) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (!token_eqstr(*stat.token_itr, ")")) {
+                ERROUT;
+                return ERR;
+            }
+            if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
             }
