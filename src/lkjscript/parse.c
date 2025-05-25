@@ -5,7 +5,6 @@ typedef struct {
     node_t** node_itr;
     node_t** execlist_rbegin;
     node_t* parent;
-    node_t* member_rbegin;
     node_t* label_continue;
     node_t* label_break;
 } stat_t;
@@ -173,7 +172,6 @@ static result_t parse_var(stat_t stat) {
         .node_itr = stat.node_itr,
         .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_var,
-        .member_rbegin = NULL,
     };
 
     // var, const
@@ -223,7 +221,6 @@ static result_t parse_fn(stat_t stat) {
         .node_itr = stat.node_itr,
         .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_fn,
-        .member_rbegin = NULL,
     };
     if (node_fn == NULL) {
         ERROUT;
@@ -303,7 +300,6 @@ static result_t parse_struct(stat_t stat) {
         .node_itr = stat.node_itr,
         .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_struct,
-        .member_rbegin = NULL,
     };
     if (node_struct == NULL) {
         ERROUT;
@@ -487,7 +483,6 @@ static result_t parse_stmt(stat_t stat) {
                 .node_itr = stat.node_itr,
                 .execlist_rbegin = stat.execlist_rbegin,
                 .parent = node_scope,
-                .member_rbegin = NULL,
             };
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
@@ -563,7 +558,6 @@ result_t parse(token_t* token, node_t* node) {
         .node_itr = &node_itr,
         .execlist_rbegin = &execlist_rbegin,
         .parent = root,
-        .member_rbegin = NULL,
     };
 
     if (parse_stmt(stat) == ERR) {
