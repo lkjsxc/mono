@@ -211,10 +211,12 @@ static result_t parse_var(stat_t stat) {
 }
 
 static result_t parse_fn(stat_t stat) {
+    // fn
     if (tokenitr_next(stat.token_itr) == ERR) {
         ERROUT;
         return ERR;
     }
+    // fn_name
     node_t* node_fn = node_find(stat.parent, *stat.token_itr, NODETYPE_FN);
     stat_t stat2 = {
         .token_itr = stat.token_itr,
@@ -231,6 +233,7 @@ static result_t parse_fn(stat_t stat) {
         ERROUT;
         return ERR;
     }
+    // args
     if (!token_eqstr(*stat.token_itr, "(")) {
         ERROUT;
         return ERR;
@@ -251,6 +254,7 @@ static result_t parse_fn(stat_t stat) {
         ERROUT;
         return ERR;
     }
+    // explicit return_type
     if (!token_eqstr(*stat.token_itr, "->")) {
         ERROUT;
         return ERR;
@@ -259,10 +263,12 @@ static result_t parse_fn(stat_t stat) {
         ERROUT;
         return ERR;
     }
+    // return_type
     if (parse_type(stat2) == ERR) {
         ERROUT;
         return ERR;
     }
+    // stmt
     if (!token_eqstr(*stat.token_itr, "(")) {
         ERROUT;
         return ERR;
