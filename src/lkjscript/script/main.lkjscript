@@ -16,14 +16,14 @@ struct stat_t (
         var root: obj_t
     )
     var data: gobj_t
-    fn print(var stat: stat_t*) (
+    fn print(var stat: stat_t*) -> i64 (
         _print(stat->origin.a)
         _print(stat->origin.b)
         _print(stat->obj.id)
     )
 )
 
-fn main() (
+fn main() -> i64 (
     var stat: stat_t
     stat.print()
 )
