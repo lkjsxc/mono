@@ -54,6 +54,8 @@
 ## global_obj
 <!-- 0769. = obj* obj_origin -->
 0770. = obj* obj_camera
+0771. = obj* obj_mouse
+0772. = obj* obj_ui_start
 
 # obj
 
@@ -76,6 +78,9 @@
 23. float visibility
 24. int color
 25. float brightness
+
+33. float collision_x
+34. float collision_y
 
 # struct
 
