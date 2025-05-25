@@ -1,5 +1,5 @@
 .vscode
 .devcontainer
 .venv
-src/lkjscript/lkjscript
-src/lkjscript/lkjscript.exe
+lkjscript/lkjscript
+lkjscript/lkjscript.exe
