@@ -94,4 +94,11 @@ map {
     node* root
     int size
 }
+node {
+    node* left
+    node* right
+    float priority
+    any key
+    any val
+}
 ```
