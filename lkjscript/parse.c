@@ -333,15 +333,6 @@ static result_t parse_struct(stat_t stat) {
 }
 
 static result_t parse_structmember(stat_t stat, node_t* node_struct) {
-    node_t* node_structmember = node_new(stat.node_itr);
-    *node_structmember = (node_t){.nodetype = NODETYPE_STRUCT_MEMBER, .token = *stat.token_itr};
-    for(node_t* member_itr = node_struct->child; member_itr != NULL; member_itr = member_itr->next) {
-        if (token_eq(member_itr->token, *stat.token_itr)) {
-            node_structmember->child = member_itr;
-        }
-    }
-    node_pushback(stat.execlist_rbegin, node_structmember);
-    return OK;
 }
 
 static result_t parse_primary(stat_t stat) {
@@ -417,35 +408,7 @@ static result_t parse_postfix(stat_t stat) {
             return OK;
         }
         if (token_eqstr(*stat.token_itr, ".")) {
-            stat_t stat2 = {
-                .token_itr = stat.token_itr,
-                .node_itr = stat.node_itr,
-                .execlist_rbegin = stat.execlist_rbegin,
-                .parent = stat.execlist_rbegin,
-            };
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if(parse_structmember(stat, stat.parent) == ERR) {
-                ERROUT;
-                return ERR;
-            }
         } else if (token_eqstr(*stat.token_itr, "->")) {
-            node_t* node_deref = node_new(stat.node_itr);
-            node_t* node_structmember = node_new(stat.node_itr);
-            *node_deref = (node_t){.nodetype = NODETYPE_DEREF, .token = *stat.token_itr};
-            *node_structmember = (node_t){.nodetype = NODETYPE_STRUCT_MEMBER, .token = *stat.token_itr};
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (parse_primary(stat) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            node_pushback(stat.execlist_rbegin, node_deref);
-            node_pushback(stat.execlist_rbegin, node_structmember);
         } else {
             return OK;  // no more postfix operators
         }
