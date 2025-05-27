@@ -332,25 +332,124 @@ static result_t parse_struct(stat_t stat) {
     return OK;
 }
 
+static result_t parse_structmember(stat_t stat, node_t* node_struct) {
+    node_t* node_structmember = node_new(stat.node_itr);
+    *node_structmember = (node_t){.nodetype = NODETYPE_STRUCT_MEMBER, .token = *stat.token_itr};
+    for(node_t* member_itr = node_struct->child; member_itr != NULL; member_itr = member_itr->next) {
+        if (token_eq(member_itr->token, *stat.token_itr)) {
+            node_structmember->child = member_itr;
+        }
+    }
+    node_pushback(stat.execlist_rbegin, node_structmember);
+    return OK;
+}
+
 static result_t parse_primary(stat_t stat) {
     node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
-    node_t* findfn_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_FN);
     if (findvar_result != NULL) {
         node_t* node_var = node_new(stat.node_itr);
-        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr};
+        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr, .child = findvar_result};
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
         }
         node_pushback(stat.execlist_rbegin, node_var);
-    } else if (findfn_result != NULL) {
     } else if (token_isdigit(*stat.token_itr)) {
+        node_t* node_digit = node_new(stat.node_itr);
+        *node_digit = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
+        // set val (implement later)
+        node_pushback(stat.execlist_rbegin, node_digit);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
     } else if (token_isstr(*stat.token_itr)) {
+        node_t* node_str = node_new(stat.node_itr);
+        *node_str = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
+        // set val (implement later)
+        node_pushback(stat.execlist_rbegin, node_str);
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
     } else {
         ERROUT;
         return ERR;
     }
     return OK;
+}
+
+static result_t parse_postfix(stat_t stat) {
+    while (1) {
+        node_t* findfn_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_FN);
+        if (parse_primary(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (findfn_result != NULL) {
+            node_t* node_fn = node_new(stat.node_itr);
+            *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = *stat.token_itr, .child = findfn_result};
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (!token_eqstr(*stat.token_itr, "(")) {
+                ERROUT;
+                return ERR;
+            }
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_expr(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (!token_eqstr(*stat.token_itr, ")")) {
+                ERROUT;
+                return ERR;
+            }
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            node_pushback(stat.execlist_rbegin, node_fn);
+            return OK;
+        }
+        if (token_eqstr(*stat.token_itr, ".")) {
+            stat_t stat2 = {
+                .token_itr = stat.token_itr,
+                .node_itr = stat.node_itr,
+                .execlist_rbegin = stat.execlist_rbegin,
+                .parent = stat.execlist_rbegin,
+            };
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if(parse_structmember(stat, stat.parent) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+        } else if (token_eqstr(*stat.token_itr, "->")) {
+            node_t* node_deref = node_new(stat.node_itr);
+            node_t* node_structmember = node_new(stat.node_itr);
+            *node_deref = (node_t){.nodetype = NODETYPE_DEREF, .token = *stat.token_itr};
+            *node_structmember = (node_t){.nodetype = NODETYPE_STRUCT_MEMBER, .token = *stat.token_itr};
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_primary(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            node_pushback(stat.execlist_rbegin, node_deref);
+            node_pushback(stat.execlist_rbegin, node_structmember);
+        } else {
+            return OK;  // no more postfix operators
+        }
+    }
 }
 
 static result_t parse_unary(stat_t stat) {
@@ -359,7 +458,7 @@ static result_t parse_unary(stat_t stat) {
     } else if (token_eqstr(*stat.token_itr, "-")) {
     } else if (token_eqstr(*stat.token_itr, "!")) {
     } else {
-        if (parse_primary(stat) == ERR) {
+        if (parse_postfix(stat) == ERR) {
             ERROUT;
             return ERR;
         }

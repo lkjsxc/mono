@@ -91,6 +91,7 @@ typedef enum {
     NODETYPE_VAR,
     NODETYPE_FN,
     NODETYPE_STRUCT,
+    NODETYPE_STRUCT_MEMBER,
 
     NODETYPE_LABEL,
     NODETYPE_LABEL_SCOPE_OPEN,
@@ -106,7 +107,7 @@ typedef struct node_t {
     // PUSH_CONST: val, STRUCT: size, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
 
-    // STRUCT: member, FN: type and stmt, (JMP,JZE): target, decl: type
+    // STRUCT: member, FN: type and stmt, (JMP,JZE,CALL): target, decl: type
     struct node_t* child;
     struct node_t* parent;
 } node_t;
