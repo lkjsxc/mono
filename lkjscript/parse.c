@@ -348,7 +348,6 @@ static result_t parse_primary(stat_t stat) {
     } else if (token_isdigit(*stat.token_itr)) {
         node_t* node_digit = node_new(stat.node_itr);
         *node_digit = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
-        // set val (implement later)
         node_pushback(stat.execlist_rbegin, node_digit);
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
@@ -357,7 +356,6 @@ static result_t parse_primary(stat_t stat) {
     } else if (token_isstr(*stat.token_itr)) {
         node_t* node_str = node_new(stat.node_itr);
         *node_str = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
-        // set val (implement later)
         node_pushback(stat.execlist_rbegin, node_str);
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;

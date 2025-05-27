@@ -3,6 +3,7 @@
 #include "readsrc.c"
 #include "tokenize.c"
 #include "parse.c"
+#include "genbin.c"
 
 static mem_t mem;
 
@@ -17,6 +18,10 @@ result_t compile() {
     }
     if (parse(mem.compile.token, mem.compile.node) == ERR) {
         write(STDERR_FILENO, "Error parsing tokens\n", 21);
+        return ERR;
+    }
+    if (genbin(mem.compile.node, mem.compile.bin) == ERR) {
+        write(STDERR_FILENO, "Error generating binary\n", 24);
         return ERR;
     }
     return OK;
