@@ -615,12 +615,7 @@ result_t parse(token_t* token, node_t* node) {
     token_t* token_itr = token;
     node_t* node_itr = node;
 
-    node_t* execlist_root = node_new(&node_itr);
     node_t* root = node_new(&node_itr);
-    node_t* execlist_begin = execlist_root;
-    node_t* execlist_rbegin = execlist_root;
-
-    *execlist_root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
     *root = (node_t){.nodetype = NODETYPE_NOP, .token = NULL};
 
     stat_t stat = {
