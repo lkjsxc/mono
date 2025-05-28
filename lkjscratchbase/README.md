@@ -56,6 +56,7 @@
 0770. = obj* obj_camera
 0771. = obj* obj_mouse
 0772. = obj* obj_ui_start
+0773. = obj* obj_ui_menuopen
 
 # obj
 
