@@ -3,7 +3,6 @@
 typedef struct {
     token_t** token_itr;
     node_t** node_itr;
-    node_t** execlist_rbegin;
     node_t* parent;
     node_t* label_continue;
     node_t* label_break;
@@ -170,8 +169,9 @@ static result_t parse_var(stat_t stat) {
     stat_t stat2 = (stat_t){
         .token_itr = stat.token_itr,
         .node_itr = stat.node_itr,
-        .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_var,
+        .label_continue = NULL,
+        .label_break = NULL,
     };
 
     // var, const
@@ -219,8 +219,9 @@ static result_t parse_fn(stat_t stat) {
     stat_t stat2 = {
         .token_itr = stat.token_itr,
         .node_itr = stat.node_itr,
-        .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_fn,
+        .label_continue = NULL,
+        .label_break = NULL,
     };
     if (node_fn == NULL) {
         ERROUT;
@@ -298,8 +299,9 @@ static result_t parse_struct(stat_t stat) {
     stat_t stat2 = {
         .token_itr = stat.token_itr,
         .node_itr = stat.node_itr,
-        .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_struct,
+        .label_continue = NULL,
+        .label_break = NULL,
     };
     if (node_struct == NULL) {
         ERROUT;
@@ -342,8 +344,9 @@ static result_t parse_block(stat_t stat) {
     stat_t stat2 = {
         .token_itr = stat.token_itr,
         .node_itr = stat.node_itr,
-        .execlist_rbegin = stat.execlist_rbegin,
         .parent = node_block,
+        .label_continue = stat.label_continue,
+        .label_break = stat.label_break,
     };
     if (tokenitr_next(stat.token_itr) == ERR) {
         ERROUT;
@@ -372,11 +375,11 @@ static result_t parse_primary(stat_t stat) {
             ERROUT;
             return ERR;
         }
-        node_pushback(stat.execlist_rbegin, node_var);
+        node_addmember(stat.parent, node_var);
     } else if (token_isdigit(*stat.token_itr)) {
         node_t* node_digit = node_new(stat.node_itr);
         *node_digit = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
-        node_pushback(stat.execlist_rbegin, node_digit);
+        node_addmember(stat.parent, node_digit);
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
@@ -384,7 +387,7 @@ static result_t parse_primary(stat_t stat) {
     } else if (token_isstr(*stat.token_itr)) {
         node_t* node_str = node_new(stat.node_itr);
         *node_str = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
-        node_pushback(stat.execlist_rbegin, node_str);
+        node_addmember(stat.parent, node_str);
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
@@ -404,8 +407,8 @@ static result_t parse_postfix(stat_t stat) {
             return ERR;
         }
         if (findfn_result != NULL) {
-            node_t* node_fn = node_new(stat.node_itr);
-            *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = *stat.token_itr, .child = findfn_result};
+            node_t* node_call = node_new(stat.node_itr);
+            *node_call = (node_t){.nodetype = NODETYPE_FN, .token = *stat.token_itr, .child = findfn_result};
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
@@ -430,7 +433,7 @@ static result_t parse_postfix(stat_t stat) {
                 ERROUT;
                 return ERR;
             }
-            node_pushback(stat.execlist_rbegin, node_fn);
+            node_addmember(stat.parent, node_call);
             return OK;
         }
         if (token_eqstr(*stat.token_itr, ".")) {
@@ -496,7 +499,7 @@ static result_t parse_binary(stat_t stat) {
                     ERROUT;
                     return ERR;
                 }
-                node_pushback(stat.execlist_rbegin, node_binary);
+                node_addmember(stat.parent, node_binary);
             }
         }
         if (operator_found == 0) {
@@ -521,7 +524,7 @@ static result_t parse_assign(stat_t stat) {
             ERROUT;
             return ERR;
         }
-        node_pushback(stat.execlist_rbegin, node_assign);
+        node_addmember(stat.parent, node_assign);
     }
     return OK;
 }
@@ -578,7 +581,7 @@ static result_t parse_stmt(stat_t stat) {
                 ERROUT;
                 return ERR;
             }
-            node_pushback(stat.execlist_rbegin, node_return);
+            node_addmember(stat.parent, node_return);
         } else if (token_eqstr(*stat.token_itr, "if")) {
         } else if (token_eqstr(*stat.token_itr, "else")) {
         } else if (token_eqstr(*stat.token_itr, "while")) {
@@ -623,8 +626,9 @@ result_t parse(token_t* token, node_t* node) {
     stat_t stat = {
         .token_itr = &token_itr,
         .node_itr = &node_itr,
-        .execlist_rbegin = &execlist_rbegin,
         .parent = root,
+        .label_continue = NULL,
+        .label_break = NULL,
     };
 
     if (parse_stmt(stat) == ERR) {
