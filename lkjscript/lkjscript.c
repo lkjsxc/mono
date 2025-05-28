@@ -4,6 +4,7 @@
 #include "tokenize.c"
 #include "parse.c"
 #include "genbin.c"
+#include "exec.c"
 
 static mem_t mem;
 
@@ -30,6 +31,10 @@ result_t compile() {
 int main() {
     if (compile() == ERR) {
         write(STDERR_FILENO, "Compilation failed\n", 19);
+        return 1;
+    }
+    if(exec() == ERR) {
+        write(STDERR_FILENO, "Execution failed\n", 19);
         return 1;
     }
     return 0;

@@ -335,6 +335,34 @@ static result_t parse_struct(stat_t stat) {
 static result_t parse_structmember(stat_t stat, node_t* node_struct) {
 }
 
+static result_t parse_block(stat_t stat) {
+    node_t* node_block = node_new(stat.node_itr);
+    *node_block = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
+    node_addmember(stat.parent, node_block);
+    stat_t stat2 = {
+        .token_itr = stat.token_itr,
+        .node_itr = stat.node_itr,
+        .execlist_rbegin = stat.execlist_rbegin,
+        .parent = node_block,
+    };
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (parse_stmt(stat2) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+    if (!token_eqstr(*stat.token_itr, ")")) {
+        ERROUT;
+        return ERR;
+    }
+    if (tokenitr_next(stat.token_itr) == ERR) {
+        ERROUT;
+        return ERR;
+    }
+}
+
 static result_t parse_primary(stat_t stat) {
     node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
     if (findvar_result != NULL) {
@@ -535,28 +563,7 @@ static result_t parse_stmt(stat_t stat) {
         if (token_eqstr(*stat.token_itr, ")")) {
             return OK;
         } else if (token_eqstr(*stat.token_itr, "(")) {
-            node_t* node_scope = node_new(stat.node_itr);
-            *node_scope = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-            node_addmember(stat.parent, node_scope);
-            stat_t stat2 = {
-                .token_itr = stat.token_itr,
-                .node_itr = stat.node_itr,
-                .execlist_rbegin = stat.execlist_rbegin,
-                .parent = node_scope,
-            };
-            if (tokenitr_next(stat.token_itr) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (parse_stmt(stat2) == ERR) {
-                ERROUT;
-                return ERR;
-            }
-            if (!token_eqstr(*stat.token_itr, ")")) {
-                ERROUT;
-                return ERR;
-            }
-            if (tokenitr_next(stat.token_itr) == ERR) {
+            if (parse_block(stat) == ERR) {
                 ERROUT;
                 return ERR;
             }
