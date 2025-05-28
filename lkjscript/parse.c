@@ -79,8 +79,8 @@ static result_t tokenitr_skipsplit(token_t** token_itr) {
     }
 }
 
-static result_t parse_stmt_pre(stat_t stat) {
-    token_t* token_itr = *stat.token_itr;
+static result_t parse_stmt_pre(stat_t stat, token_t* token_start) {
+    token_t* token_itr = token_start;
     int64_t nest = 0;
     while (nest >= 0) {
         if ((token_itr + 1)->data == NULL) {
@@ -547,7 +547,8 @@ static result_t parse_expr(stat_t stat) {
 }
 
 static result_t parse_stmt(stat_t stat) {
-    if (parse_stmt_pre(stat) == ERR) {
+    token_t* token_start = *stat.token_itr;
+    if (parse_stmt_pre(stat, token_start) == ERR) {
         ERROUT;
         return ERR;
     }
