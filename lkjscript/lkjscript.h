@@ -99,7 +99,7 @@ typedef enum {
     NODETYPE_LABEL_GLOBAL_END,
 } nodetype_t;
 
-typedef struct node_t {
+typedef struct {
     nodetype_t nodetype;
     token_t* token;
     struct node_t* next;
