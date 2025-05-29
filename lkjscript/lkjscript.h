@@ -49,7 +49,7 @@ typedef enum {
     NODETYPE_PUSH_LOCAL_VAL,
     NODETYPE_PUSH_LOCAL_ADDR,
     NODETYPE_JMP,
-    NODETYPE_JZ,
+    NODETYPE_JZE,
     NODETYPE_CALL,
     NODETYPE_RETURN,
 
@@ -110,6 +110,9 @@ typedef struct node_t {
     // STRUCT: member, FN: type and stmt, (JMP,JZE,CALL): target, decl: type
     struct node_t* child;
     struct node_t* parent;
+
+    // bin index
+    int64_t bin;
 } node_t;
 
 typedef struct {
