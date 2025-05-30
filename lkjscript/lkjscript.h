@@ -9,15 +9,15 @@
 
 #define ERROUT3(n) #n
 #define ERROUT2(n) ERROUT3(n)
-#define ERROUT                                          \
-    {                                                     \
-        write(STDERR_FILENO, "{Error: { file: \"", 18);      \
-        write(STDERR_FILENO, __FILE__, sizeof(__FILE__)); \
-        write(STDERR_FILENO, "\", func: \"", 11);            \
-        write(STDERR_FILENO, __func__, sizeof(__func__)); \
-        write(STDERR_FILENO, "\", line: ", 10);            \
+#define ERROUT                                                              \
+    {                                                                       \
+        write(STDERR_FILENO, "{Error: { file: \"", 18);                     \
+        write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                   \
+        write(STDERR_FILENO, "\", func: \"", 11);                           \
+        write(STDERR_FILENO, __func__, sizeof(__func__));                   \
+        write(STDERR_FILENO, "\", line: ", 10);                             \
         write(STDERR_FILENO, ERROUT2(__LINE__), sizeof(ERROUT2(__LINE__))); \
-        write(STDERR_FILENO, "}}\n", 4);                  \
+        write(STDERR_FILENO, "}}\n", 4);                                    \
     }
 
 typedef unsigned char uint8_t;
@@ -29,15 +29,17 @@ typedef enum {
 } result_t;
 
 typedef enum {
+    GLOBALMEM_NULL,
+    GLOBALMEM_IP,
+    GLOBALMEM_SP,
+    GLOBALMEM_BP,
+} globalmem_t;
+
+typedef enum {
     TOKENTYPE_NUM,
     TOKENTYPE_STR,
     TOKENTYPE_IDENT,
 } tokentype_t;
-
-typedef struct {
-    const char* data;
-    int64_t size;
-} token_t;
 
 typedef enum {
     NODETYPE_NULL,
@@ -98,6 +100,11 @@ typedef enum {
     NODETYPE_LABEL_SCOPE_CLOSE,
     NODETYPE_LABEL_GLOBAL_END,
 } nodetype_t;
+
+typedef struct {
+    const char* data;
+    int64_t size;
+} token_t;
 
 typedef struct node_t {
     nodetype_t nodetype;
