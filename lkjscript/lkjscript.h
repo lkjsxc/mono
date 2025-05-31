@@ -29,10 +29,11 @@ typedef enum {
 } result_t;
 
 typedef enum {
-    GLOBALMEM_NULL,
-    GLOBALMEM_IP,
-    GLOBALMEM_SP,
-    GLOBALMEM_BP,
+    GLOBALOFFSET_NULL = 0,
+    GLOBALOFFSET_IP = 8,
+    GLOBALOFFSET_SP = 16,
+    GLOBALOFFSET_BP = 24,
+    GLOBALOFFSET_INST = 256,
 } globalmem_t;
 
 typedef enum {

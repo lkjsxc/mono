@@ -1,7 +1,15 @@
 #include "lkjscript.h"
 
+static inline int64_t* provide_ip(uint8_t* mem) {
+    return (int64_t*)((uint8_t*)(mem + GLOBALOFFSET_IP));
+}
+
+static inline void* provide_inst(uint8_t* mem, int64_t offset) {
+    return (void*)(mem + *provide_ip(mem) + offset);
+}
+
 result_t exec(uint8_t* mem) {
-    nodetype_t opcode = *(nodetype_t*)provide_ip(mem);
+    uint8_t opcode = *(uint8_t*)provide_inst(mem, 0);
     while (1) {
         switch (opcode) {
             case NODETYPE_NULL:
@@ -13,46 +21,81 @@ result_t exec(uint8_t* mem) {
             case NODETYPE_PUSH_CONST:
                 break;
             case NODETYPE_PUSH_LOCAL_VAL:
+                break;
             case NODETYPE_PUSH_LOCAL_ADDR:
+                break;
             case NODETYPE_JMP:
+                break;
             case NODETYPE_JZE:
+                break;
             case NODETYPE_CALL:
+                break;
             case NODETYPE_RETURN:
-
+                write(STDOUT_FILENO, "test\n", 5);
+                break;
             case NODETYPE_ASSIGN:
+                break;
             case NODETYPE_ASSIGN1:
+                break;
             case NODETYPE_ASSIGN2:
+                break;
             case NODETYPE_ASSIGN3:
+                break;
             case NODETYPE_ASSIGN4:
-
+                break;
             case NODETYPE_OR:
+                break;
             case NODETYPE_AND:
+                break;
             case NODETYPE_EQ:
+                break;
             case NODETYPE_NE:
+                break;
             case NODETYPE_LT:
+                break;
             case NODETYPE_LE:
+                break;
             case NODETYPE_GT:
+                break;
             case NODETYPE_GE:
+                break;
             case NODETYPE_NOT:
+                break;
             case NODETYPE_ADD:
+                break;
             case NODETYPE_SUB:
+                break;
             case NODETYPE_MUL:
+                break;
             case NODETYPE_DIV:
+                break;
             case NODETYPE_MOD:
+                break;
             case NODETYPE_SHL:
+                break;
             case NODETYPE_SHR:
+                break;
             case NODETYPE_BITOR:
+                break;
             case NODETYPE_BITXOR:
+                break;
             case NODETYPE_BITAND:
-            case NODETYPE_GETSTRUCTMEMBER:
-
+                break;
             case NODETYPE_DEREF:
+                break;
             case NODETYPE_NEG:
+                break;
             case NODETYPE_BITNOT:
-
+                break;
             case NODETYPE_READ:
+                break;
             case NODETYPE_WRITE:
+                break;
             case NODETYPE_USLEEP:
+                break;
+            default:
+                ERROUT;
+                return ERR;
         }
     }
 }
