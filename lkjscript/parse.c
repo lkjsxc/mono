@@ -376,6 +376,23 @@ static result_t parse_primary(stat_t stat) {
             return ERR;
         }
         node_addmember(stat.parent, node_var);
+    } else if (token_eqstr(*stat.token_itr, "(")) {
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (parse_expr(stat) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        if (!token_eqstr(*stat.token_itr, ")")) {
+            ERROUT;
+            return ERR;
+        }
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
     } else if (token_isdigit(*stat.token_itr)) {
         node_t* node_digit = node_new(stat.node_itr);
         *node_digit = (node_t){.nodetype = NODETYPE_PUSH_CONST, .token = *stat.token_itr};
@@ -484,23 +501,33 @@ static result_t parse_binary(stat_t stat) {
         ERROUT;
         return ERR;
     }
+    nodetype_t optype = NODETYPE_NULL;
     while (1) {
         int64_t operator_found = 0;
         for (int64_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
-            if (token_eqstr(*stat.token_itr, binary_operators[i].str)) {
-                operator_found = 1;
-                node_t* node_binary = node_new(stat.node_itr);
-                *node_binary = (node_t){.nodetype = binary_operators[i].nodetype, .token = *stat.token_itr};
-                if (tokenitr_next(stat.token_itr) == ERR) {
-                    ERROUT;
-                    return ERR;
-                }
-                if (parse_unary(stat) == ERR) {
-                    ERROUT;
-                    return ERR;
-                }
-                node_addmember(stat.parent, node_binary);
+            if (!token_eqstr(*stat.token_itr, binary_operators[i].str)) {
+                continue;
             }
+            operator_found = 1;
+            if (optype == NODETYPE_NULL) {
+                optype = binary_operators[i].nodetype;
+            }
+            if (optype != binary_operators[i].nodetype) {
+                ERROUT;
+                return ERR;
+            }
+            node_t* node_binary = node_new(stat.node_itr);
+            *node_binary = (node_t){.nodetype = binary_operators[i].nodetype, .token = *stat.token_itr};
+            if (tokenitr_next(stat.token_itr) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            if (parse_unary(stat) == ERR) {
+                ERROUT;
+                return ERR;
+            }
+            node_addmember(stat.parent, node_binary);
+            break;
         }
         if (operator_found == 0) {
             return OK;

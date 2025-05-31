@@ -82,8 +82,12 @@ result_t exec(uint8_t* mem) {
             } break;
             case NODETYPE_SUB:
                 break;
-            case NODETYPE_MUL:
-                break;
+            case NODETYPE_MUL: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 * val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
             case NODETYPE_DIV:
                 break;
             case NODETYPE_MOD:
