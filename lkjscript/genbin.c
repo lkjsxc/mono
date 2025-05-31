@@ -1,7 +1,7 @@
 #include "lkjscript.h"
 
-result_t bin_link(uint8_t* bin, node_t* node) {
-    if (node->child != NULL) {
+static result_t bin_link(uint8_t* bin, node_t* node) {
+    if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
         if (bin_link(bin, node->child) == ERR) {
             ERROUT;
             return ERR;
@@ -19,8 +19,8 @@ result_t bin_link(uint8_t* bin, node_t* node) {
     return OK;
 }
 
-result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
-    if (node->child != NULL) {
+static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
+    if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
         if (bin_gen(bin, node->child, bin_itr) == ERR) {
             ERROUT;
             return ERR;
@@ -35,23 +35,31 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
             *bin_itr += sizeof(nodetype_t);
             break;
         case NODETYPE_PUSH_CONST: {
-            int64_t val;
-            if (node->token != NULL) {
-                val = token_toint(node->token);
+            if (node->token == NULL) {
+                *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = NODETYPE_PUSH_CONST;
+                *bin_itr += sizeof(nodetype_t);
+                *(int64_t*)((uint8_t*)(bin + *bin_itr)) = node->val;
+                *bin_itr += sizeof(int64_t);
+            } else if (token_isdigit(node->token)) {
+                *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = NODETYPE_PUSH_CONST;
+                *bin_itr += sizeof(nodetype_t);
+                *(int64_t*)((uint8_t*)(bin + *bin_itr)) = token_toint(node->token);
+                *bin_itr += sizeof(int64_t);
+            } else if (token_isstr(node->token)) {  // TODO: implement this later
+                ERROUT;
+                return ERR;
             } else {
-                val = node->val;
+                ERROUT;
+                return ERR;
             }
-            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += sizeof(nodetype_t);
-            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = val;
-            *bin_itr += sizeof(int64_t);
         } break;
         case NODETYPE_PUSH_LOCAL_VAL:
-            // implement later
-            break;
-        case NODETYPE_PUSH_LOCAL_ADDR:
-            // implement later
-            break;
+        case NODETYPE_PUSH_LOCAL_ADDR: {
+            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(nodetype_t);
+            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = node->child->val; // TODO: implement offset later (parse_stmt_post in parser.c)
+            *bin_itr += sizeof(int64_t);
+        } break;
         case NODETYPE_JMP:
         case NODETYPE_JZE:
         case NODETYPE_CALL:

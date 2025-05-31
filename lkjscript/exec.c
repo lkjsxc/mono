@@ -80,28 +80,66 @@ result_t exec(uint8_t* mem) {
                 *(int64_t*)provide_stack(mem, -16) = val1 + val2;
                 *provide_sp(mem) -= sizeof(int64_t);
             } break;
-            case NODETYPE_SUB:
-                break;
+            case NODETYPE_SUB: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 - val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
             case NODETYPE_MUL: {
                 int64_t val1 = *(int64_t*)provide_stack(mem, -16);
                 int64_t val2 = *(int64_t*)provide_stack(mem, -8);
                 *(int64_t*)provide_stack(mem, -16) = val1 * val2;
                 *provide_sp(mem) -= sizeof(int64_t);
             } break;
-            case NODETYPE_DIV:
-                break;
-            case NODETYPE_MOD:
-                break;
-            case NODETYPE_SHL:
-                break;
-            case NODETYPE_SHR:
-                break;
-            case NODETYPE_BITOR:
-                break;
-            case NODETYPE_BITXOR:
-                break;
-            case NODETYPE_BITAND:
-                break;
+            case NODETYPE_DIV: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                if (val2 == 0) {  // Prevent division by zero
+                    return ERR;
+                }
+                *(int64_t*)provide_stack(mem, -16) = val1 / val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_MOD: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                if (val2 == 0) {  // Prevent division by zero
+                    return ERR;
+                }
+                *(int64_t*)provide_stack(mem, -16) = val1 % val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_SHL: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 << val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_SHR: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 >> val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_BITOR: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 | val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_BITXOR: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 ^ val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
+            case NODETYPE_BITAND: {
+                int64_t val1 = *(int64_t*)provide_stack(mem, -16);
+                int64_t val2 = *(int64_t*)provide_stack(mem, -8);
+                *(int64_t*)provide_stack(mem, -16) = val1 & val2;
+                *provide_sp(mem) -= sizeof(int64_t);
+            } break;
             case NODETYPE_DEREF:
                 break;
             case NODETYPE_NEG:

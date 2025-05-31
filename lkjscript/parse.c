@@ -370,7 +370,7 @@ static result_t parse_primary(stat_t stat) {
     node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
     if (findvar_result != NULL) {
         node_t* node_var = node_new(stat.node_itr);
-        *node_var = (node_t){.nodetype = NODETYPE_VAR, .token = *stat.token_itr, .child = findvar_result};
+        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_VAL, .token = *stat.token_itr, .child = findvar_result};
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
@@ -462,7 +462,23 @@ static result_t parse_postfix(stat_t stat) {
 }
 
 static result_t parse_unary(stat_t stat) {
-    if (token_eqstr(*stat.token_itr, "&")) {
+    if (token_eqstr(*stat.token_itr, "&")) {    // TODO: fix this later
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
+        if (findvar_result == NULL) {
+            ERROUT;
+            return ERR;
+        }
+        node_t* node_var = node_new(stat.node_itr);
+        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_ADDR, .token = *stat.token_itr, .child = findvar_result};
+        if (tokenitr_next(stat.token_itr) == ERR) {
+            ERROUT;
+            return ERR;
+        }
+        node_addmember(stat.parent, node_var);
     } else if (token_eqstr(*stat.token_itr, "*")) {
     } else if (token_eqstr(*stat.token_itr, "-")) {
     } else if (token_eqstr(*stat.token_itr, "!")) {
