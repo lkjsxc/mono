@@ -31,13 +31,13 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_NOP:
             break;
         case NODETYPE_END:
-            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += 1;
+            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(uint8_t);
             break;
         case NODETYPE_PUSH_CONST:
-            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
             *(int64_t*)((uint8_t*)(bin + *bin_itr + 1)) = node->nodetype;
-            *bin_itr += 9;
+            *bin_itr += sizeof(uint8_t) + sizeof(int64_t);
             break;
         case NODETYPE_PUSH_LOCAL_VAL:
             // implement later
@@ -52,8 +52,8 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
             break;
         case NODETYPE_RETURN:
         case NODETYPE_ASSIGN:
-            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += 1;
+            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(uint8_t);
             break;
         case NODETYPE_ASSIGN1:
         case NODETYPE_ASSIGN2:
@@ -86,8 +86,8 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_READ:
         case NODETYPE_WRITE:
         case NODETYPE_USLEEP:
-            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += 1;
+            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(uint8_t);
             break;
         case NODETYPE_GETSTRUCTMEMBER:
             // implement later
