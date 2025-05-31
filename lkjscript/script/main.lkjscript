@@ -1,3 +1,5 @@
 var a: i64
+var b: i64
 &a = 123456
-return a
+&b = a + 1
+return b

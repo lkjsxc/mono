@@ -1,5 +1,24 @@
 #include "lkjscript.h"
 
+static int64_t provide_offset(node_t* parent, node_t* node) {
+    int64_t offset = 0;
+    node_t* itr = parent->child;
+    while (itr != node->child) {
+        if (itr->nodetype == NODETYPE_VAR) {
+            if (token_eqstr(itr->child->token, "*")) {
+                offset += sizeof(void*);
+            } else if (token_eqstr(itr->child->token, "i64")) {
+                offset += sizeof(int64_t*);
+            } else {
+                // TODO: implement offset later (inc struct size)
+                ERROUT;
+            }
+        }
+        itr = itr->next;
+    }
+    return offset;
+}
+
 static result_t bin_link(uint8_t* bin, node_t* node) {
     if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
         if (bin_link(bin, node->child) == ERR) {
@@ -57,7 +76,7 @@ static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_PUSH_LOCAL_ADDR: {
             *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
             *bin_itr += sizeof(nodetype_t);
-            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = node->child->val; // TODO: implement offset later (parse_stmt_post in parser.c)
+            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = provide_offset(node->parent, node);  // TODO: implement offset later (parse_stmt_post in parser.c)
             *bin_itr += sizeof(int64_t);
         } break;
         case NODETYPE_JMP:
@@ -130,4 +149,5 @@ result_t genbin(node_t* root, uint8_t* bin) {
     }
     *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_IP)) = GLOBALOFFSET_INST;
     *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_SP)) = bin_itr;
+    *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_BP)) = bin_itr + 256;
 }
