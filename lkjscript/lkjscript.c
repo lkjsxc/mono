@@ -1,10 +1,10 @@
 #include "lkjscript.h"
-#include "token.c"
-#include "readsrc.c"
-#include "tokenize.c"
-#include "parse.c"
-#include "genbin.c"
 #include "exec.c"
+#include "genbin.c"
+#include "parse.c"
+#include "readsrc.c"
+#include "token.c"
+#include "tokenize.c"
 
 static mem_t mem;
 
@@ -33,7 +33,7 @@ int main() {
         write(STDERR_FILENO, "Compilation failed\n", 19);
         return 1;
     }
-    if(exec(mem.u8) == ERR) {
+    if (exec(mem.u8) == ERR) {
         write(STDERR_FILENO, "Execution failed\n", 19);
         return 1;
     }

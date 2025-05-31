@@ -31,14 +31,21 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_NOP:
             break;
         case NODETYPE_END:
-            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += sizeof(uint8_t);
+            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(nodetype_t);
             break;
-        case NODETYPE_PUSH_CONST:
-            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *(int64_t*)((uint8_t*)(bin + *bin_itr + 1)) = node->nodetype;
-            *bin_itr += sizeof(uint8_t) + sizeof(int64_t);
-            break;
+        case NODETYPE_PUSH_CONST: {
+            int64_t val;
+            if (node->token != NULL) {
+                val = token_toint(node->token);
+            } else {
+                val = node->val;
+            }
+            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(nodetype_t);
+            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = val;
+            *bin_itr += sizeof(int64_t);
+        } break;
         case NODETYPE_PUSH_LOCAL_VAL:
             // implement later
             break;
@@ -52,8 +59,8 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
             break;
         case NODETYPE_RETURN:
         case NODETYPE_ASSIGN:
-            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += sizeof(uint8_t);
+            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(nodetype_t);
             break;
         case NODETYPE_ASSIGN1:
         case NODETYPE_ASSIGN2:
@@ -86,8 +93,8 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_READ:
         case NODETYPE_WRITE:
         case NODETYPE_USLEEP:
-            *(uint8_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
-            *bin_itr += sizeof(uint8_t);
+            *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
+            *bin_itr += sizeof(nodetype_t);
             break;
         case NODETYPE_GETSTRUCTMEMBER:
             // implement later
@@ -105,7 +112,6 @@ result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
 
 result_t genbin(node_t* root, uint8_t* bin) {
     int64_t bin_itr = GLOBALOFFSET_INST;
-    *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_IP)) = GLOBALOFFSET_INST;
     if (bin_gen(bin, root, &bin_itr) == ERR) {
         ERROUT;
         return ERR;
@@ -114,4 +120,6 @@ result_t genbin(node_t* root, uint8_t* bin) {
         ERROUT;
         return ERR;
     }
+    *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_IP)) = GLOBALOFFSET_INST;
+    *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_SP)) = bin_itr;
 }

@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define MEM_SIZE (1024 * 1024)
+#define MEM_SIZE (1024 * 256)
 #define SRC_PATH "script/main.lkjscript"
 
 #define ERROUT3(n) #n
@@ -139,5 +139,12 @@ int64_t token_eq(token_t* token1, token_t* token2);
 int64_t token_eqstr(token_t* token, const char* str);
 int64_t token_isdigit(token_t* token);
 int64_t token_isstr(token_t* token);
+int64_t token_toint(token_t* token);
+
+result_t readsrc(const char* filename, char* dst, int64_t max_size);
+result_t tokenize(const char* src, token_t* token_array);
+result_t parse(token_t* token, node_t* node);
+result_t genbin(node_t* root, uint8_t* bin);
+result_t exec(uint8_t* mem);
 
 #endif

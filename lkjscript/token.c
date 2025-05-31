@@ -39,3 +39,15 @@ int64_t token_isstr(token_t* token) {
     }
     return 0;
 }
+
+int64_t token_toint(token_t* token) {
+    if(!token_isdigit(token)) {
+        ERROUT;
+        return -1;
+    }
+    int64_t result = 0;
+    for(int64_t i = 0; i < token->size; i++) {
+        result = result * 10 + (token->data[i] - '0');
+    }
+    return result;
+}
