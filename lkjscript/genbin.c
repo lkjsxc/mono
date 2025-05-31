@@ -1,6 +1,7 @@
 #include "lkjscript.h"
 
 static int64_t provide_offset(node_t* parent, node_t* node) {
+    // TODO: when parent is root or function, offset be 0. when else offset is recursively decided
     int64_t offset = 0;
     node_t* itr = parent->child;
     while (itr != node->child) {
