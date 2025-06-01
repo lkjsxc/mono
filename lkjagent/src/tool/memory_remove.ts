@@ -6,7 +6,7 @@ import { JsonPath } from '../types/common';
  * Removes data at a specified path in RAM
  * @param targetPath - Dot-separated path in RAM (e.g., 'ram.todo.task_to_remove')
  */
-export async function ram_remove(targetPath: JsonPath): Promise<void> {
+export async function memory_remove(targetPath: JsonPath): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   
   try {

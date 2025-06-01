@@ -1,12 +1,5 @@
 {
   "memory": {
-    "ramCharacterLimit": 2048,
-    "systemPromptDirectory": "data/prompts/",
-    "criticalPaths": [
-      "ram.current_task",
-      "ram.thinking_log",
-      "ram.todo"
-    ],
-    "backupInterval": 300000
+    "memoryCharacterLimit": 2048
   }
 }

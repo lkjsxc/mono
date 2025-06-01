@@ -2,10 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export interface MemoryConfig {
-  ramCharacterLimit: number;
-  systemPromptDirectory: string;
-  criticalPaths: string[];
-  backupInterval: number;
+  memoryCharacterLimit: number;
 }
 
 export interface Config {

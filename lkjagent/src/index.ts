@@ -4,8 +4,8 @@ import axios from 'axios';
 import { LogEntry, MemoryState, StorageState, ToolAction, ToolKind, XmlString } from './types/common';
 import { ConfigManager } from './config/config-manager';
 import { logAction } from './tool/action_logger';
-import { ram_set } from './tool/ram_set';
-import { ram_remove } from './tool/ram_remove';
+import { memory_set } from './tool/memory_set';
+import { memory_remove } from './tool/memory_remove';
 import { storage_get } from './tool/storage_get';
 import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
@@ -81,13 +81,13 @@ function parseActionsFromXml(xml: string): ToolAction[] {
 
       // Skip invalid actions
       switch (action.kind) {
-        case 'ram_set':
+        case 'memory_set':
           if (!action.path || action.content === undefined) {
             console.warn(`Skipping ${action.kind} action: missing path or content`);
             continue;
           }
           break;
-        case 'ram_remove':
+        case 'memory_remove':
           if (!action.path) {
             console.warn('Skipping remove action: missing path');
             continue;
@@ -149,22 +149,22 @@ async function generateSystemPrompt(): Promise<string> {
 
   const configManager = await ConfigManager.getInstance();
   const memoryConfig = configManager.getMemoryConfig();
-  const ramCharacterLimit = memoryConfig.ramCharacterLimit;
+  const memoryCharacterLimit = memoryConfig.memoryCharacterLimit;
 
   return `<lkjagent_system_setup>
   <persona>
     <name>lkjagent</name>
-    <role>An AI agent with finite RAM and infinite storage that communicates using XML actions</role>
+    <role>An AI agent with finite memory and infinite storage that communicates using XML actions</role>
   </persona>
 
-  ${jsonToXml(memoryData, 'ram')}
+  ${jsonToXml(memoryData, 'root')}
 
   <output_format_specification>
     <format>
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>ram_set|ram_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
+          <kind>memory_set|memory_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
           <path>/path/to/data</path>
           <content>optional content</content>
           <source_path>optional source path for storage operations</source_path>
@@ -175,21 +175,21 @@ async function generateSystemPrompt(): Promise<string> {
       1. Always wrap your response in <actions> tags
       2. Each action must be wrapped in <action> tags
       3. The source_path tag is required only for storage_set action
-      4. RAM must not exceed ${ramCharacterLimit} tokens
+      4. must not exceed ${memoryCharacterLimit} tokens
       5. A directory should have no more than 8 direct children
       6. Make proactive use of storage
     </rules>
     <example>
       <actions>
         <action>
-          <kind>ram_set</kind>
-          <path>/todo/new_task</path>
+          <kind>memory_set</kind>
+          <path>/user/todo/new_task</path>
           <content>Complete the project documentation</content>
         </action>
         <action>
           <kind>storage_set</kind>
           <path>/completed_tasks</path>
-          <source_path>/todo/completed</source_path>
+          <source_path>/user/todo/completed</source_path>
         </action>
       </actions>
     </example>
@@ -260,24 +260,24 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
 
     // Handle each action type
     switch (action.kind) {
-      case 'ram_set':
+      case 'memory_set':
         if (!action.path || action.content === undefined) {
           console.warn(`Skipping ${action.kind}: missing path or content`);
           entry.error = `Missing ${!action.path ? 'path' : 'content'}`;
           await logAction(entry);
           return;
         }
-        await ram_set(action.path, action.content);
+        await memory_set(action.path, action.content);
         break;
 
-      case 'ram_remove':
+      case 'memory_remove':
         if (!action.path) {
           console.warn('Skipping remove: missing path');
           entry.error = 'Missing path';
           await logAction(entry);
           return;
         }
-        await ram_remove(action.path);
+        await memory_remove(action.path);
         break;
 
       case 'storage_set':
@@ -307,7 +307,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('sys/loaded_data', storage_get(action.path));
+        await memory_set('sys/loaded_data', storage_get(action.path));
         break;
 
       case 'storage_search':
@@ -317,7 +317,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('sys/loaded_data', storage_search(action.content));
+        await memory_set('sys/loaded_data', storage_search(action.content));
         break;
 
       case 'storage_ls':
@@ -327,7 +327,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('sys/loaded_data', storage_ls(action.path));
+        await memory_set('sys/loaded_data', storage_ls(action.path));
         break; default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
         entry.error = `Unknown action kind: ${action.kind}`;
@@ -343,7 +343,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
     // Add error to thinking_log and log the error
     entry.error = error instanceof Error ? error.message : String(error);
     await logAction(entry);
-    await ram_set('/sys/thinking_log', `Error executing ${action.kind} action: ${error}`);
+    await memory_set('/sys/thinking_log', `Error executing ${action.kind} action: ${error}`);
   }
 }
 

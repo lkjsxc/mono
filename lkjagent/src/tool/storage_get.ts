@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
-import { ram_set } from './ram_set';
+import { memory_set } from './memory_set';
 
 /**
  * Loads data from a specified path in Storage and places it in RAM's loaded_data area

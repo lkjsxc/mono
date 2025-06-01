@@ -5,7 +5,7 @@ lkjagentは必要最低限の機能を備えたAIエージェントです。小�
 -   **完全ローカルかつプライベート:** ローカルマシン上ですべてが完結します。
 -   **jsonとマークアップ:** 記憶はjson形式で保存され、エージェントに渡されるときにマークアップ言語へと変換されます。
 -   **コンピュータのような記憶方法:** 
-    -   **ram:** 後で書きます
+    -   **memory:** 後で書きます
     -   **storage:** 後で書きます
 
 ## 構造
@@ -18,8 +18,8 @@ lkjagent/
     ├── memory.json     # メモリの状態
     ├── storage.json     # ストレージの状態
     ├── tool/          # ツール群
-    │   ├── ram_set.ts
-    │   ├── ram_remove.ts
+    │   ├── memory_set.ts
+    │   ├── memory_remove.ts
     │   ├── storage_get.ts
     │   ├── storage_ls.ts
     │   ├── storage_remove.ts
