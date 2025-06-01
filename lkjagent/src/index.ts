@@ -165,7 +165,7 @@ async function generateSystemPrompt(): Promise<string> {
       <actions>
         <action>
           <kind>ram_set|ram_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
-          <path>path.to.data</path>
+          <path>/path/to/data</path>
           <content>optional content</content>
           <source_path>optional source path for storage operations</source_path>
         </action>
@@ -225,14 +225,14 @@ async function callLLM(prompt: string): Promise<string> {
     // Validate that the response is in XML format
     if (!llmResponse.includes('<actions>')) {
       console.warn('LLM response is not in expected XML format, wrapping it');
-      return `<actions><action><kind>add</kind><path>ram/thinking_log</path><content>${llmResponse}</content></action></actions>`;
+      return `<actions><action><kind>add</kind><path>/sys/thinking_log</path><content>${llmResponse}</content></action></actions>`;
     }
 
     return llmResponse;
   } catch (error: any) {
     console.error('Error calling LLM:', error);
     // Return a fallback response in case of error
-    return `<actions><action><kind>add</kind><path>ram/thinking_log</path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
+    return `<actions><action><kind>add</kind><path>/sys/thinking_log</path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
   }
 }
 
@@ -307,7 +307,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('ram/loaded_data', storage_get(action.path));
+        await ram_set('sys/loaded_data', storage_get(action.path));
         break;
 
       case 'storage_search':
@@ -317,7 +317,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('ram/loaded_data', storage_search(action.content));
+        await ram_set('sys/loaded_data', storage_search(action.content));
         break;
 
       case 'storage_ls':
@@ -327,7 +327,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           await logAction(entry);
           return;
         }
-        await ram_set('ram/loaded_data', storage_ls(action.path));
+        await ram_set('sys/loaded_data', storage_ls(action.path));
         break; default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
         entry.error = `Unknown action kind: ${action.kind}`;
@@ -343,7 +343,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
     // Add error to thinking_log and log the error
     entry.error = error instanceof Error ? error.message : String(error);
     await logAction(entry);
-    await ram_set('ram/thinking_log', `Error executing ${action.kind} action: ${error}`);
+    await ram_set('/sys/thinking_log', `Error executing ${action.kind} action: ${error}`);
   }
 }
 

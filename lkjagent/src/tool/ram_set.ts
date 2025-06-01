@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
+import { validatePath, setValueAtPath } from '../util/json';
 
 /**
  * Adds or updates data at a specified path in RAM
@@ -10,35 +11,16 @@ import { JsonPath } from '../types/common';
 export async function ram_set(targetPath: JsonPath, content: any): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   
-  try {
-    // Read current memory state
-    const memoryData = JSON.parse(await fs.readFile(memoryPath, 'utf-8'));
-    
-    // Split the path into parts and traverse/create the object structure
-    const parts = targetPath.split('/');
-    let current = memoryData;
-    
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      if (typeof current !== 'object' || current === null) {
-        throw new Error(`Cannot traverse path at '${part}': parent is not an object`);
-      }
-      if (!(part in current)) {
-        current[part] = {};
-      }
-      current = current[part];
-    }
-    
-    // Set the value at the final path segment
-    const lastPart = parts[parts.length - 1];
-    if (typeof current !== 'object' || current === null) {
-      throw new Error(`Cannot set property '${lastPart}': parent is not an object`);
-    }
-    current[lastPart] = content;
-    
-    // Write updated memory back to file
-    await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2), 'utf-8');
-  } catch (error) {
-    throw new Error(`Failed to add/update RAM at path ${targetPath}: ${error}`);
-  }
+  // Validate path format
+  validatePath(targetPath);
+
+  // Read current memory state
+  const memoryContent = await fs.readFile(memoryPath, 'utf-8');
+  const memoryData = JSON.parse(memoryContent);
+
+  // Update the value at the specified path
+  setValueAtPath(memoryData, targetPath, content);
+
+  // Write back to file
+  await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2), 'utf-8');
 }
