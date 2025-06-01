@@ -6,20 +6,22 @@
       "characters": {
         "wanderer_elara": {
           "name": "Elara Meadowlight",
-          "status": "exploring",
+          "status": "unbound",
           "motivation": "To witness and understand the changes of the realm."
         },
         "scribe_korbin": {
           "name": "Korbin Stonehand",
-          "status": "documenting",
+          "status": "unstable",
           "motivation": "To chronicle the endless history of the Everchanging Realm."
         }
       },
       "event_log": [],
       "current_scene": {
-        "location": "The Shifting Sands Oasis",
+        "location": "Veilspire Caverns",
         "time": "midday",
-        "description": "A brief respite at an oasis, though the horizon already shimmers with an unfamiliar haze."
+        "description": "The cavern walls now display recursive timelines, their bioluminescent runes forming Möbius strips of possibility. The antelope stardust coalesces into a swirling nexus of potential futures.",
+        "new_event": "The library portal materializes, its shelves made of shifting paradoxes. Each book emits a hum matching the frequency of an unmade choice from Elara's past.",
+        "pending_event": "\"Which unwritten moment will you claim as your own?\""
       }
     },
     "knowledge_base": {
@@ -46,7 +48,11 @@
             "status": "pending",
             "description": "Update the story state based on the newly generated segment."
           }
-        }
+        },
+        "evaluate_current_state": "Current state: Elara's crystallized staff pulses with fragmented timelines; Korbin's quill etches paradoxes into the cavern walls. The rift's energy intensifies, warping their perceptions of past choices.",
+        "select_event_prompt": "A spectral herd of crystal antelopes emerges, each horn inscribed with a pivotal decision from Elara's journey. Korbin's quill begins transcribing the antelopes' whispers, causing the cavern to fracture into overlapping realities.",
+        "develop_narrative_segment": "Elara's staff shatters into prismatic shards, each reflecting a possible path she could take. Korbin realizes his quill is not recording history but rewriting it—every word alters the cavern's geometry. The antelopes' whispers coalesce into a single question: \"Which truth will you become?\"",
+        "update_world_and_characters": "Korbin's quill now hums with unstable energy; the cavern walls flicker between states. Elara's fragmented self begins to merge, her status shifting to 'unbound.' A new event: The antelopes dissolve into stardust, leaving a portal to the 'library of unwritten moments.'"
       }
     }
   }

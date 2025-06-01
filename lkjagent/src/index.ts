@@ -9,6 +9,7 @@ import { storage_load } from './tool/storage_load';
 import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
 import { storage_store } from './tool/storage_store';
+import { storage_getdir } from './tool/storage_getdir';
 
 /**
  * Convert JSON data to XML format for LLM communication
@@ -116,6 +117,9 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             continue;
           }
           break;
+        case 'storage_getdir':
+          // path is optional for storage_getdir, so no validation needed here
+          break;
         default:
           console.warn(`Skipping unknown action kind: ${action.kind}`);
           continue;
@@ -157,7 +161,7 @@ async function generateSystemPrompt(): Promise<string> {
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove</kind>
+          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove|storage_getdir</kind>
           <path>path.to.data</path>
           <content>content to store or search</content>
           <source_path>optional source path for storage operations</source_path>
@@ -292,6 +296,11 @@ async function executeAction(action: ToolAction): Promise<void> {
           return;
         }
         await storage_search(action.content);
+        break;
+
+      case 'storage_getdir':
+        // path is optional for storage_getdir
+        await storage_getdir(action.path);
         break;
 
       default:
