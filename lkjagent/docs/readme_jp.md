@@ -3,13 +3,27 @@ lkjagentは必要最低限の機能を備えたAIエージェントです。小�
 
 ## 特徴
 -   **完全ローカルかつプライベート:** ローカルマシン上ですべてが完結します。
--   **お手製言語特化:** lkjscriptでプログラムを書き、デバッグし、実行できます。
 -   **コンピュータのような記憶方法:** 
     -   **ram:** 後で書きます
     -   **storage:** 後で書きます
 
-## インストール
-後で書きます。
+## 構造
+lkjagent/
+├── README.md
+├── docs/
+│   └── readme_jp.md   # 日本語ドキュメント
+└── src/
+    ├── index.ts       # メインエントリーポイント
+    ├── memory.xml     # メモリの状態
+    ├── tool/          # ツール群
+    │   ├── ram_add.ts
+    │   ├── ram_remove.ts
+    │   ├── storage_load.ts
+    │   ├── storage_remove.ts
+    │   ├── storage_search.ts
+    │   └── storage_store.ts
+    └── types/         # 型定義
+        └── common.ts
 
 ## プロンプト
 
