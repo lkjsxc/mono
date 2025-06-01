@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
+import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Removes data at a specified path in Storage
@@ -8,28 +9,32 @@ import { JsonPath } from '../types/common';
  */
 export async function storage_remove(targetPath: JsonPath): Promise<void> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
-  
-  try {
+    try {
+    // Validate path format
+    validatePath(targetPath);
+    
     // Read current storage state
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
+      // Split the path into parts and handle special cases
+    const parts = targetPath.split('/').filter(p => p);
+    if (parts.length === 0) {
+      throw new Error('Cannot remove root storage node');
+    }
     
-    // Split the path into parts and traverse the object structure
-    const parts = targetPath.split('/');
-    let current = storageData;
+    // Get the parent path and the target to remove
+    const parentPath = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
+    const lastPart = parts[parts.length - 1];
     
-    // Traverse to the parent of the target to remove
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      if (!(part in current)) {
-        throw new Error(`Path segment '${part}' not found in Storage`);
-      }
-      current = current[part];
+    // Get the parent object
+    const parent = parentPath === '/' ? storageData : getValueAtPath(storageData, parentPath);
+    
+    if (typeof parent !== 'object' || parent === null) {
+      throw new Error(`Parent path '${parentPath}' is not an object`);
     }
     
     // Remove the target
-    const lastPart = parts[parts.length - 1];
-    if (lastPart in current) {
-      delete current[lastPart];
+    if (lastPart in parent) {
+      delete parent[lastPart];
       
       // Write updated storage back to file
       await fs.writeFile(storagePath, JSON.stringify(storageData, null, 2), 'utf-8');

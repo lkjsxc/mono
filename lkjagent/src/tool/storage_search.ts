@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath, SearchResult } from '../types/common';
+import { validatePath } from '../util/json';
 
 /**
  * Search recursively through an object for matching content
@@ -9,7 +10,7 @@ import { JsonPath, SearchResult } from '../types/common';
  * @param currentPath - Current path in the object (for building result paths)
  * @returns Array of paths and their matching values
  */
-function searchRecursive(obj: any, content: string, currentPath: string): SearchResult[] {
+function searchRecursive(obj: any, content: string, currentPath: JsonPath): SearchResult[] {
   const results: SearchResult[] = [];
   
   if (typeof obj === 'string' && obj.toLowerCase().includes(content.toLowerCase())) {
@@ -20,7 +21,7 @@ function searchRecursive(obj: any, content: string, currentPath: string): Search
     });
   } else if (typeof obj === 'object' && obj !== null) {
     for (const [key, value] of Object.entries(obj)) {
-      const newPath = currentPath ? `${currentPath}.${key}` : key;
+      const newPath = currentPath ? `${currentPath}/${key}` : `/${key}`;
       results.push(...searchRecursive(value, content, newPath));
     }
   }
@@ -59,7 +60,7 @@ export async function storage_search(content: string): Promise<SearchResult[]> {
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
     
     // Perform recursive search through the storage data
-    const results = searchRecursive(storageData, content, '');
+    const results = searchRecursive(storageData, content, '/');
     
     // Sort results by relevance (highest first)
     return results.sort((a, b) => (b.relevance || 0) - (a.relevance || 0));

@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
+import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Removes data at a specified path in memory
@@ -10,26 +11,32 @@ export async function memory_remove(targetPath: JsonPath): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   
   try {
+    // Validate path format
+    validatePath(targetPath);
+    
     // Read current memory state
     const memoryData = JSON.parse(await fs.readFile(memoryPath, 'utf-8'));
     
-    // Split the path into parts and traverse the object structure
-    const parts = targetPath.split('/');
-    let current = memoryData;
+    // Split the path into parts
+    const parts = targetPath.split('/').filter(p => p);
+    if (parts.length === 0) {
+      throw new Error('Cannot remove root memory node');
+    }
     
-    // Traverse to the parent of the target to remove
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      if (!(part in current)) {
-        throw new Error(`Path segment '${part}' not found in memory`);
-      }
-      current = current[part];
+    // Get the parent path and the target to remove
+    const parentPath = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
+    const lastPart = parts[parts.length - 1];
+    
+    // Get the parent object
+    const parent = parentPath === '/' ? memoryData : getValueAtPath(memoryData, parentPath);
+    
+    if (typeof parent !== 'object' || parent === null) {
+      throw new Error(`Parent path '${parentPath}' is not an object`);
     }
     
     // Remove the target
-    const lastPart = parts[parts.length - 1];
-    if (lastPart in current) {
-      delete current[lastPart];
+    if (lastPart in parent) {
+      delete parent[lastPart];
       
       // Write updated memory back to file
       await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2), 'utf-8');

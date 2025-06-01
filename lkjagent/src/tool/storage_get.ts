@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
 import { memory_set } from './memory_set';
+import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Loads data from a specified path in Storage and places it in memory's loaded_data area
