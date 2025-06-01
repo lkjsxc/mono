@@ -13,8 +13,19 @@
         }
       },
       "magic_system": {
-        "elements": ["fire", "water", "earth", "air", "spirit"],
-        "schools": ["elemental", "healing", "prophecy", "enchantment"]
+        "elements": [
+          "fire",
+          "water",
+          "earth",
+          "air",
+          "spirit"
+        ],
+        "schools": [
+          "elemental",
+          "healing",
+          "prophecy",
+          "enchantment"
+        ]
       }
     },
     "story_templates": {
@@ -24,6 +35,19 @@
         "Magical artifact discovered"
       ]
     },
-    "archived_stories": {}
+    "archived_stories": {},
+    "completed_tasks": {
+      "task_description": "Begin the hero's journey",
+      "status": "completed",
+      "sub_tasks": {
+        "setup_world": "Aiden discovers ancient scrolls in the Royal Library revealing his bloodline is tied to the Starforged Blade, a weapon capable of sealing Dragon's Peak. The prophecy warns of a \"silver-furred shadow\" that will awaken during the Blood Moon, matching the spectral wolf's description.",
+        "inciting_incident": {
+          "status": "completed",
+          "description": "Create the event that starts the hero's journey"
+        }
+      },
+      "setup_world": "Aiden discovers ancient scrolls in the Royal Library revealing his bloodline is tied to the Starforged Blade, a weapon capable of sealing Dragon's Peak. The prophecy warns of a \"silver-furred shadow\" that will awaken during the Blood Moon, matching the spectral wolf's description.",
+      "inciting_incident": "Aiden deciphers the runes at Dragon's Peak, discovering they form a map to the Starforged Blade's hidden forge beneath the Royal Castle. He encounters a mysterious stranger who warns of the Blood Moon's impending arrival."
+    }
   }
 }
