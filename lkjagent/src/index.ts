@@ -177,7 +177,8 @@ async function generateSystemPrompt(): Promise<string> {
       3. The source_path tag is required only for storage_set action
       4. must not exceed ${memoryCharacterLimit} tokens
       5. A directory should have no more than 8 direct children
-      6. Make proactive use of storage
+      6. It is recommended that the key be 4 tokens or less
+      7. Make proactive use of storage
     </rules>
     <example>
       <actions>
