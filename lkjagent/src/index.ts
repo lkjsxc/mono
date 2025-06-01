@@ -52,12 +52,69 @@ function parseActionsFromXml(xml: string): ToolAction[] {
     const sourcePath = actionXml.match(/<source_path>(.*?)<\/source_path>/)?.[1];
 
     if (kind) {
-      actions.push({
+      // Convert XML content to JSON object if it contains XML tags
+      let processedContent = content;
+      if (content && content.includes('<') && content.includes('>')) {
+        const contentObj: any = {};
+        const xmlTags = content.match(/<(\w+)>(.*?)<\/\1>/g);
+        if (xmlTags) {
+          xmlTags.forEach(tag => {
+            const [, name, value] = tag.match(/<(\w+)>(.*?)<\/\1>/) || [];
+            if (name && value) {
+              contentObj[name] = value;
+            }
+          });
+          processedContent = contentObj;
+        }
+      }
+
+      // Validate required fields based on action kind
+      const action: ToolAction = {
         kind: kind as ToolAction['kind'],
-        ...(path && { path }),
-        ...(content && { content }),
-        ...(sourcePath && { source_path: sourcePath })
-      });
+        path: path || '',
+        content: processedContent || {},
+        source_path: sourcePath || ''
+      };
+
+      // Skip invalid actions
+      switch (action.kind) {
+        case 'add':
+        case 'edit':
+          if (!action.path || action.content === undefined) {
+            console.warn(`Skipping ${action.kind} action: missing path or content`);
+            continue;
+          }
+          break;
+        case 'remove':
+          if (!action.path) {
+            console.warn('Skipping remove action: missing path');
+            continue;
+          }
+          break;
+        case 'storage_load':
+          if (!action.path) {
+            console.warn('Skipping storage_load action: missing path');
+            continue;
+          }
+          break;
+        case 'storage_store':
+          if (!action.source_path || !action.path) {
+            console.warn('Skipping storage_store action: missing source_path or path');
+            continue;
+          }
+          break;
+        case 'storage_search':
+          if (!action.content) {
+            console.warn('Skipping storage_search action: missing content');
+            continue;
+          }
+          break;
+        default:
+          console.warn(`Skipping unknown action kind: ${action.kind}`);
+          continue;
+      }
+
+      actions.push(action);
     }
   }
 
@@ -165,51 +222,66 @@ async function callLLM(prompt: string): Promise<string> {
 }
 
 /**
- * Execute a single tool action
+ * Execute a single tool action with error handling
  */
 async function executeAction(action: ToolAction): Promise<void> {
-  switch (action.kind) {
-    case 'add':
-      if (!action.path || action.content === undefined) {
-        throw new Error('Add action requires path and content');
-      }
-      await ram_add(action.path, action.content);
-      break;
-      
-    case 'remove':
-      if (!action.path) {
-        throw new Error('Remove action requires path');
-      }
-      await ram_remove(action.path);
-      break;
-      
-    case 'edit':
-      if (!action.path || action.content === undefined) {
-        throw new Error('Edit action requires path and content');
-      }
-      await ram_add(action.path, action.content); // Edit is same as add for our implementation
-      break;
-      
-    case 'storage_load':
-      if (!action.path) {
-        throw new Error('Storage load action requires path');
-      }
-      await storage_load(action.path);
-      break;
-      
-    case 'storage_store':
-      if (!action.source_path || !action.path) {
-        throw new Error('Storage store action requires source_path and path');
-      }
-      await storage_store(action.source_path, action.path);
-      break;
-      
-    case 'storage_search':
-      if (!action.content) {
-        throw new Error('Storage search action requires content');
-      }
-      await storage_search(action.content);
-      break;
+  try {
+    // Validate required fields first
+    if (!action.kind) {
+      console.warn('Skipping action: missing kind');
+      return;
+    }
+
+    // Handle each action type
+    switch (action.kind) {
+      case 'add':
+      case 'edit':
+        if (!action.path || action.content === undefined) {
+          console.warn(`Skipping ${action.kind}: missing path or content`);
+          return;
+        }
+        await ram_add(action.path, action.content);
+        break;
+
+      case 'remove':
+        if (!action.path) {
+          console.warn('Skipping remove: missing path');
+          return;
+        }
+        await ram_remove(action.path);
+        break;
+
+      case 'storage_load':
+        if (!action.path) {
+          console.warn('Skipping storage_load: missing path');
+          return;
+        }
+        await storage_load(action.path);
+        break;
+
+      case 'storage_store':
+        if (!action.source_path || !action.path) {
+          console.warn('Skipping storage_store: missing paths');
+          return;
+        }
+        await storage_store(action.source_path, action.path);
+        break;
+
+      case 'storage_search':
+        if (!action.content) {
+          console.warn('Skipping storage_search: missing content');
+          return;
+        }
+        await storage_search(action.content);
+        break;
+
+      default:
+        console.warn(`Skipping unknown action kind: ${action.kind}`);
+    }
+  } catch (error) {
+    console.warn(`Error executing ${action.kind} action:`, error);
+    // Add error to thinking_log instead of throwing
+    await ram_add('ram.thinking_log', `Error executing ${action.kind} action: ${error}`);
   }
 }
 
@@ -230,10 +302,6 @@ async function runAgent(): Promise<void> {
       for (const action of actions) {
         await executeAction(action);
       }
-      
-      // For demonstration, we'll just run once
-      // In a real implementation, we would check for completion conditions
-      break;
     }
   } catch (error) {
     console.error('Agent execution error:', error);

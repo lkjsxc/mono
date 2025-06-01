@@ -1,0 +1,32 @@
+{
+  "storage": {
+    "parser_templates": {
+      "error_messages": {
+        "syntax": {
+          "unexpected_token": "Unexpected token at position {position}",
+          "missing_comma": "Expected comma at position {position}",
+          "unclosed_array": "Unclosed array at position {position}",
+          "unclosed_object": "Unclosed object at position {position}"
+        },
+        "validation": {
+          "invalid_type": "Invalid type: expected {expected}, got {actual}",
+          "max_depth": "Maximum nesting depth exceeded",
+          "duplicate_key": "Duplicate key '{key}' in object"
+        }
+      }
+    },
+    "test_cases": {
+      "valid_examples": [
+        {"type": "simple", "data": {"key": "value"}},
+        {"type": "array", "data": [1, 2, 3]},
+        {"type": "nested", "data": {"a": {"b": {"c": 1}}}}
+      ],
+      "invalid_examples": [
+        {"type": "syntax", "data": "{key: value}"},
+        {"type": "unclosed", "data": "[1, 2, 3"},
+        {"type": "type", "data": "{\"key\": undefined}"}
+      ]
+    },
+    "parse_history": {}
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "ram": {
+    "current_task": null,
+    "thinking_log": "",
+    "parser_state": {
+      "current_document": null,
+      "validation_rules": {
+        "max_depth": 10,
+        "allow_comments": true,
+        "strict_mode": false
+      },
+      "parse_stats": {
+        "documents_processed": 0,
+        "total_errors": 0,
+        "last_error": null
+      }
+    },
+    "knowledge_base": {
+      "json_rules": "Follow RFC 8259 JSON specification for parsing and validation",
+      "supported_types": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "todo": {
+      "parser_001": {
+        "task_description": "Initialize JSON parser with basic validation",
+        "status": "pending",
+        "sub_tasks": {
+          "setup_validator": {
+            "status": "pending",
+            "description": "Set up basic JSON validation rules"
+          },
+          "implement_parser": {
+            "status": "pending",
+            "description": "Implement core JSON parsing functionality"
+          }
+        }
+      }
+    }
+  }
+}

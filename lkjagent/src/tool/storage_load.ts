@@ -21,10 +21,52 @@ export async function storage_load(targetPath: JsonPath): Promise<any> {
     
     // Traverse to the target data
     for (const part of parts) {
-      if (!(part in current)) {
-        throw new Error(`Path segment '${part}' not found in Storage`);
+      if (Array.isArray(current)) {
+        // If current is an array, try to find the item
+        const item = current.find(x => {
+          if (typeof x === 'string') {
+            // Try case-insensitive match and replace underscores with spaces
+            const normalized = part.toLowerCase().replace(/_/g, ' ');
+            return x.toLowerCase() === normalized;
+          }
+          return x.name === part || x.id === part;
+        });
+        if (!item) {
+          // If not found, return empty object and continue
+          current = {};
+          break;
+        }
+        current = item;
+      } else if (current && typeof current === 'object') {
+        if (!(part in current)) {
+          // Check if we're looking for something that might be in an array
+          let found = false;
+          for (const [key, value] of Object.entries(current)) {
+            if (Array.isArray(value)) {
+              const normalized = part.toLowerCase().replace(/_/g, ' ');
+              const item = value.find(x => 
+                typeof x === 'string' ? x.toLowerCase() === normalized : x.name === part
+              );
+              if (item) {
+                current = item;
+                found = true;
+                break;
+              }
+            }
+          }
+          if (!found) {
+            // If not found, return empty object and continue
+            current = {};
+            break;
+          }
+        } else {
+          current = current[part];
+        }
+      } else {
+        // If we can't traverse further, return empty object
+        current = {};
+        break;
       }
-      current = current[part];
     }
     
     // Store the loaded data in RAM's loaded_data section

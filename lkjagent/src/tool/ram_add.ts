@@ -20,6 +20,9 @@ export async function ram_add(targetPath: JsonPath, content: any): Promise<void>
     
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
+      if (typeof current !== 'object' || current === null) {
+        throw new Error(`Cannot traverse path at '${part}': parent is not an object`);
+      }
       if (!(part in current)) {
         current[part] = {};
       }
@@ -28,6 +31,9 @@ export async function ram_add(targetPath: JsonPath, content: any): Promise<void>
     
     // Set the value at the final path segment
     const lastPart = parts[parts.length - 1];
+    if (typeof current !== 'object' || current === null) {
+      throw new Error(`Cannot set property '${lastPart}': parent is not an object`);
+    }
     current[lastPart] = content;
     
     // Write updated memory back to file
