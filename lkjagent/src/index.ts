@@ -1,14 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import axios from 'axios';
-import { MemoryState, StorageState, ToolAction, XmlString } from './types/common';
+import { LogEntry, MemoryState, StorageState, ToolAction, ToolKind, XmlString } from './types/common';
 import { ConfigManager } from './config/config-manager';
-import { ram_add } from './tool/ram_add';
+import { logAction } from './tool/action_logger';
+import { ram_set } from './tool/ram_set';
 import { ram_remove } from './tool/ram_remove';
-import { storage_load } from './tool/storage_load';
+import { storage_get } from './tool/storage_get';
 import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
-import { storage_store } from './tool/storage_store';
+import { storage_set } from './tool/storage_set';
 import { storage_ls } from './tool/storage_ls';
 
 /**
@@ -80,22 +81,21 @@ function parseActionsFromXml(xml: string): ToolAction[] {
 
       // Skip invalid actions
       switch (action.kind) {
-        case 'add':
-        case 'edit':
+        case 'ram_set':
           if (!action.path || action.content === undefined) {
             console.warn(`Skipping ${action.kind} action: missing path or content`);
             continue;
           }
           break;
-        case 'remove':
+        case 'ram_remove':
           if (!action.path) {
             console.warn('Skipping remove action: missing path');
             continue;
           }
           break;
-        case 'storage_load':
+        case 'storage_get':
           if (!action.path) {
-            console.warn('Skipping storage_load action: missing path');
+            console.warn('Skipping storage_get action: missing path');
             continue;
           }
           break;
@@ -105,9 +105,9 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             continue;
           }
           break;
-        case 'storage_store':
+        case 'storage_set':
           if (!action.source_path || !action.path) {
-            console.warn('Skipping storage_store action: missing source_path or path');
+            console.warn('Skipping storage_set action: missing source_path or path');
             continue;
           }
           break;
@@ -164,7 +164,7 @@ async function generateSystemPrompt(): Promise<string> {
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove|storage_ls</kind>
+          <kind>ram_set, ram_remove, storage_set, storage_remove, storage_get, storage_search, storage_ls</kind>
           <path>path.to.data</path>
           <content>content to store or search</content>
           <source_path>optional source path for storage operations</source_path>
@@ -174,12 +174,11 @@ async function generateSystemPrompt(): Promise<string> {
     <rules>
       1. Always wrap your response in <actions> tags
       2. Each action must be wrapped in <action> tags
-      3. The kind tag is required and must be one of: add, remove, edit, storage_load, storage_store, storage_search
-      4. The path tag is required for all actions except storage_search
-      5. The content tag is required for add, edit, and storage_search actions
-      6. The source_path tag is required only for storage_store action
-      7. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens
-      8. A directory should have no more than 8 direct children
+      3. The path tag is required for all actions except storage_search
+      4. The content tag is required for add, edit, and storage_search actions
+      5. The source_path tag is required only for storage_set action
+      6. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens
+      7. A directory should have no more than 8 direct children
     </rules>
     <example>
       <actions>
@@ -189,7 +188,7 @@ async function generateSystemPrompt(): Promise<string> {
           <content>Complete the project documentation</content>
         </action>
         <action>
-          <kind>storage_store</kind>
+          <kind>storage_set</kind>
           <path>storage/completed_tasks</path>
           <source_path>ram/todo/completed</source_path>
         </action>
@@ -241,80 +240,108 @@ async function callLLM(prompt: string): Promise<string> {
 /**
  * Execute a single tool action with error handling
  */
-async function executeAction(action: ToolAction): Promise<void> {
+async function executeAction(action: ToolAction): Promise<void> {  // Create initial log entry
+  const entry: LogEntry = {
+    timestamp: Date.now(),
+    actionType: action.kind as ToolKind,
+    path: action.path,
+    sourcePath: action.source_path,
+    content: action.content,
+    status: 'error'  // Default to error, will be updated to success if no error
+  };
+  
   try {
     // Validate required fields first
     if (!action.kind) {
       console.warn('Skipping action: missing kind');
+      entry.error = 'Missing action kind';
+      await logAction(entry);
       return;
     }
 
     // Handle each action type
-    switch (action.kind) {
-      case 'add':
-      case 'edit':
+    switch (action.kind) {      case 'ram_set':
         if (!action.path || action.content === undefined) {
           console.warn(`Skipping ${action.kind}: missing path or content`);
+          entry.error = `Missing ${!action.path ? 'path' : 'content'}`;
+          await logAction(entry);
           return;
         }
-        await ram_add(action.path, action.content);
+        await ram_set(action.path, action.content);
         break;
 
-      case 'remove':
+      case 'ram_remove':
         if (!action.path) {
           console.warn('Skipping remove: missing path');
+          entry.error = 'Missing path';
+          await logAction(entry);
           return;
         }
         await ram_remove(action.path);
-        break;
-
-      case 'storage_store':
+        break;      case 'storage_set':
         if (!action.source_path || !action.path) {
-          console.warn('Skipping storage_store: missing paths');
+          console.warn('Skipping storage_set: missing paths');
+          entry.error = `Missing ${!action.source_path ? 'source_path' : 'path'}`;
+          await logAction(entry);
           return;
         }
-        await storage_store(action.source_path, action.path);
+        await storage_set(action.source_path, action.path);
         break;
 
       case 'storage_remove':
         if (!action.path) {
           console.warn('Skipping storage_remove: missing path');
+          entry.error = 'Missing path';
+          await logAction(entry);
           return;
         }
         await storage_remove(action.path);
         break;
 
-      case 'storage_load':
+      case 'storage_get':
         if (!action.path) {
-          console.warn('Skipping storage_load: missing path');
+          console.warn('Skipping storage_get: missing path');
+          entry.error = 'Missing path';
+          await logAction(entry);
           return;
         }
-        await ram_add('ram/loaded_data', storage_load(action.path));
+        await ram_set('ram/loaded_data', storage_get(action.path));
         break;
 
       case 'storage_search':
         if (!action.content) {
           console.warn('Skipping storage_search: missing content');
+          entry.error = 'Missing content';
+          await logAction(entry);
           return;
         }
-        await ram_add('ram/loaded_data', storage_search(action.content));
+        await ram_set('ram/loaded_data', storage_search(action.content));
         break;
 
       case 'storage_ls':
         if (!action.path) {
           console.warn('Skipping storage_ls: missing path');
+          entry.error = 'Missing path';
+          await logAction(entry);
           return;
         }
-        await ram_add('ram/loaded_data', storage_ls(action.path));
-        break;
-
-      default:
+        await ram_set('ram/loaded_data', storage_ls(action.path));
+        break;default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
+        entry.error = `Unknown action kind: ${action.kind}`;
+        await logAction(entry);
+        return;
     }
+
+    // If we get here, the action was successful
+    entry.status = 'success';
+    await logAction(entry);
   } catch (error) {
     console.warn(`Error executing ${action.kind} action:`, error);
-    // Add error to thinking_log instead of throwing
-    await ram_add('ram/thinking_log', `Error executing ${action.kind} action: ${error}`);
+    // Add error to thinking_log and log the error
+    entry.error = error instanceof Error ? error.message : String(error);
+    await logAction(entry);
+    await ram_set('ram/thinking_log', `Error executing ${action.kind} action: ${error}`);
   }
 }
 

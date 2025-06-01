@@ -37,7 +37,7 @@ function setValueAtPath(obj: any, pathParts: string[], value: any): void {
  * @param sourcePath - Path in RAM where the data is located
  * @param destinationPath - Path in Storage where to store the data
  */
-export async function storage_store(sourcePath: JsonPath, destinationPath: JsonPath): Promise<void> {
+export async function storage_set(sourcePath: JsonPath, destinationPath: JsonPath): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
   

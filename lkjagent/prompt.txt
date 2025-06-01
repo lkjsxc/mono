@@ -19,12 +19,12 @@ lkjagent/
     ├── memory.json
     ├── storage.json
     ├── tool/
-    │   ├── ram_add.ts
+    │   ├── ram_set.ts
     │   ├── ram_remove.ts
-    │   ├── storage_load.ts
+    │   ├── storage_get.ts
     │   ├── storage_remove.ts
     │   ├── storage_search.ts
-    │   └── storage_store.ts
+    │   └── storage_set.ts
     └── types/
         └── common.ts
 ```
@@ -56,7 +56,7 @@ Please implement each file according to the following steps.
 *   Please implement each of the following tool files in TypeScript. Each tool should be exported as an independent function and be usable from `index.ts`.
 *   Use the types defined in `common.ts` for arguments and return values.
 *   These tools will primarily manipulate data in `memory.json` and `storage.json`. Refer to the `<memory_architecture>` in the README for the data structures to be manipulated.
-    *   **`ram_add.ts`**:
+    *   **`ram_set.ts`**:
         *   Feature: Adds or updates new data at a specified path in RAM (e.g., `ram.todo.new_task`).
         *   Arguments: `path` (string), `content` (any/appropriate type).
         *   Operation: Modifies data in `memory.json`.
@@ -64,7 +64,7 @@ Please implement each file according to the following steps.
         *   Feature: Deletes data at a specified path in RAM.
         *   Arguments: `path` (string).
         *   Operation: Modifies data in `memory.json`.
-    *   **`storage_load.ts`**:
+    *   **`storage_get.ts`**:
         *   Feature: Loads data from a specified path in Storage and places it in a temporary area in RAM (e.g., `ram.loaded_data`), or returns the data directly.
         *   Arguments: `path` (string).
         *   Operation: Reads data from `storage.json`. Updates `memory.json` if necessary.
@@ -77,7 +77,7 @@ Please implement each file according to the following steps.
         *   Arguments: `content` (string/search query).
         *   Return Value: Search results (e.g., a list of path-value pairs).
         *   Operation: Searches data in `storage.json`.
-    *   **`storage_store.ts`**:
+    *   **`storage_set.ts`**:
         *   Feature: Saves data from a specified path in RAM to a specified path in Storage. The README example shows behavior like saving `ram.db.schema` to an assumed `storage.db.schema`.
         *   Arguments: `source_path` (string, path in RAM), `destination_path` (string, path in Storage).
         *   Operation: Reads data from `memory.json` and writes to `storage.json`.

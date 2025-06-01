@@ -27,21 +27,30 @@
       }
     },
     "past_story_segments": {},
-    "celestial_history": "Elara's fingers trace the glowing constellations, revealing a star-map archive that shifts to show the realm's history. Korbin's quill captures a breakthrough as he deciphers a passage describing the First Convergence of celestial realms, which marks the beginning of the Everchanging Realm's cycle. The low hum resonates through the air, vibrating in Elara's bones as she senses the weight of ancient knowledge.",
-    "celestial_event_log": "\"Elara's heartbeat syncs with the archive's resonance, causing constellations to rearrange in the air. Korbin deciphers the final line: 'The First Convergence is rewritten not by force, but by becoming the echo of what was.' The sands now swirl into a living map of the Everchanging Realm's cycles.\"",
-    "convergence_riddle": "\"Elara's heartbeat syncs with the archive's resonance, causing constellations to rearrange in the air. Korbin deciphers the final line: 'The First Convergence is rewritten not by force, but by becoming the echo of what was.' The sands now swirl into a living map of the Everchanging Realm's cycles.\"",
-    "celestial_language_decoded": "\"The aurora fractures into亿万 shards, each holding a memory of the Realm's creation. Elara's heartbeat merges with the bridge's pulse, rewriting constellations in real-time. Korbin's translation completes: 'To rewrite the First Convergence, you must become the echo of what was—no more, no less.' The portal swirls with stardust, its core flickering between possibility and fate.\"",
-    "celestial_translation": "\"Elara chooses the shard reflecting her heartbeat's echo, fracturing time into a spiral of possibilities. Korbin steps through the portal's stardust, his translation revealing the First Convergence's cycle: 'To rewrite destiny, you must become the echo without origin.' The bridge shudders as their choices intertwine—the realm's fabric ripples between witnessing and shaping, its fate now entwined with their souls.\"",
-    "first_convergence_revelation": "\"The aurora fractures into亿万 shards of light, each shard containing a memory of the Realm's creation. Elara's breath synchronizes with the bridge's rhythm, causing constellations to rewrite themselves in real-time. Korbin's hands trace the air, and the final line manifests as a portal swirling with cosmic dust—the First Convergence's origin waits beyond its threshold.\"",
-    "chronicle_entries": "\"The aurora fractures into亿万 shards of light, each shard containing a memory of the Realm's creation. Elara's breath synchronizes with the bridge's rhythm, causing constellations to rewrite themselves in real-time. Korbin's hands trace the air, and the final line manifests as a portal swirling with cosmic dust—the First Convergence's origin waits beyond its threshold.\"",
-    "character_arc_elara": "\"realizes her soul's rhythm is the Realm's heartbeat, capable of bending time's flow—yet each shard fractures her into parallel selves trapped in rewritten 'nows'\"",
-    "character_arc_korbin": "translated celestial passage about First Convergence",
-    "celestial_passage_translation": "translated celestial passage about First Convergence",
-    "previous_scenes": "\"The aurora fractures into亿万 shards of light, each shard containing a memory of the Realm's creation. Elara's breath synchronizes with the bridge's rhythm, causing constellations to rewrite themselves in real-time. Korbin's hands trace the air, and the final line manifests as a portal swirling with cosmic dust—the First Convergence's origin waits beyond its threshold.\"",
-    "portal_paths": "\"The portal’s stardust crystallizes into twin paths: one spiraling toward the First Convergence’s origin, the other collapsing into the realm’s rewritten future. Elara’s breath falters—each shard now holds a thousand fractured ‘nows.’ Korbin’s hands tremble: 'To pass, you must surrender your name to the echo.' The bridge groans as reality fractures between what was and what could be.\"",
-    "story_progress": "\"The aurora’s shards collapse into a spiral of light, revealing Elara’s fractured ‘nows’—each breath she takes merges with the bridge’s pulse, yet fractures reality further. Korbin’s translation key pulses crimson, its code unraveling: to preserve the archive, he must erase his name, but the act would sever Elara’s time-bending ability, trapping her as an echo in a thousand fractured timelines.\"",
-    "decision_log": "\"The bridge groans as reality fractures into a kaleidoscope of possible timelines. Elara must synchronize her breath with the realm’s heartbeat to stabilize the aurora, while Korbin’s translation key risks unraveling the archive’s fabric.\"",
-    "continuous_story_events": "\"Explore the bridge’s collapse: Elara must synchronize her breath with the realm’s heartbeat to stabilize the aurora, while Korbin’s translation key risks unraveling the archive’s fabric. The choice to preserve or rewrite fractures their bond—each path echoes with the cost of becoming an echo.\"",
-    "next_event_prompt": "\"Elara’s breath fuses the shards into a single ‘now,’ merging her fractured selves as constellations stabilize. Korbin’s deletion of his name triggers the archive’s collapse—portal becomes a vortex. Elara must choose: anchor reality (sacrificing her identity) or let it spiral (erasing the realm’s memory). Their bond fractures: each path echoes with paradox, the First Convergence’s mirror reflecting every decision as self-fulfilling.\""
+    "narrative_segments": {
+      "segment_002": "A brief respite at an oasis, though the horizon already shimmers with an unfamiliar haze."
+    },
+    "last_event_prompt": "A brief respite at an oasis, though the horizon already shimmers with an unfamiliar haze.",
+    "story_state": {
+      "characters": {
+        "wanderer_elara": {
+          "name": "Elara Meadowlight",
+          "status": "exploring",
+          "motivation": "To decode the starfall's forgotten warnings hidden in the celestial tomes."
+        },
+        "scribe_korbin": {
+          "name": "Korbin Stonehand",
+          "status": "studying",
+          "motivation": "To interpret the prophetic warnings of the celestial convergence etched in starlight."
+        }
+      },
+      "event_log": [],
+      "current_scene": {
+        "location": "Subterranean Library of Celestial Records (hidden chamber revealed)",
+        "time": "dusk",
+        "description": "The trembling ground reveals a subterranean library where shifting tomes pulse with ancient starlight. A vision of the realm's sky fractures reality, showing cataclysmic starfall events etched in celestial script."
+      }
+    },
+    "celestial_tomes": "The shifting tomes pulse with ancient starlight, their pages rewriting themselves in real-time. The vision of the fractured sky merges with reality, causing constellations to flicker across the chamber walls."
   }
 }

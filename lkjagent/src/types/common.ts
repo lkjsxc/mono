@@ -57,7 +57,7 @@ export interface StorageState {
 /**
  * Kinds of tools available to the agent
  */
-export type ToolKind = 'add' | 'remove' | 'edit' | 'storage_load' | 'storage_store' | 'storage_search' | 'storage_remove' | 'storage_ls';
+export type ToolKind = 'ram_set' | 'ram_remove' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls';
 
 /**
  * Structure of an action the agent can execute
@@ -66,7 +66,7 @@ export interface ToolAction {
   kind: ToolKind;
   path?: string;        // Path in RAM or Storage to operate on
   content?: any;        // Content to add/edit/search
-  source_path?: string; // For storage_store action
+  source_path?: string; // For storage_set action
 }
 
 /**
@@ -82,12 +82,12 @@ export interface SearchResult {
  * Tool function signatures
  */
 export interface ToolFunctions {
-  ram_add: (path: string, content: any) => Promise<void>;
+  ram_set: (path: string, content: any) => Promise<void>;
   ram_remove: (path: string) => Promise<void>;
-  storage_load: (path: string) => Promise<any>;
+  storage_get: (path: string) => Promise<any>;
   storage_remove: (path: string) => Promise<void>;
   storage_search: (content: string) => Promise<SearchResult[]>;
-  storage_store: (source_path: string, destination_path: string) => Promise<void>;
+  storage_set: (source_path: string, destination_path: string) => Promise<void>;
 }
 
 /**
@@ -100,3 +100,16 @@ export type JsonPath = string;
  * Helper type for XML string format used in LLM communication
  */
 export type XmlString = string;
+
+/**
+ * Structure of a log entry
+ */
+export interface LogEntry {
+  timestamp: number;
+  actionType: ToolKind;
+  path?: string;
+  sourcePath?: string;
+  content?: any;
+  status: 'success' | 'error';
+  error?: string;
+}

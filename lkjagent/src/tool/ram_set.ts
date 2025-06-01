@@ -7,7 +7,7 @@ import { JsonPath } from '../types/common';
  * @param targetPath - Dot-separated path in RAM (e.g., 'ram.todo.new_task')
  * @param content - Content to add/update at the path
  */
-export async function ram_add(targetPath: JsonPath, content: any): Promise<void> {
+export async function ram_set(targetPath: JsonPath, content: any): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   
   try {

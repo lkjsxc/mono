@@ -1,14 +1,14 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath } from '../types/common';
-import { ram_add } from './ram_add';
+import { ram_set } from './ram_set';
 
 /**
  * Loads data from a specified path in Storage and places it in RAM's loaded_data area
  * @param targetPath - Dot-separated path in Storage (e.g., 'storage.knowledge_base.policy')
  * @returns The loaded data
  */
-export async function storage_load(targetPath: JsonPath): Promise<any> {
+export async function storage_get(targetPath: JsonPath): Promise<any> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
   
   try {

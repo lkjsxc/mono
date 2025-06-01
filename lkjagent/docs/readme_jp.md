@@ -18,12 +18,12 @@ lkjagent/
     ├── memory.json     # メモリの状態
     ├── storage.json     # ストレージの状態
     ├── tool/          # ツール群
-    │   ├── ram_add.ts
+    │   ├── ram_set.ts
     │   ├── ram_remove.ts
-    │   ├── storage_load.ts
+    │   ├── storage_get.ts
     │   ├── storage_ls.ts
     │   ├── storage_remove.ts
     │   ├── storage_search.ts
-    │   └── storage_store.ts
+    │   └── storage_set.ts
     └── types/         # 型定義
         └── common.ts
