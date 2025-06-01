@@ -12,8 +12,7 @@
           }
         }
       },
-      "magic_system": {
-      }
+      "magic_system": {}
     },
     "story_templates": {
       "quest_hooks": {
@@ -22,6 +21,45 @@
         "artifact": "Magical artifact discovered"
       }
     },
-    "archived_stories": {}
+    "archived_stories": {},
+    "last_action": "Begin the hero's journey",
+    "world_state": {
+      "characters": {
+        "hero": {
+          "name": "Aiden Brightforge",
+          "status": "active"
+        }
+      },
+      "plot_points": "A mysterious artifact, the Starforged Dagger, has been stolen from the royal vaults of Silverspire, setting Aiden on a quest to recover it before an ancient darkness awakens.",
+      "current_scene": {
+        "location": "The Kingdom of Silverspire",
+        "time": "dawn",
+        "description": "A peaceful morning in the kingdom before the adventure begins"
+      }
+    },
+    "story_progress": {
+      "location": "The Royal Vaults of Silverspire",
+      "time": "dawn",
+      "description": "Aiden's fingers trace the glowing runes, triggering a hidden mechanism that rumbles the vault floor. A concealed door slides open, revealing a chamber bathed in blue light and etched with star maps."
+    },
+    "completed_tasks": "Store the refined celestial code resonance in storage.completed_tasks to track progress.",
+    "saved_thoughts": "Aiden completes the celestial code, fracturing the obelisk's crystalline surface. The hidden chamber pulses with ancient starlight as prismatic shards harmonize, revealing the Starforged Dagger's sanctum. The vault's magic binds to his touch, and the final alignment etched in stardust fractures the magical lock.",
+    "progress": {
+      "save_002": "Aiden seizes the Starforged Dagger, its supernova core igniting his veins. The vault's foundations ripple with new stardust pathways, and the dagger's constellations pulse in rhythm with his celestial code, forging a bridge between mortal and cosmic realms. As the final alignment etched in stardust fractures the magical lock, ancient starlight surges from the dagger’s blade, carving luminous runes into the vault’s heart."
+    }
+  },
+  "ram": {
+    "story_state": {
+      "current_scene": {
+        "description": "Aiden's fingers trace the luminous star maps, their constellations pulsing in rhythm with his heartbeat. The vaults breathe around him, ancient magic coiling through the air as the stars rearrange themselves into a map of forgotten truths. A shimmering lockguard of celestial runes forms ahead, its patterns shifting to match the star maps' alignments."
+      }
+    },
+    "todo": {
+      "story_001": "Interrogate the vault's magical lock to uncover its ancient enchantments and bypass its defenses, then trace the dagger's trail through the star maps etched into the chamber.",
+      "story_002": "Aiden has deciphered the star maps' celestial alignments, bypassing the magical lock to uncover the Starforged Dagger's hidden path through Silverspire's vaults. The dagger's location now lies within the labyrinthine archives beyond the concealed passage, where sentient constellations pulse with ancient knowledge awaiting his command."
+    },
+    "current_scene": {
+      "description": "Aiden seizes the Starforged Dagger, its supernova core igniting his veins. The vault's foundations ripple with new stardust pathways, and the dagger's constellations pulse in rhythm with his celestial code, forging a bridge between mortal and cosmic realms."
+    }
   }
 }

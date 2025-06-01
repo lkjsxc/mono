@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import axios from 'axios';
 import { MemoryState, StorageState, ToolAction, XmlString } from './types/common';
+import { ConfigManager } from './config/config-manager';
 import { ram_add } from './tool/ram_add';
 import { ram_remove } from './tool/ram_remove';
 import { storage_load } from './tool/storage_load';
@@ -133,16 +134,17 @@ async function generateSystemPrompt(): Promise<string> {
     fs.readFile(storagePath, 'utf-8').then(JSON.parse)
   ]);
 
+  const configManager = await ConfigManager.getInstance();
+  const memoryConfig = configManager.getMemoryConfig();
+  const ramCharacterLimit = memoryConfig.ramCharacterLimit;
+
   return `<lkjagent_system_setup>
   <persona>
     <name>lkjagent</name>
     <role>An AI agent that communicates using XML actions</role>
   </persona>
 
-  <memory_architecture>
-    ${jsonToXml(memoryData, 'ram')}
-    ${jsonToXml(storageData, 'storage')}
-  </memory_architecture>
+  ${jsonToXml(memoryData, 'ram')}
 
   <output_format_specification>
     <format>
@@ -163,6 +165,9 @@ async function generateSystemPrompt(): Promise<string> {
       4. The path tag is required for all actions except storage_search
       5. The content tag is required for add, edit, and storage_search actions
       6. The source_path tag is required only for storage_store action
+      7. Content for paths starting with \`ram.\` must not exceed ${ramCharacterLimit} tokens.
+         - For \`add\` and \`edit\` actions, this limit applies to the \`<content>\` if its associated \`<path>\` starts with \`ram.\`.
+         - For \`storage_store\` actions, this limit applies to the data being stored (from \`<source_path>\`) if the destination \`<path>\` starts with \`ram.\`.
     </rules>
     <example>
       <actions>
