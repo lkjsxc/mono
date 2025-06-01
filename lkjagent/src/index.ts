@@ -9,7 +9,7 @@ import { storage_load } from './tool/storage_load';
 import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
 import { storage_store } from './tool/storage_store';
-import { storage_getdir } from './tool/storage_getdir';
+import { storage_ls } from './tool/storage_ls';
 
 /**
  * Convert JSON data to XML format for LLM communication
@@ -117,8 +117,11 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             continue;
           }
           break;
-        case 'storage_getdir':
-          // path is optional for storage_getdir, so no validation needed here
+        case 'storage_ls':
+          if (!action.path) {
+            console.warn('Skipping storage_ls action: missing path');
+            continue;
+          }
           break;
         default:
           console.warn(`Skipping unknown action kind: ${action.kind}`);
@@ -161,7 +164,7 @@ async function generateSystemPrompt(): Promise<string> {
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove|storage_getdir</kind>
+          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove|storage_ls</kind>
           <path>path.to.data</path>
           <content>content to store or search</content>
           <source_path>optional source path for storage operations</source_path>
@@ -298,9 +301,12 @@ async function executeAction(action: ToolAction): Promise<void> {
         await storage_search(action.content);
         break;
 
-      case 'storage_getdir':
-        // path is optional for storage_getdir
-        await storage_getdir(action.path);
+      case 'storage_ls':
+        if (!action.path) {
+          console.warn('Skipping storage_ls: missing path');
+          return;
+        }
+        await storage_ls(action.path);
         break;
 
       default:

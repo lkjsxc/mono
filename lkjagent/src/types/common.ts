@@ -57,7 +57,7 @@ export interface StorageState {
 /**
  * Kinds of tools available to the agent
  */
-export type ToolKind = 'add' | 'remove' | 'edit' | 'storage_load' | 'storage_store' | 'storage_search' | 'storage_remove' | 'storage_getdir';
+export type ToolKind = 'add' | 'remove' | 'edit' | 'storage_load' | 'storage_store' | 'storage_search' | 'storage_remove' | 'storage_ls';
 
 /**
  * Structure of an action the agent can execute
