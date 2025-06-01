@@ -16,7 +16,7 @@ export async function storage_load(targetPath: JsonPath): Promise<any> {
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
     
     // Split the path into parts and traverse the object structure
-    const parts = targetPath.split('.');
+    const parts = targetPath.split('/');
     let current = storageData;
     
     // Traverse to the target data

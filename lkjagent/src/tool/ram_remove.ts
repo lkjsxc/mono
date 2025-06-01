@@ -14,7 +14,7 @@ export async function ram_remove(targetPath: JsonPath): Promise<void> {
     const memoryData = JSON.parse(await fs.readFile(memoryPath, 'utf-8'));
     
     // Split the path into parts and traverse the object structure
-    const parts = targetPath.split('.');
+    const parts = targetPath.split('/');
     let current = memoryData;
     
     // Traverse to the parent of the target to remove

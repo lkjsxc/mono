@@ -178,21 +178,21 @@ async function generateSystemPrompt(): Promise<string> {
       4. The path tag is required for all actions except storage_search
       5. The content tag is required for add, edit, and storage_search actions
       6. The source_path tag is required only for storage_store action
-      7. Content for paths starting with \`ram.\` must not exceed ${ramCharacterLimit} tokens.
-         - For \`add\` and \`edit\` actions, this limit applies to the \`<content>\` if its associated \`<path>\` starts with \`ram.\`.
-         - For \`storage_store\` actions, this limit applies to the data being stored (from \`<source_path>\`) if the destination \`<path>\` starts with \`ram.\`.
+      7. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens.
+         - For \`add\` and \`edit\` actions, this limit applies to the \`<content>\` if its associated \`<path>\` starts with \`ram/\`.
+         - For \`storage_store\` actions, this limit applies to the data being stored (from \`<source_path>\`) if the destination \`<path>\` starts with \`ram/\`.
     </rules>
     <example>
       <actions>
         <action>
           <kind>add</kind>
-          <path>ram.todo.new_task</path>
+          <path>ram/todo/new_task</path>
           <content>Complete the project documentation</content>
         </action>
         <action>
           <kind>storage_store</kind>
-          <path>storage.completed_tasks</path>
-          <source_path>ram.todo.completed</source_path>
+          <path>storage/completed_tasks</path>
+          <source_path>ram/todo/completed</source_path>
         </action>
       </actions>
     </example>

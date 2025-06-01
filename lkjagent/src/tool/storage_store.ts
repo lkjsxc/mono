@@ -47,11 +47,11 @@ export async function storage_store(sourcePath: JsonPath, destinationPath: JsonP
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
     
     // Get the data from RAM
-    const sourcePathParts = sourcePath.split('.');
+    const sourcePathParts = sourcePath.split('/');
     const dataToStore = await getValueAtPath(memoryData, sourcePathParts);
     
     // Store the data in Storage
-    const destinationPathParts = destinationPath.split('.');
+    const destinationPathParts = destinationPath.split('/');
     setValueAtPath(storageData, destinationPathParts, dataToStore);
     
     // Write updated storage back to file

@@ -15,7 +15,7 @@ export async function ram_add(targetPath: JsonPath, content: any): Promise<void>
     const memoryData = JSON.parse(await fs.readFile(memoryPath, 'utf-8'));
     
     // Split the path into parts and traverse/create the object structure
-    const parts = targetPath.split('.');
+    const parts = targetPath.split('/');
     let current = memoryData;
     
     for (let i = 0; i < parts.length - 1; i++) {
