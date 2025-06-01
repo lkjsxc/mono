@@ -27,7 +27,7 @@ export class ConfigManager {
   }
 
   private async loadConfig(): Promise<void> {
-    const configPath = path.join(__dirname, 'config.json');
+    const configPath = path.join(__dirname, '..', '..', 'data', 'config.json');
     const configData = await fs.readFile(configPath, 'utf-8');
     this.config = JSON.parse(configData);
   }
@@ -38,7 +38,7 @@ export class ConfigManager {
 
   public async updateConfig(newConfig: Partial<Config>): Promise<void> {
     this.config = { ...this.config, ...newConfig };
-    const configPath = path.join(__dirname, 'config.json');
+    const configPath = path.join(__dirname, '..', '..', 'data', 'config.json');
     await fs.writeFile(configPath, JSON.stringify(this.config, null, 2), 'utf-8');
   }
 }

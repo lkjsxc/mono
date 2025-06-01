@@ -5,24 +5,22 @@
         "silverspire": {
           "name": "Kingdom of Silverspire",
           "description": "A majestic kingdom surrounded by silver-peaked mountains",
-          "key_locations": [
-            "Royal Castle",
-            "Mystic Forest",
-            "Dragon's Peak"
-          ]
+          "key_locations": {
+            "royal_castle": "Royal Castle",
+            "mystic_forest": "Mystic Forest",
+            "dragon_peak": "Dragon's Peak"
+          }
         }
       },
       "magic_system": {
-        "elements": ["fire", "water", "earth", "air", "spirit"],
-        "schools": ["elemental", "healing", "prophecy", "enchantment"]
       }
     },
     "story_templates": {
-      "quest_hooks": [
-        "Ancient prophecy reveals itself",
-        "Mysterious stranger arrives with urgent news",
-        "Magical artifact discovered"
-      ]
+      "quest_hooks": {
+        "prophecy": "Ancient prophecy reveals itself",
+        "stranger": "Mysterious stranger arrives with urgent news",
+        "artifact": "Magical artifact discovered"
+      }
     },
     "archived_stories": {}
   }

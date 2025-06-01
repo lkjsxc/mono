@@ -6,11 +6,10 @@
       "characters": {
         "hero": {
           "name": "Aiden Brightforge",
-          "traits": ["brave", "determined", "kind-hearted"],
           "status": "active"
         }
       },
-      "plot_points": [],
+      "plot_points": {},
       "current_scene": {
         "location": "The Kingdom of Silverspire",
         "time": "dawn",
@@ -18,8 +17,7 @@
       }
     },
     "knowledge_base": {
-      "story_rules": "Generate engaging fantasy narratives with rich character development",
-      "genre_elements": ["magic", "quests", "mythical creatures", "prophecies"]
+      "story_rules": "Generate engaging fantasy narratives with rich character development"
     },
     "todo": {
       "story_001": {
