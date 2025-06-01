@@ -4,8 +4,8 @@ import { JsonPath } from '../types/common';
 import { validatePath, getValueAtPath, setValueAtPath } from '../util/json';
 
 /**
- * Stores data from RAM into Storage
- * @param sourcePath - Path in RAM where the data is located
+ * Stores data from memory into Storage
+ * @param sourcePath - Path in memory where the data is located
  * @param destinationPath - Path in Storage where to store the data
  */
 export async function storage_set(sourcePath: JsonPath, destinationPath: JsonPath): Promise<void> {

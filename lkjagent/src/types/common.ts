@@ -13,7 +13,7 @@ export interface TodoItem {
 }
 
 /**
- * Structure representing RAM content
+ * Structure representing memory content
  */
 export interface RamData {
   current_task?: {
@@ -41,7 +41,7 @@ export interface StorageData {
 }
 
 /**
- * Complete memory state including RAM
+ * Complete memory state including memory
  */
 export interface MemoryState {
   ram: RamData;
@@ -64,7 +64,7 @@ export type ToolKind = 'memory_set' | 'memory_remove' | 'storage_get' | 'storage
  */
 export interface ToolAction {
   kind: ToolKind;
-  path?: string;        // Path in RAM or Storage to operate on
+  path?: string;        // Path in memory or Storage to operate on
   content?: any;        // Content to add/edit/search
   source_path?: string; // For storage_set action
 }

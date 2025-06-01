@@ -3,8 +3,8 @@ import * as path from 'path';
 import { JsonPath } from '../types/common';
 
 /**
- * Removes data at a specified path in RAM
- * @param targetPath - Dot-separated path in RAM (e.g., 'ram.todo.task_to_remove')
+ * Removes data at a specified path in memory
+ * @param targetPath - Dot-separated path in memory (e.g., 'ram.todo.task_to_remove')
  */
 export async function memory_remove(targetPath: JsonPath): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
@@ -21,7 +21,7 @@ export async function memory_remove(targetPath: JsonPath): Promise<void> {
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
       if (!(part in current)) {
-        throw new Error(`Path segment '${part}' not found in RAM`);
+        throw new Error(`Path segment '${part}' not found in memory`);
       }
       current = current[part];
     }
@@ -34,9 +34,9 @@ export async function memory_remove(targetPath: JsonPath): Promise<void> {
       // Write updated memory back to file
       await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2), 'utf-8');
     } else {
-      throw new Error(`Target '${lastPart}' not found in RAM`);
+      throw new Error(`Target '${lastPart}' not found in memory`);
     }
   } catch (error) {
-    throw new Error(`Failed to remove from RAM at path ${targetPath}: ${error}`);
+    throw new Error(`Failed to remove from memory at path ${targetPath}: ${error}`);
   }
 }

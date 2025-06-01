@@ -4,7 +4,7 @@ import { JsonPath } from '../types/common';
 import { memory_set } from './memory_set';
 
 /**
- * Loads data from a specified path in Storage and places it in RAM's loaded_data area
+ * Loads data from a specified path in Storage and places it in memory's loaded_data area
  * @param targetPath - Dot-separated path in Storage (e.g., 'storage.knowledge_base.policy')
  * @returns The loaded data
  */

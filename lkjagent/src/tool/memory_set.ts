@@ -4,8 +4,8 @@ import { JsonPath } from '../types/common';
 import { validatePath, setValueAtPath } from '../util/json';
 
 /**
- * Adds or updates data at a specified path in RAM
- * @param targetPath - Dot-separated path in RAM (e.g., 'ram.todo.new_task')
+ * Adds or updates data at a specified path in memory
+ * @param targetPath - Dot-separated path in memory (e.g., 'ram.todo.new_task')
  * @param content - Content to add/update at the path
  */
 export async function memory_set(targetPath: JsonPath, content: any): Promise<void> {
