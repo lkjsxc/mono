@@ -164,9 +164,9 @@ async function generateSystemPrompt(): Promise<string> {
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>ram_set, ram_remove, storage_set, storage_remove, storage_get, storage_search, storage_ls</kind>
+          <kind>ram_set|ram_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
           <path>path.to.data</path>
-          <content>content to store or search</content>
+          <content>optional content</content>
           <source_path>optional source path for storage operations</source_path>
         </action>
       </actions>
@@ -174,23 +174,22 @@ async function generateSystemPrompt(): Promise<string> {
     <rules>
       1. Always wrap your response in <actions> tags
       2. Each action must be wrapped in <action> tags
-      3. The path tag is required for all actions except storage_search
-      4. The content tag is required for add, edit, and storage_search actions
-      5. The source_path tag is required only for storage_set action
-      6. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens
-      7. A directory should have no more than 8 direct children
+      3. The source_path tag is required only for storage_set action
+      4. RAM must not exceed ${ramCharacterLimit} tokens
+      5. A directory should have no more than 8 direct children
+      6. Make proactive use of storage
     </rules>
     <example>
       <actions>
         <action>
-          <kind>add</kind>
-          <path>ram/todo/new_task</path>
+          <kind>ram_set</kind>
+          <path>/todo/new_task</path>
           <content>Complete the project documentation</content>
         </action>
         <action>
           <kind>storage_set</kind>
-          <path>storage/completed_tasks</path>
-          <source_path>ram/todo/completed</source_path>
+          <path>/completed_tasks</path>
+          <source_path>/todo/completed</source_path>
         </action>
       </actions>
     </example>
@@ -249,7 +248,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
     content: action.content,
     status: 'error'  // Default to error, will be updated to success if no error
   };
-  
+
   try {
     // Validate required fields first
     if (!action.kind) {
@@ -260,7 +259,8 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
     }
 
     // Handle each action type
-    switch (action.kind) {      case 'ram_set':
+    switch (action.kind) {
+      case 'ram_set':
         if (!action.path || action.content === undefined) {
           console.warn(`Skipping ${action.kind}: missing path or content`);
           entry.error = `Missing ${!action.path ? 'path' : 'content'}`;
@@ -278,7 +278,9 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           return;
         }
         await ram_remove(action.path);
-        break;      case 'storage_set':
+        break;
+
+      case 'storage_set':
         if (!action.source_path || !action.path) {
           console.warn('Skipping storage_set: missing paths');
           entry.error = `Missing ${!action.source_path ? 'source_path' : 'path'}`;
@@ -326,7 +328,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           return;
         }
         await ram_set('ram/loaded_data', storage_ls(action.path));
-        break;default:
+        break; default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
         entry.error = `Unknown action kind: ${action.kind}`;
         await logAction(entry);
