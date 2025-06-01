@@ -178,7 +178,8 @@ async function generateSystemPrompt(): Promise<string> {
       4. The path tag is required for all actions except storage_search
       5. The content tag is required for add, edit, and storage_search actions
       6. The source_path tag is required only for storage_store action
-      7. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens.
+      7. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens
+      8. A directory should have no more than 8 direct children
     </rules>
     <example>
       <actions>
@@ -226,14 +227,14 @@ async function callLLM(prompt: string): Promise<string> {
     // Validate that the response is in XML format
     if (!llmResponse.includes('<actions>')) {
       console.warn('LLM response is not in expected XML format, wrapping it');
-      return `<actions><action><kind>add</kind><path>ram.thinking_log</path><content>${llmResponse}</content></action></actions>`;
+      return `<actions><action><kind>add</kind><path>ram/thinking_log</path><content>${llmResponse}</content></action></actions>`;
     }
 
     return llmResponse;
   } catch (error: any) {
     console.error('Error calling LLM:', error);
     // Return a fallback response in case of error
-    return `<actions><action><kind>add</kind><path>ram.thinking_log</path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
+    return `<actions><action><kind>add</kind><path>ram/thinking_log</path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
   }
 }
 
@@ -288,7 +289,7 @@ async function executeAction(action: ToolAction): Promise<void> {
           console.warn('Skipping storage_load: missing path');
           return;
         }
-        await ram_add('ram.loaded_data', storage_load(action.path));
+        await ram_add('ram/loaded_data', storage_load(action.path));
         break;
 
       case 'storage_search':
@@ -296,7 +297,7 @@ async function executeAction(action: ToolAction): Promise<void> {
           console.warn('Skipping storage_search: missing content');
           return;
         }
-        await ram_add('ram.loaded_data', storage_search(action.content));
+        await ram_add('ram/loaded_data', storage_search(action.content));
         break;
 
       case 'storage_ls':
@@ -304,7 +305,7 @@ async function executeAction(action: ToolAction): Promise<void> {
           console.warn('Skipping storage_ls: missing path');
           return;
         }
-        await ram_add('ram.loaded_data', storage_ls(action.path));
+        await ram_add('ram/loaded_data', storage_ls(action.path));
         break;
 
       default:
@@ -313,7 +314,7 @@ async function executeAction(action: ToolAction): Promise<void> {
   } catch (error) {
     console.warn(`Error executing ${action.kind} action:`, error);
     // Add error to thinking_log instead of throwing
-    await ram_add('ram.thinking_log', `Error executing ${action.kind} action: ${error}`);
+    await ram_add('ram/thinking_log', `Error executing ${action.kind} action: ${error}`);
   }
 }
 
