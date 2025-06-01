@@ -19,7 +19,7 @@ function jsonToXml(obj: any, rootTag: string, indent = ''): string {
   }
 
   const xmlParts: string[] = [`${indent}<${rootTag}>`];
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (Array.isArray(value)) {
       for (const item of value) {
@@ -31,7 +31,7 @@ function jsonToXml(obj: any, rootTag: string, indent = ''): string {
       xmlParts.push(`${indent}  <${key}>${value}</${key}>`);
     }
   }
-  
+
   xmlParts.push(`${indent}</${rootTag}>`);
   return xmlParts.join('\n');
 }
@@ -98,6 +98,12 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             continue;
           }
           break;
+        case 'storage_remove':
+          if (!action.path) {
+            console.warn('Skipping storage_remove action: missing path');
+            continue;
+          }
+          break;
         case 'storage_store':
           if (!action.source_path || !action.path) {
             console.warn('Skipping storage_store action: missing source_path or path');
@@ -151,7 +157,7 @@ async function generateSystemPrompt(): Promise<string> {
       You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>add|remove|edit|storage_load|storage_store|storage_search</kind>
+          <kind>add|remove|edit|storage_load|storage_store|storage_search|storage_remove</kind>
           <path>path.to.data</path>
           <content>content to store or search</content>
           <source_path>optional source path for storage operations</source_path>
@@ -264,6 +270,14 @@ async function executeAction(action: ToolAction): Promise<void> {
         await storage_load(action.path);
         break;
 
+      case 'storage_remove':
+        if (!action.path) {
+          console.warn('Skipping storage_remove: missing path');
+          return;
+        }
+        await storage_remove(action.path);
+        break;
+
       case 'storage_store':
         if (!action.source_path || !action.path) {
           console.warn('Skipping storage_store: missing paths');
@@ -298,11 +312,11 @@ async function runAgent(): Promise<void> {
     while (true) {
       // Generate system prompt with current state
       const systemPrompt = await generateSystemPrompt();
-      
+
       // Get actions from LLM
       const llmResponse = await callLLM(systemPrompt);
       const actions = parseActionsFromXml(llmResponse);
-      
+
       // Execute each action
       for (const action of actions) {
         await executeAction(action);
