@@ -1,0 +1,17 @@
+{
+  "ram": {
+    "current_task": null,
+    "thinking_log": "",
+    "knowledge_base": {
+      "system_policy_summary": "Process tasks using the indicated tools in high quality XML format."
+    },
+    "todo": {
+      "setup_001": {
+        "task_description": "Initialize system configuration",
+        "status": "pending",
+        "sub_tasks": {}
+      }
+    },
+    "loaded_data": "Hello, I am lkjagent and I am ready to do the task."
+  }
+}

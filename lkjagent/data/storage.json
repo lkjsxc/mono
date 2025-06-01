@@ -1,0 +1,11 @@
+{
+    "storage":  {
+                    "knowledge_base":  {
+                                           "system_policy_summary":  "Process tasks using the indicated tools in high quality XML format.",
+                                           "greeting_message":  "Hello, I am lkjagent and I am ready to do the task."
+                                       },
+                    "archived_data":  {
+
+                                      }
+                }
+}
