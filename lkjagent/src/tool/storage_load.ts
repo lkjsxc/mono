@@ -69,9 +69,6 @@ export async function storage_load(targetPath: JsonPath): Promise<any> {
       }
     }
     
-    // Store the loaded data in RAM's loaded_data section
-    await ram_add('ram.loaded_data', current);
-    
     return current;
   } catch (error) {
     throw new Error(`Failed to load from Storage at path ${targetPath}: ${error}`);

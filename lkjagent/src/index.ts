@@ -154,7 +154,7 @@ async function generateSystemPrompt(): Promise<string> {
   return `<lkjagent_system_setup>
   <persona>
     <name>lkjagent</name>
-    <role>An AI agent that communicates using XML actions</role>
+    <role>An AI agent with finite RAM and infinite storage that communicates using XML actions</role>
   </persona>
 
   ${jsonToXml(memoryData, 'ram')}
@@ -179,8 +179,6 @@ async function generateSystemPrompt(): Promise<string> {
       5. The content tag is required for add, edit, and storage_search actions
       6. The source_path tag is required only for storage_store action
       7. Content for paths starting with \`ram/\` must not exceed ${ramCharacterLimit} tokens.
-         - For \`add\` and \`edit\` actions, this limit applies to the \`<content>\` if its associated \`<path>\` starts with \`ram/\`.
-         - For \`storage_store\` actions, this limit applies to the data being stored (from \`<source_path>\`) if the destination \`<path>\` starts with \`ram/\`.
     </rules>
     <example>
       <actions>
@@ -269,12 +267,12 @@ async function executeAction(action: ToolAction): Promise<void> {
         await ram_remove(action.path);
         break;
 
-      case 'storage_load':
-        if (!action.path) {
-          console.warn('Skipping storage_load: missing path');
+      case 'storage_store':
+        if (!action.source_path || !action.path) {
+          console.warn('Skipping storage_store: missing paths');
           return;
         }
-        await storage_load(action.path);
+        await storage_store(action.source_path, action.path);
         break;
 
       case 'storage_remove':
@@ -285,12 +283,12 @@ async function executeAction(action: ToolAction): Promise<void> {
         await storage_remove(action.path);
         break;
 
-      case 'storage_store':
-        if (!action.source_path || !action.path) {
-          console.warn('Skipping storage_store: missing paths');
+      case 'storage_load':
+        if (!action.path) {
+          console.warn('Skipping storage_load: missing path');
           return;
         }
-        await storage_store(action.source_path, action.path);
+        await ram_add('ram.loaded_data', storage_load(action.path));
         break;
 
       case 'storage_search':
@@ -298,7 +296,7 @@ async function executeAction(action: ToolAction): Promise<void> {
           console.warn('Skipping storage_search: missing content');
           return;
         }
-        await storage_search(action.content);
+        await ram_add('ram.loaded_data', storage_search(action.content));
         break;
 
       case 'storage_ls':
@@ -306,7 +304,7 @@ async function executeAction(action: ToolAction): Promise<void> {
           console.warn('Skipping storage_ls: missing path');
           return;
         }
-        await storage_ls(action.path);
+        await ram_add('ram.loaded_data', storage_ls(action.path));
         break;
 
       default:
