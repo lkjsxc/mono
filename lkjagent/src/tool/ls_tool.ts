@@ -33,13 +33,21 @@ export async function handle_ls_action(
     const relative_path = get_relative_path(action.target_path);
     const target_data = root === 'working_memory' ? working_memory : storage;
 
-    const contents = list_contents_at_path(target_data, relative_path);
-    
-    if (contents !== undefined) {
+    const contents = list_contents_at_path(target_data, relative_path); if (contents !== undefined) {
       result.status = 'success';
-      result.data = contents;
       const count = Object.keys(contents).length;
-      result.message = `Listed ${count} items in ${action.target_path}`;
+
+      // Create formatted list of items with directory indicators
+      const itemList = Object.entries(contents).map(([name, item]) => {
+        const isDirectory = item && typeof item === 'object' && !Array.isArray(item) && (item as any)._is_directory === true;
+        return isDirectory ? `${name}/ (dir)` : `${name} (file)`;
+      });
+
+      if (count === 0) {
+        result.message = `Directory ${action.target_path} is empty`;
+      } else {
+        result.message = `Listed ${count} items in ${action.target_path}:\n${itemList.join('\n')}`;
+      }
     } else {
       result.error = `Path not found or is not a directory: ${action.target_path}`;
     }

@@ -1,47 +1,28 @@
 {
   "working_memory": {
-    "user_data": {
-      "todo": {
-        "task1": {
-          "description": "Initial task setup",
-          "status": "pending"
-        },
-        "setup_initial_storage_structure": {
-          "description": "Setup initial storage structure",
-          "status": "\"completed\""
-        },
-        "task2": {
-          "description": "Next task details",
-          "status": "\"in_progress\""
-        },
-        "task3": {
-          "description": "Expand storage capacity",
-          "status": {
-            "status": "in_progress"
-          }
-        }
-      },
-      "current_task": {
-        "description": "Initial task setup",
-        "status": "\"in_progress\""
-      }
-    },
     "action_result": {
-      "_1": {
-        "action_index": 1,
-        "timestamp": 1748850171098,
-        "kind": "set",
-        "target_path": "/working_memory/system_info/status",
+      "_18": {
+        "action_index": 18,
+        "timestamp": 1748858846081,
+        "kind": "get",
+        "target_path": "/storage/test_data",
         "status": "success",
-        "message": "Value set successfully at /working_memory/system_info/status"
+        "data": {
+          "content": "This is a test document",
+          "status": "active"
+        },
+        "message": "Retrieved data from /storage/test_data"
+      },
+      "_19": {
+        "action_index": 19,
+        "timestamp": 1748858846088,
+        "kind": "search",
+        "target_path": "/storage",
+        "status": "success",
+        "data": {},
+        "message": "Search for \"test_data\" in /storage found 0 matches"
       }
     },
-    "system_info": {
-      "status": "Agent ready and operational"
-    },
-    "current_task": {
-      "description": "Expanding storage capacity",
-      "status": "\"progressing\""
-    }
+    "cache": {}
   }
 }

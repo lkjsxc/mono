@@ -1,5 +1,5 @@
 {
-  "working_memory_character_max": 2048,
+  "working_memory_character_max": 4096,
   "working_memory_direct_child_max": 8,
   "working_memory_key_token_max": 4,
   "llm_api_url": "http://localhost:1234/v1/chat/completions",

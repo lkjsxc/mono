@@ -98,10 +98,21 @@ function generate_result_summary(action: tool_action, result: action_result): st
     case 'rm':
       return `${action_desc} deleted successfully`;
     case 'mv':
-      return `${action.source_path} moved to ${action.target_path}`;
-    case 'ls':
+      return `${action.source_path} moved to ${action.target_path}`;    case 'ls':
       const count = result.data ? Object.keys(result.data).length : 0;
-      return `${action_desc} listed ${count} items`;
+      let dirCount = 0;
+      let fileCount = 0;
+      if (result.data && typeof result.data === 'object') {
+        Object.values(result.data).forEach((item: any) => {
+          if (item && typeof item === 'object' && item._is_directory === true) {
+            dirCount++;
+          } else {
+            fileCount++;
+          }
+        });
+      }
+      const dirInfo = dirCount > 0 ? ` (${dirCount} dirs, ${fileCount} files)` : ` (${count} files)`;
+      return `${action_desc} listed ${count} items${dirInfo}`;
     case 'search':
       const results = result.data ? Object.keys(result.data).length : 0;
       return `${action_desc} found ${results} matches`;

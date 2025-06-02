@@ -100,22 +100,34 @@ function is_valid_tool_kind(kind: string): boolean {
 }
 
 /**
- * Convert JSON object to simple XML for examples
+ * Convert JSON object to simple XML with proper formatting
  */
-export function json_to_xml(obj: any, rootTag: string = 'root'): string {
+export function json_to_xml(obj: any, rootTag: string = 'root', indent: number = 0): string {
+  const indentStr = '  '.repeat(indent);
+  const childIndentStr = '  '.repeat(indent + 1);
+  
   if (typeof obj !== 'object' || obj === null) {
-    return `<${rootTag}>${escape_xml_content(String(obj))}</${rootTag}>`;
+    return `${indentStr}<${rootTag}>${escape_xml_content(String(obj))}</${rootTag}>`;
   }
   
-  let xml = `<${rootTag}>`;
+  if (Array.isArray(obj)) {
+    let xml = `${indentStr}<${rootTag}>\n`;
+    obj.forEach((item, index) => {
+      xml += json_to_xml(item, `item_${index}`, indent + 1) + '\n';
+    });
+    xml += `${indentStr}</${rootTag}>`;
+    return xml;
+  }
+  
+  let xml = `${indentStr}<${rootTag}>\n`;
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'object' && value !== null) {
-      xml += json_to_xml(value, key);
+      xml += json_to_xml(value, key, indent + 1) + '\n';
     } else {
-      xml += `<${key}>${escape_xml_content(String(value))}</${key}>`;
+      xml += `${childIndentStr}<${key}>${escape_xml_content(String(value))}</${key}>\n`;
     }
   }
-  xml += `</${rootTag}>`;
+  xml += `${indentStr}</${rootTag}>`;
   
   return xml;
 }

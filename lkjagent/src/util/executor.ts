@@ -10,6 +10,7 @@ import { handle_rm_action } from '../tool/rm_tool';
 import { handle_mv_action } from '../tool/mv_tool';
 import { handle_ls_action } from '../tool/ls_tool';
 import { handle_search_action } from '../tool/search_tool';
+import { handle_mkdir_action } from '../tool/mkdir_tool';
 import { log_action } from '../tool/action_logger';
 
 // Global action counter for cumulative indexing
@@ -62,9 +63,11 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
           break;
         case 'ls':
           result = await handle_ls_action(action, working_memory, storage, action_index);
-          break;
-        case 'search':
+          break;        case 'search':
           result = await handle_search_action(action, working_memory, storage, action_index);
+          break;
+        case 'mkdir':
+          result = await handle_mkdir_action(action, working_memory, storage, action_index);
           break;
         default:
           result = {

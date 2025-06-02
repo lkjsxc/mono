@@ -23,7 +23,8 @@ export type tool_kind =
   | 'rm'
   | 'mv'
   | 'ls'
-  | 'search';
+  | 'search'
+  | 'mkdir';
 
 // Tool action interface
 export interface tool_action {

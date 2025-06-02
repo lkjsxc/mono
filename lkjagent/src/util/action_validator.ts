@@ -8,9 +8,8 @@ import { is_valid_path } from './json';
 /**
  * Validate a tool action
  */
-export function validate_action(action: tool_action): { valid: boolean; error?: string } {
-  // Check if kind is valid
-  const valid_kinds = ['set', 'get', 'rm', 'mv', 'ls', 'search'];
+export function validate_action(action: tool_action): { valid: boolean; error?: string } {  // Check if kind is valid
+  const valid_kinds = ['set', 'get', 'rm', 'mv', 'ls', 'search', 'mkdir'];
   if (!valid_kinds.includes(action.kind)) {
     return { valid: false, error: `Invalid action kind: ${action.kind}` };
   }
@@ -46,10 +45,10 @@ export function validate_action(action: tool_action): { valid: boolean; error?: 
         return { valid: false, error: 'content (search query) is required for search action' };
       }
       break;
-      
-    case 'get':
+        case 'get':
     case 'rm':
     case 'ls':
+    case 'mkdir':
       // These actions only need target_path, which we already validated
       break;
       

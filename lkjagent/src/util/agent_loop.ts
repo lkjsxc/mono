@@ -3,7 +3,7 @@
  */
 
 import { call_llm, test_llm_connection } from './llm';
-import { generate_system_prompt, generate_welcome_prompt } from './prompt';
+import { generate_system_prompt } from './prompt';
 import { parse_actions_from_xml } from './xml';
 import { validate_actions } from './action_validator';
 import { execute_actions } from './executor';
@@ -24,27 +24,7 @@ export async function run_agent(): Promise<void> {
   
   const config = await load_config();
   let iteration_count = 0;
-  
-  try {
-    // Initial welcome interaction
-    console.log('👋 Sending welcome prompt...');
-    const welcome_prompt = await generate_welcome_prompt();
-    const welcome_response = await call_llm(welcome_prompt);
-    
-    console.log('🤖 LLM Response:', welcome_response);
-    
-    // Parse and execute welcome actions
-    const welcome_actions = parse_actions_from_xml(welcome_response);
-    if (welcome_actions.length > 0) {
-      const validation = validate_actions(welcome_actions);
-      if (validation.valid) {
-        await execute_actions(welcome_actions, true);
-        console.log('✅ Welcome actions executed successfully');
-      } else {
-        console.warn('⚠️ Welcome actions validation failed:', validation.errors);
-      }
-    }
-    
+    try {
     // Main interaction loop
     while (true) {
       iteration_count++;
