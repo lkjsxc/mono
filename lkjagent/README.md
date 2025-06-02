@@ -1,79 +1,80 @@
+```markdown
 # 🤖 lkjagent
 
-[![Build Status](https://img.shields.io/your_ci_badge_url)](https://your_ci_link)
-[![npm version](https://img.shields.io/npm/v/lkjagent.svg?style=flat)](https://www.npmjs.com/package/lkjagent)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+[![build_status](https://img.shields.io/your_ci_badge_url)](https://your_ci_link)
+[![npm_version](https://img.shields.io/npm/v/lkjagent.svg?style=flat)](https://www.npmjs.com/package/lkjagent)
+[![license:_mit](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![prs_welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-**lkjagent** is a sophisticated AI Agent framework specifically designed for small Language Learning Models (LLMs). It solves the critical challenge of memory limitations in smaller models by implementing a dual-memory architecture that enables complex, persistent, and long-running task execution.
+**lkjagent** is a sophisticated ai_agent framework specifically designed for small language_learning_models (llms). It solves the critical challenge of memory limitations in smaller models by implementing a dual_memory_architecture: finite **working_memory** for immediate context and infinite persistent **storage** for long_term data. This enables complex, persistent, and long_running task execution.
 
-This framework empowers developers to build advanced AI agents that can handle tasks requiring long-term context and data retention, even when using LLMs with constrained memory capacities.
+This framework empowers developers to build advanced ai_agents that can handle tasks requiring long_term context and data retention, even when using llms with constrained memory capacities. Communication with the llm is performed using a **simple_xml_format that can be straightforwardly rewritten as json**, ensuring clarity and ease of parsing. Attributes and complex xml features are not supported; tags map to keys and text content to values.
 
-## 🌟 Key Features
+## 🌟 key_features
 
--   **🧠 Dual Memory Architecture**: Finite working memory (RAM) for immediate context + infinite persistent storage for long-term data.
--   **📡 XML-Based Communication**: Structured action protocol for reliable and verifiable LLM interaction.
--   **⚡ Modular TypeScript Design**: Clean, maintainable, and scalable architecture built with TypeScript.
--   **🔄 Persistent Task Management**: Enables long-running tasks with state preservation across sessions.
--   **📊 Comprehensive Action Logging**: Full audit trail of all agent operations, with results stored in `/result_data/action_N/`.
--   **🛡️ Robust Error Handling**: Graceful failure recovery with detailed error reporting for enhanced stability.
--   **🎯 Action Numbering System**: Sequential tracking of all operations, facilitating debugging and state recovery.
--   **🔍 Advanced XML Processing**: Safe XML parsing with circular reference detection, validation, and content escaping.
+-   **🧠 dual_memory_architecture**: Finite **working_memory** (for immediate context) + infinite persistent **storage** (for long_term data).
+-   **📡 simple_xml_based_communication**: Structured action protocol using a simple_xml_format (easily convertible to json) for reliable and verifiable llm interaction.
+-   **⚡ modular_typescript_design**: Clean, maintainable, and scalable architecture built with typescript.
+-   **🔄 persistent_task_management**: Enables long_running tasks with state preservation across sessions.
+-   **📊 cumulative_action_logging_and_results**: Full audit trail of all agent operations. Actions are numbered cumulatively (e.g., `_1`, `_2`, ...). Execution results are stored in `/working_memory/action_result/_${total_index}`.
+-   **🛡️ robust_error_handling**: Graceful failure recovery with detailed error reporting for enhanced stability.
+-   **🎯 cumulative_action_numbering**: Sequential tracking of all operations, facilitating debugging and state recovery. Each action processed increments a total index.
+-   **🔍 advanced_xml_processing**: Safe xml parsing for the simple supported format, with validation and content escaping.
 
-## 📋 Table of Contents
+## 📋 table_of_contents
 
--   [🌟 Key Features](#-key-features)
--   [📋 Table of Contents](#-table-of-contents)
--   [🚀 Quick Start](#-quick-start)
--   [🏗️ Architecture Overview](#️-architecture-overview)
-    -   [🧠 Memory System](#-memory-system)
-    -   [📡 Communication Protocol](#-communication-protocol)
--   [🔧 Installation](#-installation)
-    -   [📦 Prerequisites](#-prerequisites)
-    -   [🛠️ Installation Steps](#️-installation-steps)
-    -   [📁 Data Directory Setup](#-data-directory-setup)
--   [⚙️ Configuration](#️-configuration)
-    -   [🔧 Configuration Options](#-configuration-options)
-    -   [🎯 Action Numbering System Details](#-action-numbering-system-details)
--   [🧩 Modular Utilities & Core Concepts](#-modular-utilities--core-concepts)
-    -   [🏗️ Architectural Benefits](#️-architectural-benefits)
-    -   [🔧 Core Utility Modules (`src/util/`)](#-core-utility-modules-srcutil)
--   [🛠️ Tool System](#️-tool-system)
-    -   [Available Actions](#available-actions)
-    -   [Action Execution Flow](#action-execution-flow)
--   [📊 Data Management](#-data-management)
-    -   [Memory Structure (`data/memory.json`)](#memory-structure-datamemoryjson)
-    -   [Storage Structure (`data/storage.json`)](#storage-structure-datastoragejson)
-    -   [Action Log Structure (`data/log.json`)](#action-log-structure-datalogjson)
--   [💻 Usage](#-usage)
-    -   [Basic Operation](#basic-operation)
-    -   [Integration with LM Studio (or similar)](#integration-with-lm-studio-or-similar)
-    -   [Example Workflow](#example-workflow)
--   [🎮 Example Use Cases](#-example-use-cases)
--   [📁 Project Structure](#-project-structure)
--   [🔄 Development Workflow](#-development-workflow)
-    -   [Building](#building)
-    -   [Testing](#testing)
-    -   [Linting and Formatting](#linting-and-formatting)
--   [📚 API Reference (Core Components)](#-api-reference-core-components)
-    -   [Core Utility Functions](#core-utility-functions)
-    -   [Core Interfaces](#core-interfaces)
-    -   [Configuration Interface](#configuration-interface)
--   [🤝 Contributing](#-contributing)
-    -   [Development Guidelines](#development-guidelines)
-    -   [Adding New Utilities](#adding-new-utilities)
-    -   [Adding New Tools](#adding-new-tools)
--   [🛣️ Roadmap (Future Enhancements)](#️-roadmap-future-enhancements)
--   [📄 License](#-license)
--   [🙏 Acknowledgements](#-acknowledgements)
+-   [🌟 key_features](#-key_features)
+-   [📋 table_of_contents](#-table_of_contents)
+-   [🚀 quick_start](#-quick_start)
+-   [🏗️ architecture_overview](#️-architecture_overview)
+    -   [🧠 memory_system](#-memory_system)
+    -   [📡 communication_protocol](#-communication_protocol)
+-   [🔧 installation](#-installation)
+    -   [📦 prerequisites](#-prerequisites)
+    -   [🛠️ installation_steps](#️-installation_steps)
+    -   [📁 data_directory_setup](#-data_directory_setup)
+-   [⚙️ configuration](#️-configuration)
+    -   [🔧 configuration_options](#-configuration_options)
+    -   [🎯 action_numbering_system_details](#-action_numbering_system_details)
+-   [🧩 modular_utilities_and_core_concepts](#-modular_utilities_and_core_concepts)
+    -   [🏗️ architectural_benefits](#️-architectural_benefits)
+    -   [🔧 core_utility_modules (src/util/)](#-core_utility_modules-srcutil)
+-   [🛠️ tool_system](#️-tool_system)
+    -   [available_actions](#available_actions)
+    -   [action_execution_flow](#action_execution_flow)
+-   [📊 data_management](#-data_management)
+    -   [working_memory_structure (memory.json)](#working_memory_structure-memoryjson)
+    -   [storage_structure (storage.json)](#storage_structure-storagejson)
+    -   [action_log_structure (log.json)](#action_log_structure-logjson)
+-   [💻 usage](#-usage)
+    -   [basic_operation](#basic_operation)
+    -   [integration_with_lm_studio (or_similar)](#integration_with_lm_studio-or_similar)
+    -   [example_workflow](#example_workflow)
+-   [🎮 example_use_cases](#-example_use_cases)
+-   [📁 project_structure](#-project_structure)
+-   [🔄 development_workflow](#-development_workflow)
+    -   [building](#building)
+    -   [testing](#testing)
+    -   [linting_and_formatting](#linting_and_formatting)
+-   [📚 api_reference (core_components)](#-api_reference-core_components)
+    -   [core_utility_functions](#core_utility_functions)
+    -   [core_interfaces](#core_interfaces)
+    -   [configuration_interface](#configuration_interface)
+-   [🤝 contributing](#-contributing)
+    -   [development_guidelines](#development_guidelines)
+    -   [adding_new_utilities](#adding_new_utilities)
+    -   [adding_new_tools](#adding_new_tools)
+-   [✨ implementation_order (todo_list_from_scratch)](#-implementation_order-todo_list_from_scratch)
+-   [📄 license](#-license)
+-   [🙏 acknowledgements](#-acknowledgements)
 
-## 🚀 Quick Start
+## 🚀 quick_start
 
 Get lkjagent up and running in a few simple steps:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/lkjagent.git # Replace with actual URL
+git clone https://github.com/your_username/lkjagent.git # Replace with actual URL
 cd lkjagent
 
 # 2. Install dependencies
@@ -81,236 +82,227 @@ npm install
 
 # 3. Build the project
 npm run build
-# Or for development with watching (if tsc --watch is configured in package.json)
-# npm run dev
 # Or manually with tsc
 # npx tsc
 
-# 4. Initialize data files (creates default JSON files in data/)
+# 4. Initialize data files (creates default json files in data/)
 npm run init-data
 
-# 5. Configure your LLM (edit data/config.json, see Configuration section)
-# Ensure your LLM server (e.g., LM Studio, Ollama) is running.
+# 5. Configure your llm (edit data/config.json, see configuration section)
+# Ensure your llm server (e.g., lm_studio, ollama) is running.
 
 # 6. Start the agent
 npm start
 # Or: node dist/index.js
 ```
 
-## 🏗️ Architecture Overview
+## 🏗️ architecture_overview
 
-lkjagent is built around a dual-memory system and a structured XML communication protocol to effectively manage tasks and interact with LLMs.
+lkjagent is built around a dual_memory_system and a structured, simple_xml_communication_protocol to effectively manage tasks and interact with llms. **Storage information is not directly given to the llm in the prompt.**
 
-### 🧠 Memory System
+### 🧠 memory_system
 
-The dual-memory architecture is inspired by human cognitive systems, designed to overcome the memory limitations of smaller LLMs:
+The dual_memory_architecture is designed to overcome the memory limitations of smaller llms:
 
 ```mermaid
 graph TB
-    A[LLM] -->|Requests Actions| B(XML Actions)
-    B -->|Validates| C(Action Validator)
-    C -->|Executes| D(Executor)
-    D -->|Operates on| E[Working Memory (RAM)]
-    D -->|Operates on| F[Persistent Storage (Disk)]
-    E -->|Provides Context| G(JSON Path Operations)
-    F -->|Provides Context| G
-    G -->|Logs Actions/Results| H(Action Logger)
-    H -->|Creates| I[Audit Trail (in /result_data & log.json)]
+    A[llm] -->|requests_actions_via_simple_xml| B(xml_parser)
+    B -->|outputs_action_objects| C(action_validator)
+    C -->|validates| D(executor)
+    D -->|operates_on| E[working_memory (in memory.json)]
+    D -->|operates_on (indirectly_via_tools)| F[persistent_storage (in storage.json)]
+    E -->|provides_context (excluding_direct_storage_view)| G(prompt_generator)
+    G -->|sends_prompt_to_llm| A
+    D -->|logs_actions_results| H(action_logger)
+    H -->|creates| I[audit_trail (in log.json & /working_memory/action_result/)]
 ```
 
-#### 🐏 Working Memory (RAM - `data/memory.json`)
--   **Finite capacity** (configurable, e.g., 2048 characters by default).
--   **Fast access** for current task context, immediate operations, and temporary data.
--   **Structured data** typically as JSON, with potential for predefined schemas and type safety.
--   **Automatic cleanup** mechanisms can be implemented when limits are reached to maintain performance.
--   Holds the **real-time state** for active tasks and system operations.
+#### 🐏 working_memory (`memory.json` containing `/working_memory`)
+-   **Finite capacity** (configurable, e.g., `working_memory_character_max` default 2048 characters).
+-   **Fast access** for current task context, immediate operations, and temporary data. All llm interactions are based on this.
+-   **Structured data** as json under the `/working_memory` root key.
+-   Holds the **real_time state** for active tasks and system operations, including results of past actions.
 
-#### 💾 Persistent Storage (Disk - `data/storage.json`)
--   **Effectively infinite capacity** for long-term data retention, knowledge bases, and archival.
--   **Hierarchical organization** using Unix-style path-based access (e.g., `/path/to/data`).
--   **Advanced search capabilities** across all stored content (e.g., keyword matching).
--   Potential for **versioning system** for tracking data evolution over time.
--   Ensures **cross-session persistence**, maintaining state between agent restarts.
+#### 💾 persistent_storage (`storage.json` containing `/storage`)
+-   **Effectively infinite capacity** for long_term data retention, knowledge bases, and archival.
+-   **Hierarchical organization** using unix_style path_based access (e.g., `/storage/path/to/data`).
+-   **Accessed by llm indirectly** via actions like `get`, `ls`, `search` targeting `/storage/...` paths.
+-   Ensures **cross_session persistence**, maintaining state between agent restarts.
+-   **Not directly exposed to the llm in the system_prompt.**
 
-### 📡 Communication Protocol
+### 📡 communication_protocol
 
-The agent uses a robust XML-based protocol for structured LLM communication, ensuring clarity and verifiability of actions:
+The agent uses a robust xml_based_protocol for structured llm communication. **Crucially, only simple xml that can be directly and unambiguously rewritten as json is allowed.** This means:
+-   Tags map to json keys.
+-   Text content within tags maps to json values.
+-   No xml attributes are used.
+-   No mixed content (text interspersed with child elements within a single parent) that doesn't map cleanly to a key_value structure.
+-   The primary purpose is to provide a structured format for actions and their parameters.
 
-**Example LLM Action Request:**
+**example_llm_action_request:**
 ```xml
 <actions>
   <action>
-    <kind>memory_set</kind>
-    <target_path>/user/todo/new_task</target_path>
+    <kind>set</kind>
+    <target_path>/working_memory/user/todo/new_task</target_path>
     <content>{"task_description": "Complete project documentation", "status": "pending", "priority": "high"}</content>
   </action>
   <action>
-    <kind>storage_ls</kind>
-    <target_path>/archived_data</target_path>
+    <kind>ls</kind>
+    <target_path>/storage/archived_data</target_path>
   </action>
   <action>
-    <kind>storage_search</kind>
-    <content>project documentation</content> <!-- Content is the search query here -->
+    <kind>search</kind>
+    <target_path>/storage/documents</target_path> <!-- Scope of search -->
+    <content>project documentation</content> <!-- Search query -->
   </action>
 </actions>
 ```
 
-**XML Protocol Features:**
--   **Schema Validation**: Ensures proper action structure and prevents malformed requests from the LLM.
--   **Content Escaping**: Safe handling of special characters and nested data within XML content.
--   **Error Recovery**: Graceful parsing with detailed error messages for debugging.
--   **Circular Reference Detection**: Prevents infinite loops in complex data structures during XML generation/parsing.
+**xml_protocol_features:**
+-   **schema_validation**: Ensures proper action structure based on the simple format.
+-   **content_escaping**: Safe handling of special characters within text content.
+-   **error_recovery**: Graceful parsing with detailed error messages for debugging.
 
-## 🔧 Installation
+## 🔧 installation
 
-### 📦 Prerequisites
+### 📦 prerequisites
 
--   **Node.js**: Version 16+ (LTS recommended).
--   **npm** (usually comes with Node.js) or **yarn**.
--   **TypeScript**: Version 4.5+ (for development).
--   **LLM Server**:
-    -   LM Studio, Ollama, or any OpenAI API-compatible local LLM server.
+-   **node_js**: Version 16+ (LTS recommended).
+-   **npm** (usually comes with node_js) or **yarn**.
+-   **typescript**: Version 4.5+ (for development).
+-   **llm_server**:
+    -   lm_studio, ollama, or any openai_api_compatible local llm_server.
     -   Ensure the server is running and accessible.
--   **RAM**: 4GB+ recommended for optimal performance, especially when running LLMs locally.
+-   **system_ram**: 4GB+ recommended for optimal performance, especially when running llms locally.
 
-### 🛠️ Installation Steps
+### 🛠️ installation_steps
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/lkjagent.git # Replace with actual URL
+git clone https://github.com/your_username/lkjagent.git # Replace with actual URL
 cd lkjagent
 
 # 2. Install dependencies
 npm install
 
-# 3. Build the TypeScript project
+# 3. Build the typescript project
 npm run build
 # Alternative for manual build:
 # npx tsc
 
-# 4. Initialize data files (creates default JSON files in data/)
+# 4. Initialize data files (creates default json files in data/)
 npm run init-data
 # This script ensures data/config.json, data/memory.json, data/storage.json, and data/log.json exist.
 ```
 
-### 📁 Data Directory Setup
+### 📁 data_directory_setup
 
 After running `npm run init-data` (or manual setup), the `data/` directory will be initialized:
 
 ```
 data/
-├── config.json      # Agent configuration (LLM endpoint, memory limits, etc.)
-├── memory.json      # Working memory state (volatile, for current tasks)
-├── storage.json     # Persistent storage (long-term knowledge, archives)
+├── config.json      # Agent configuration (root_level_settings)
+├── memory.json      # Contains /working_memory (volatile, for current tasks & action results)
+├── storage.json     # Contains /storage (persistent_storage, long_term knowledge, archives)
 └── log.json         # Action execution log (history of operations)
 ```
 
-**Manual Setup (if `npm run init-data` is unavailable or for custom initialization):**
+**manual_setup (if `npm run init-data` is unavailable or for custom initialization):**
 
 ```bash
 # Create data directory
 mkdir -p data
 
-# Create default configuration file (data/config.json)
+# Create default configuration file (data/config.json) - All settings at root level
 echo '{
-  "memory": {
-    "MemoryCharacterMax": 2048,
-    "DirectChildMax": 8
-  },
-  "llm": {
-    "apiUrl": "http://localhost:1234/v1/chat/completions",
-    "model": "your-local-model-name", # IMPORTANT: Change this to your model
-    "maxTokens": 1000,
-    "temperature": 0.7
-  },
-  "system": {
-    "maxLogEntries": 1000,
-    "autoCleanup": true,
-    "debugMode": false
-  }
+  "working_memory_character_max": 2048,
+  "working_memory_direct_child_max": 8,
+  "llm_api_url": "http://localhost:1234/v1/chat/completions",
+  "llm_model": "your-local-model-name",
+  "llm_max_tokens": 1000,
+  "llm_temperature": 0.7,
+  "system_max_log_entries": 1000,
+  "system_auto_cleanup": true,
+  "system_debug_mode": false
 }' > data/config.json
 
 # Create empty data files
-echo '{"user":{"todo":{}},"sys":{"result_data":{}}}' > data/memory.json
-echo '{"knowledge_base":{"system_policy_summary":"","greeting_message":""},"archived_data":{}}' > data/storage.json
+echo '{"working_memory": {"user_data": {"todo":{}}, "action_result":{}, "system_info":{}}}' > data/memory.json
+echo '{"storage": {"knowledge_base":{"system_policy_summary":"","greeting_message":""},"archived_data":{}}}' > data/storage.json
 echo '[]' > data/log.json
 ```
-**Note:** Ensure `sys.result_data` exists in `memory.json` as it's used for storing action results.
+**Note:** Ensure `working_memory.action_result` exists in `memory.json` as it's used for storing action results.
 
-## ⚙️ Configuration
+## ⚙️ configuration
 
-Configure `lkjagent` via `data/config.json`.
+Configure `lkjagent` via `data/config.json`. **All configuration settings are at the root level (not nested).**
 
-### 🔧 Configuration Options
+### 🔧 configuration_options
 
 ```json
 {
-  "memory": {
-    "MemoryCharacterMax": 4096,    // Max characters in working memory (default: 2048)
-    "DirectChildMax": 12           // Max direct children per memory/storage directory node (default: 8)
-  },
-  "llm": {
-    "apiUrl": "http://localhost:1234/v1/chat/completions", // LM Studio/Ollama API endpoint
-    "model": "llama-3.2-3b-instruct", // Specific model name to use for inference
-    "maxTokens": 1000,             // Maximum tokens per LLM response
-    "temperature": 0.7             // LLM creativity/randomness (0.0-1.0)
-  },
-  "system": {
-    "maxLogEntries": 1000,         // Maximum entries in data/log.json before potential cleanup
-    "autoCleanup": true,           // Enable automatic cleanup of old data/logs (future feature)
-    "debugMode": false             // Enable verbose logging for debugging purposes
-  }
+  "working_memory_character_max": 4096,  // Max characters in working_memory (default: 2048)
+  "working_memory_direct_child_max": 12,    // Max direct children per working_memory/storage directory node (default: 8)
+  "llm_api_url": "http://localhost:1234/v1/chat/completions", // lm_studio/ollama api endpoint
+  "llm_model": "llama-3.2-3b-instruct", // Specific model name to use for inference
+  "llm_max_tokens": 1000,               // Maximum tokens per llm response
+  "llm_temperature": 0.7,              // llm creativity/randomness (0.0-1.0)
+  "system_max_log_entries": 1000,        // Maximum entries in data/log.json before potential cleanup
+  "system_auto_cleanup": true,          // Enable automatic cleanup of old data/logs (future feature)
+  "system_debug_mode": false            // Enable verbose logging for debugging purposes
 }
 ```
 
-#### Memory Configuration (`memory`)
--   **`MemoryCharacterMax`**: Maximum total characters allowed in the working memory (`memory.json`). This helps constrain the context provided to the LLM.
--   **`DirectChildMax`**: Maximum number of direct children a JSON object node can have in memory or storage. This helps prevent overly wide structures that might be hard for the LLM to parse.
+#### working_memory_configuration
+-   **`working_memory_character_max`**: Maximum total characters allowed in the `/working_memory` structure within `memory.json`. This helps constrain the context provided to the llm.
+-   **`working_memory_direct_child_max`**: Maximum number of direct children a json object node can have in `working_memory` or `storage`. This helps prevent overly wide structures.
 
-#### LLM Configuration (`llm`)
--   **`apiUrl`**: The API endpoint for your LLM server (e.g., LM Studio, Ollama).
--   **`model`**: The identifier for the LLM model you want the agent to use.
--   **`maxTokens`**: The maximum number of tokens the LLM should generate in its response.
--   **`temperature`**: Controls the randomness of the LLM's output. Lower values (e.g., 0.2) make it more deterministic; higher values (e.g., 0.8) make it more creative.
+#### llm_configuration
+-   **`llm_api_url`**: The api endpoint for your llm_server.
+-   **`llm_model`**: The identifier for the llm model.
+-   **`llm_max_tokens`**: The maximum number of tokens the llm should generate.
+-   **`llm_temperature`**: Controls the randomness of the llm's output.
 
-#### System Configuration (`system`)
--   **`maxLogEntries`**: Maximum number of entries to keep in `data/log.json`.
--   **`autoCleanup`**: Boolean to enable/disable automatic cleanup processes (e.g., old logs, oversized memory sections).
--   **`debugMode`**: Boolean to enable more verbose logging to the console for development and troubleshooting.
+#### system_configuration
+-   **`system_max_log_entries`**: Maximum number of entries to keep in `data/log.json`.
+-   **`system_auto_cleanup`**: Boolean to enable/disable automatic cleanup processes.
+-   **`system_debug_mode`**: Boolean to enable more verbose logging.
 
-### 🎯 Action Numbering System Details
+### 🎯 action_numbering_system_details
 
-`lkjagent` features an advanced action numbering system that tracks all operations sequentially. The results and status of each action requested by the LLM are stored in working memory under `/result_data/action_N/`.
+`lkjagent` features an action numbering system that tracks all operations **cumulatively and sequentially**. Actions are processed one by one. The results and status of each action requested by the llm are stored in `/working_memory/action_result/_${total_index}/`, where `total_index` is a counter that increments for every action processed by the agent, starting from `_1`. Once an action is processed and its result logged, it is considered final.
 
-**Example structure in `data/memory.json` after actions:**
+**Example structure in `memory.json` after actions:**
 ```json
 {
-  "user": { /* ... user data ... */ },
-  "sys": {
-    "result_data": {
-      "action_1": {
-        "action_number": 1,
+  "working_memory": {
+    "user_data": { /* ... user data ... */ },
+    "system_info": { /* ... system data ... */ },
+    "action_result": {
+      "_1": {
+        "action_index": 1,
         "timestamp": 1672531200000,
-        "kind": "storage_ls",          // Renamed from 'action' for clarity
-        "target_path": "/",
+        "kind": "ls",
+        "target_path": "/storage/",
         "status": "success",
-        "data": { "knowledge_base": {}, "archived_data": {} } // Example result
+        "data": { "knowledge_base": { "_is_directory": true }, "archived_data": { "_is_directory": true } } // Example result for ls
       },
-      "action_2": {
-        "action_number": 2,
+      "_2": {
+        "action_index": 2,
         "timestamp": 1672531201000,
-        "kind": "memory_set",
-        "target_path": "/user/current_task",
+        "kind": "set",
+        "target_path": "/working_memory/user_data/current_task",
         "status": "success",
-        "message": "Value set successfully at /user/current_task"
+        "message": "Value set successfully at /working_memory/user_data/current_task"
       },
-      "action_3": {
-        "action_number": 3,
+      "_3": {
+        "action_index": 3,
         "timestamp": 1672531202000,
-        "kind": "memory_get",
-        "target_path": "/non/existent/path",
+        "kind": "get",
+        "target_path": "/working_memory/non_existent_path",
         "status": "error",
-        "error": "Path /non/existent/path not found."
+        "error": "Path /working_memory/non_existent_path not found."
       }
     }
   }
@@ -318,712 +310,508 @@ Configure `lkjagent` via `data/config.json`.
 ```
 
 **Benefits:**
--   **Sequential Tracking**: Every LLM-requested action gets a unique sequential number.
--   **Result & Status Feedback**: The LLM receives feedback on the outcome of its requested actions in the next turn via the system prompt (which includes `/result_data`).
--   **Error Isolation**: Failed actions are logged with detailed error information, allowing the LLM to potentially retry or adjust its strategy.
--   **Debugging Support**: Easy to trace the execution flow and identify issues by examining `sys.result_data`.
--   **State Recovery**: In more advanced scenarios, this log could be used to replay or recover from specific action points.
+-   **cumulative_sequential_tracking**: Every llm-requested action gets a unique sequential number (e.g., `_1`, `_2`, `_3`, ...).
+-   **result_and_status_feedback**: The llm receives feedback on the outcome of its requested actions in the next turn via the system_prompt (which includes the content of `/working_memory/action_result/`).
+-   **error_isolation**: Failed actions are logged with detailed error information, allowing the llm to potentially retry or adjust its strategy.
+-   **debugging_support**: Easy to trace the execution flow and identify issues by examining `/working_memory/action_result/`.
 
-## 🧩 Modular Utilities & Core Concepts
+## 🧩 modular_utilities_and_core_concepts
 
-`lkjagent` features a clean, modular architecture with distributed utility functions, promoting maintainability, testability, and flexibility.
+(Content remains largely the same, with minor wording adjustments for `working_memory` and the action system if needed. Focus on the distributed nature)
 
-### 🏗️ Architectural Benefits
+### 🏗️ architectural_benefits
 
-#### Developer Experience
--   **Clear Separation of Concerns**: Each module has a single, well-defined responsibility (e.g., XML parsing, action execution).
--   **Easy Testing**: Individual utilities can be unit-tested in isolation.
--   **Maintainable Code**: Bugs and new features can often be isolated to specific modules, reducing ripple effects.
--   **Type Safety**: Full TypeScript support helps catch errors at compile-time and improves code understanding.
--   **Hot Reload Potential**: In some development setups, individual modules can be updated without a full system restart.
+#### developer_experience
+-   **clear_separation_of_concerns**: Each module has a single, well_defined responsibility.
+-   **easy_testing**: Individual utilities can be unit_tested in isolation.
+-   **maintainable_code**: Bugs and new features can often be isolated to specific modules.
+-   **type_safety**: Full typescript support.
 
-#### Operational Stability & Performance
--   **Reduced Complexity**: The main entry point (`index.ts`) is minimal, delegating tasks to specialized utilities.
--   **Error Isolation**: Failures in one utility are less likely to cascade and crash the entire system if handled properly.
--   **Performance**: Allows for optimized execution paths and potential for lazy loading of components.
--   **Debugging**: Clear module boundaries simplify troubleshooting by narrowing down the search space for issues.
--   **Scalability**: Easier to add new utilities or tools without significantly refactoring existing code.
+#### operational_stability_and_performance
+-   **reduced_complexity**: Main entry point delegates tasks.
+-   **error_isolation**: Failures in one utility are less likely to cascade.
+-   **performance**: Allows for optimized execution paths.
 
-### 🔧 Core Utility Modules (`src/util/`)
+### 🔧 core_utility_modules (`src/util/`)
 
-#### 🔄 Agent Loop (`agent-loop.ts`)
-The heart of `lkjagent`, orchestrating the continuous execution cycle:
-```typescript
-// Example usage from index.ts
-import { runAgent } from './util/agent-loop';
-runAgent().catch(console.error);
-```
-**Key Features:**
--   **Continuous Operation**: Manages the primary loop for persistent agent execution (listen, think, act).
--   **Error Recovery**: Implements top-level error handling to gracefully manage unexpected issues and attempt continuation.
--   **Iteration Tracking**: Can include sequential numbering of iterations and logging for operational insight.
--   **Modular Integration**: Coordinates calls to LLM, action parsing, execution, and state updates.
+#### 🔄 agent_loop (`agent_loop.ts`)
+Orchestrates the continuous execution cycle: listen, think, act.
 
-#### ✅ Action Validation (`action-validator.ts`)
-A comprehensive validation system ensuring the integrity and safety of actions proposed by the LLM:
-```typescript
-import { validateAction } from './util/action-validator';
-// const action = { kind: 'memory_set', target_path: '/user/task', content: 'data' };
-// const errors = validateAction(action);
-// if (errors.length === 0) { /* execute */ } else { /* handle errors */ }
-```
-**Validation Features:**
--   **Pre-execution Checks**: Prevents invalid or malformed actions from being executed.
--   **Detailed Error Reporting**: Provides specific error messages with context for why an action is invalid.
--   **Type Safety**: Leverages TypeScript types for defining valid action structures.
--   **Security Considerations**: Can include checks against path traversal, unauthorized access patterns, etc.
+#### ✅ action_validation (`action_validator.ts`)
+Validates actions from llm against the simple xml structure and defined action kinds/parameters.
 
-#### ⚙️ Action Execution (`executor.ts`)
-The centralized engine for carrying out validated actions:
-```typescript
-import { executeActions } from './util/executor';
-// const actionsToExecute = [ /* array of validated ToolAction objects */ ];
-// await executeActions(actionsToExecute); // Results are stored in /result_data
-```
-**Execution Features:**
--   **Unified Execution Logic**: A single point for processing all types of `ToolAction`.
--   **Automatic Logging**: Integrates with `action_logger.ts` to record executed actions and their outcomes.
--   **Result Management**: Populates `/result_data/action_N/` with the outcome of each action.
--   **Error Handling**: Gracefully handles errors during action execution and records them in `result_data`.
+#### ⚙️ action_execution (`executor.ts`)
+Central engine for carrying out validated actions. It parses the `target_path` to determine if an action applies to `working_memory` or `storage`. Records results in `/working_memory/action_result/_${total_index}`.
 
-#### 🤖 LLM Communication (`llm.ts`)
-A streamlined interface for interacting with the Large Language Model:
-```typescript
-import { callLLM } from './util/llm';
-// const systemPrompt = await generateSystemPrompt();
-// const llmResponseXml = await callLLM(systemPrompt);
-```
-**Communication Features:**
--   **API Integration**: Handles requests to LLM APIs (e.g., LM Studio, Ollama, OpenAI-compatible).
--   **Request Formatting**: Prepares the prompt and other parameters for the API call.
--   **Response Parsing**: Extracts the relevant content (expected to be XML) from the LLM's response.
--   **Error Handling & Retries**: Manages API errors, timeouts, and can implement retry logic.
+#### 🤖 llm_communication (`llm.ts`)
+Interface for interacting with the llm, sending prompts and receiving simple xml responses.
 
-#### 📝 System Prompt Generation (`prompt.ts`)
-Dynamically creates the system prompt sent to the LLM, including relevant context:
-```typescript
-import { generateSystemPrompt }-> {await generateSystemPrompt(); // Example usage
-const systemPrompt = await generateSystemPrompt();
-// This prompt will include current memory, storage snippets, tool definitions, etc.
-```
-**Prompt Features:**
--   **Dynamic State Injection**: Incorporates crucial parts of the current working memory and persistent storage.
--   **Tool Definition Inclusion**: Provides the LLM with a list of available tools and their usage (XML format).
--   **Context Optimization**: Balances providing sufficient information with respecting token limits of the LLM and `MemoryCharacterMax`.
--   **Goal/Instruction Setting**: Includes the overarching goal or task for the LLM.
+#### 📝 system_prompt_generation (`prompt.ts`)
+Dynamically creates the system_prompt. **Crucially, it does NOT include direct storage information.** It will include:
+-   Current relevant `/working_memory` data (respecting `working_memory_character_max`).
+-   Results from previous actions (content of `/working_memory/action_result/`).
+-   List of available tools and their xml format.
+-   The current goal or task.
 
-#### 🔄 XML Processing (`xml.ts`)
-Advanced utilities for parsing XML responses from the LLM and generating XML if needed:
-```typescript
-import { parseActionsFromXml, jsonToXml, XmlError } from './util/xml';
-// const actionsArray = parseActionsFromXml(llmResponseXmlString);
-// const xmlRepresentation = jsonToXml({ data: "example" }, "rootTag");
-```
-**XML Features:**
--   **Robust Parsing**: Converts XML strings from the LLM into structured `ToolAction` objects.
--   **JSON to XML Conversion**: Utility for converting JSON objects to XML strings (e.g., for LLM examples or internal use).
--   **Error Resilience**: Gracefully handles malformed XML, providing detailed error context.
--   **Content Processing**: Safely handles nested XML structures or stringified JSON within action content.
--   **Circular Reference Detection**: Prevents infinite loops when processing complex or self-referential data.
+#### 🔄 xml_processing (`xml.ts`)
+Utilities for parsing simple xml responses from the llm (convertible to json) and generating such xml if needed.
 
-#### 📁 JSON Path Operations (`json.ts`)
-Powerful Unix-style path operations for navigating and manipulating data within `memory.json` and `storage.json`:
-```typescript
-import { getValueAtPath, setValueAtPath, updateObjectAtPath, deletePath, validatePath } from './util/json';
-// const userData = getValueAtPath(memoryState, '/user/profile');
-// setValueAtPath(storageState, '/archived_projects/project_alpha', { status: 'complete' });
-```
-**Path Features:**
--   **Intuitive Navigation**: Uses `/path/to/data` notation for easy access to nested JSON data.
--   **Safe CRUD Operations**:
-    -   `getValueAtPath`: Retrieves a value.
-    -   `setValueAtPath`: Sets or creates a value, creating intermediate paths if needed.
-    -   `updateObjectAtPath`: Merges an object at a path (non-destructive for existing keys at other levels).
-    -   `deletePath`: Removes a key or an entire object at a path.
--   **Path Validation**: Ensures path strings are well-formed.
--   **Performance**: Optimized for frequent operations on potentially large JSON structures.
+#### 📁 json_path_operations (`json.ts`)
+unix_style path operations for `working_memory` (within `memory.json`) and `storage` (within `storage.json`). Paths like `/working_memory/foo/bar` or `/storage/alpha/beta` are resolved by the executor to operate on the correct json structure.
 
-## 🛠️ Tool System
+## 🛠️ tool_system
 
-The Tool System defines the set of operations the LLM can request the agent to perform. These actions are specified in XML and executed by the agent.
+The tool_system defines operations the llm can request. Actions are specified in simple xml. **Behavior of actions changes depending on whether `target_path` (or `source_path`) starts with `/working_memory/` or `/storage/`.**
 
-### Available Actions
+### available_actions
 
-The LLM can request the agent to perform actions by generating XML. Each `<action>` tag must contain a `<kind>` and other relevant parameters.
+| action_kind | Description                                                                 | parameters (xml_tags)                  | example_llm_request_fragment                                                                                                                               |
+|-------------|-----------------------------------------------------------------------------|----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `set`       | Add or update data in `working_memory` or `storage`.                        | `target_path`, `content`               | `<kind>set</kind><target_path>/working_memory/user/task</target_path><content>{"details": "foo"}</content>`                                                |
+| `get`       | Retrieve data from `working_memory` or `storage`. Result in `action_result`.| `target_path`                          | `<kind>get</kind><target_path>/storage/documents/doc1</target_path>`                                                                                        |
+| `rm`        | Delete data from `working_memory` or `storage`.                             | `target_path`                          | `<kind>rm</kind><target_path>/working_memory/user/old_task</target_path>`                                                                                   |
+| `mv`        | Move/rename data within the same area (wm->wm, store->store) or between areas. | `source_path`, `target_path`           | `<kind>mv</kind><source_path>/working_memory/temp/data</source_path><target_path>/storage/archived/data</target_path>`                                      |
+| `ls`        | List contents of a path in `working_memory` or `storage`. Result in `action_result`. Indicates if items are directories. | `target_path`                          | `<kind>ls</kind><target_path>/storage/project_files</target_path>`                                                                                          |
+| `search`    | Search content within `working_memory` or `storage` by keywords. Result in `action_result`. | `target_path` (scope of search), `content` (search query) | `<kind>search</kind><target_path>/storage/knowledge_base</target_path><content>backup policy</content>`                                                       |
 
-| Action Kind      | Description                                     | Parameters (XML tags)                 | Example LLM Request Fragment                 |
-| ---------------- | ----------------------------------------------- | ------------------------------------- | -------------------------------------------- |
-| `memory_set`     | Add or update data in working memory.         | `target_path`, `content`              | `<kind>memory_set</kind><target_path>/user/task</target_path><content>New task details</content>` |
-| `memory_remove`  | Delete data from working memory.              | `target_path`                         | `<kind>memory_remove</kind><target_path>/user/old_task</target_path>` |
-| `memory_mv`      | Move data within working memory.                | `source_path`, `target_path`          | `<kind>memory_mv</kind><source_path>/temp/data</source_path><target_path>/user/data</target_path>` |
-| `storage_set`    | Save data from memory to persistent storage.    | `source_path` (from memory), `target_path` (in storage) | `<kind>storage_set</kind><source_path>/user/completed_task</source_path><target_path>/archive/task1</target_path>` |
-| `storage_get`    | Load data from persistent storage to memory.    | `source_path` (from storage), `target_path` (in memory) | `<kind>storage_get</kind><source_path>/archive/task1</source_path><target_path>/user/retrieved_task</target_path>` |
-| `storage_remove` | Delete data from persistent storage.            | `target_path`                         | `<kind>storage_remove</kind><target_path>/archive/old_data</target_path>` |
-| `storage_search` | Search persistent storage content by keywords.  | `content` (search query), `target_path` (optional, where to store results in memory, defaults to `/sys/search_results`) | `<kind>storage_search</kind><content>project documentation</content>` |
-| `storage_ls`     | List directory contents in persistent storage.  | `target_path` (directory in storage), `result_path` (optional, where to store list in memory, defaults to `/sys/ls_results`) | `<kind>storage_ls</kind><target_path>/documents</target_path>` |
+**Note on `ls` results:** The data returned for `ls` in `action_result` will be an object where keys are item names. Each item value will be an object, minimally containing `{"_is_directory": boolean}`. E.g., `{"file.txt": {"_is_directory": false}, "folder": {"_is_directory": true}}`.
 
-*Note: The actual implementation for storing results of `storage_search` and `storage_ls` in memory might vary. The above table suggests a convention.*
+### action_execution_flow
 
-### Action Execution Flow
+1.  **llm_generates_simple_xml**: llm outputs xml with `<action>` elements.
+2.  **xml_parsing**: `xml.ts` parses into `tool_action` objects.
+3.  **validation**: `action_validator.ts` checks structure and parameters.
+4.  **execution**: `executor.ts` processes each action:
+    *   Determines target (e.g., `working_memory` or `storage`) based on `target_path` (and `source_path`).
+    *   Calls appropriate underlying functions (e.g., json path operations on `memory.json` data or `storage.json` data).
+5.  **result_recording**: Outcome is recorded in `/working_memory/action_result/_${total_index}/`. `total_index` is incremented.
+6.  **logging**: `action_logger.ts` logs to `data/log.json`.
+7.  **feedback_loop**: `prompt.ts` includes `/working_memory/action_result/` in the next system_prompt.
 
-1.  **LLM Generates XML**: The LLM, guided by the system prompt, outputs an XML string containing one or more `<action>` elements.
-2.  **XML Parsing**: The `xml.ts` utility parses this string into an array of `ToolAction` objects.
-3.  **Validation**: Each `ToolAction` is validated by `action-validator.ts` for correct structure, valid paths, and adherence to constraints. Invalid actions are flagged.
-4.  **Execution**: Valid actions are passed to `executor.ts`. Each action is performed by its corresponding tool implementation (e.g., `memory_set.ts` handles `memory_set` kind).
-5.  **Result Recording**: The outcome (success or error, along with any data) of each action is recorded in working memory at `/result_data/action_N/`.
-6.  **Logging**: `action_logger.ts` logs the action and its outcome to `data/log.json` for auditing.
-7.  **Feedback Loop**: In the next cycle, `prompt.ts` includes `/result_data` in the system prompt, informing the LLM about the results of its previous requests.
+## 📊 data_management
 
-## 📊 Data Management
+### working_memory_structure (`memory.json`)
 
-lkjagent uses JSON files for managing its state and logs.
-
-### Memory Structure (`data/memory.json`)
-
-Holds the agent's current working context. It's volatile and expected to change frequently.
-The `MemoryCharacterMax` config limits its total size.
+Contains the `/working_memory` key. This is the agent's volatile, short_term context.
+Limited by `working_memory_character_max`.
 
 ```json
 {
-  "user": {
-    "current_focus": "Writing a fantasy story about a dragon.",
-    "todo": {
-      "task1": {
-        "description": "Outline chapter 1",
-        "status": "pending"
+  "working_memory": {
+    "user_data": {
+      "current_focus": "Writing a fantasy story.",
+      "todo": {
+        "task1": { "description": "Outline chapter 1", "status": "pending" }
       }
     },
-    "scratchpad": "The dragon's name is Ignis."
-  },
-  "sys": {
-    "iteration_count": 5,
-    "last_error": null,
-    "result_data": { // Populated by the executor after actions
-      "action_1": {
-        "action_number": 1,
+    "system_info": {
+      "iteration_count": 5,
+      "last_error": null
+    },
+    "action_result": {
+      "_1": {
+        "action_index": 1,
         "timestamp": 1672531200000,
-        "kind": "memory_set",
-        "target_path": "/user/scratchpad",
+        "kind": "set",
+        "target_path": "/working_memory/user_data/current_focus",
         "status": "success",
         "message": "Value set successfully."
-      }
+      },
+      "_2": { /* ... more results ... */ }
     }
   }
 }
 ```
 
-### Storage Structure (`data/storage.json`)
+### storage_structure (`storage.json`)
 
-Used for long-term data, knowledge bases, and archives. Data here persists across sessions.
+Contains the `/storage` key. Used for long_term data, knowledge bases, and archives. Persists across sessions. **Not directly shown to llm.**
 
 ```json
 {
-  "knowledge_base": {
-    "common_greetings": ["Hello!", "Hi there!", "Greetings!"],
-    "system_policy_summary": "Agent operational guidelines and core directives...",
-    "project_alpha_details": {
-      "client": "ACME Corp",
-      "deadline": "2024-12-31",
-      "notes": "Requires weekly updates."
-    }
-  },
-  "archived_data": {
-    "completed_stories": {
-      "story_abc_summary": "A tale of a brave knight..."
+  "storage": {
+    "knowledge_base": {
+      "common_greetings": ["Hello!", "Hi there!"],
+      "project_alpha_details": { "client": "ACME Corp", "deadline": "2024-12-31" }
     },
-    "chat_history_2023_01": [ /* ... logs ... */ ]
+    "archived_data": {
+      "completed_stories": { "story_abc_summary": "A tale..." }
+    }
   }
 }
 ```
 
-### Action Log Structure (`data/log.json`)
+### action_log_structure (`data/log.json`)
 
-A persistent audit trail of all actions executed by the agent. Limited by `maxLogEntries`.
+Persistent audit trail of all actions. Limited by `system_max_log_entries`.
 
 ```json
 [
   {
     "timestamp": 1672531200000,
-    "action_number_in_batch": 1, // If multiple actions are in one LLM response
-    "overall_action_sequence": 101, // A global counter if needed
-    "kind": "memory_set",
-    "target_path": "/user/todo/task1",
-    "content_summary": "{\"description\":\"Outline chapter 1\",\"status\":\"pending\"}", // Could be a summary or hash
+    "total_action_index": 101, // Cumulative index
+    "kind": "set",
+    "target_path": "/working_memory/user_data/todo/task1",
+    "content_summary": "{\"description\":\"Outline chapter 1\",\"status\":\"pending\"}",
     "status": "success",
     "message": "Value set successfully."
   },
   {
     "timestamp": 1672531201500,
-    "action_number_in_batch": 1,
-    "overall_action_sequence": 102,
-    "kind": "storage_search",
-    "content_summary": "dragon lore",
+    "total_action_index": 102,
+    "kind": "search",
+    "target_path": "/storage/knowledge_base",
+    "content_summary": "dragon lore", // Search query
     "status": "success",
-    "result_summary": "Found 3 relevant documents.", // Summary of data placed in result_path
+    "result_summary": "Found 3 relevant items.", // Summary of data placed in action_result
     "error": null
   }
 ]
 ```
-*(Note: The exact fields in `log.json` can be tailored to specific auditing needs.)*
 
-## 💻 Usage
+## 💻 usage
 
-### Basic Operation
-
-Once installed and configured:
+### basic_operation
 
 ```bash
-# Start the agent
 npm start
-
-# Alternatively, run the compiled JavaScript directly
-node dist/index.js
+# Or: node dist/index.js
 ```
-The agent will then start its main loop:
-1.  Generate a system prompt.
-2.  Call the configured LLM.
-3.  Parse XML actions from the LLM response.
-4.  Validate and execute actions.
-5.  Log results.
-6.  Repeat.
+The agent loop:
+1.  Generate system_prompt (with `working_memory` data and `action_result`).
+2.  Call llm.
+3.  Parse simple xml actions.
+4.  Validate and execute actions, updating `working_memory` or `storage`, and populating `/working_memory/action_result/_${total_index}`.
+5.  Log results. Repeat.
 
-### Integration with LM Studio (or similar)
+### integration_with_lm_studio (or_similar)
 
-1.  **Launch your LLM Server**: Start LM Studio, Ollama, or your preferred local LLM server.
-2.  **Load a Model**: Ensure a compatible model is loaded and the server is serving requests (e.g., on `http://localhost:1234`).
-3.  **Configure `lkjagent`**: Update `data/config.json` with the correct `apiUrl` and `model` name:
-    ```json
-    // data/config.json
-    {
-      "llm": {
-        "apiUrl": "http://localhost:1234/v1/chat/completions", // Ensure this matches your LM Studio server
-        "model": "Publisher/ModelName-GGUF",                  // Ensure this matches a loaded model in LM Studio
-        // ... other llm settings
-      },
-      // ... other settings
-    }
-    ```
-4.  **Run `lkjagent`**: `npm start`. The agent will connect to your local LLM.
+1.  Launch llm_server & load model.
+2.  Configure `data/config.json` with `llm_api_url` and `llm_model`.
+3.  Run `npm start`.
 
-### Example Workflow
+### example_workflow
 
-1.  **Agent Starts**: `lkjagent` initializes, loads configuration, memory, and storage.
-2.  **System Prompt Generation**: `prompt.ts` creates a system prompt including:
-    *   Current relevant `memory.json` data (respecting `MemoryCharacterMax`).
-    *   Snippets from `storage.json` (e.g., relevant knowledge).
-    *   List of available tools/actions and their XML format.
-    *   The current goal or task.
-    *   Results from previous actions (`/result_data`).
-3.  **LLM Interaction**: `llm.ts` sends this prompt to the LLM via the configured API.
-4.  **LLM Responds**: The LLM processes the prompt and returns a response, ideally containing XML-formatted actions.
-5.  **Action Processing**:
-    *   `xml.ts` parses the XML into `ToolAction` objects.
-    *   `action-validator.ts` validates each action.
-    *   `executor.ts` executes valid actions, updating `memory.json` or `storage.json`.
-    *   Results (success/failure, data) are stored in `memory.json` under `/result_data/action_N/`.
-6.  **Logging**: `action_logger.ts` writes details of the executed action to `data/log.json`.
-7.  **Loop**: The process repeats, allowing for continuous, stateful interaction.
+1.  **agent_starts**: Loads config, `memory.json` (for `/working_memory`), and `storage.json`. `total_action_index` is implicitly known or reset if stateless on start (or loaded from a persistent counter if implemented).
+2.  **system_prompt**: `prompt.ts` creates prompt using `/working_memory` (including `/working_memory/action_result/`), tool list, and goal. **No direct `storage` content.**
+3.  **llm_interaction**: `llm.ts` sends prompt, gets simple xml back.
+4.  **action_processing**:
+    *   `xml.ts` parses xml.
+    *   `action_validator.ts` validates.
+    *   `executor.ts` executes actions. If `target_path` is `/working_memory/...`, operates on `memory.json` data. If `/storage/...`, operates on `storage.json` data.
+    *   Results stored in `/working_memory/action_result/_${total_index}/`. `total_index` increments.
+5.  **logging**: `action_logger.ts` writes to `data/log.json`.
+6.  **loop**.
 
-## 🎮 Example Use Cases
+## 🎮 example_use_cases
 
-`lkjagent` is designed for tasks where context persistence and structured operations are key, especially with smaller LLMs.
+(Examples remain similar but emphasize interaction via actions for storage)
 
--   **📝 Long-Form Content Generation**:
-    -   **Fantasy Story Writing** (`example/fantasy_story/`): The agent can maintain plot points, character details, and world-building information across multiple chapters or sessions. The LLM can request to save drafts to storage, retrieve character backstories, or update plot outlines in memory.
-    -   **Technical Documentation**: Generate and maintain documentation, storing different sections and versions.
--   **📊 Data Analysis & Reporting (Conceptual)**:
-    -   The LLM could direct the agent to fetch data snippets (simulated via storage), perform transformations (in memory), and then compile a report.
--   **🤖 Task Management & Planning**:
-    -   Manage a to-do list, break down complex tasks, and store progress persistently. The LLM can add, remove, or update tasks in `/user/todo/`.
--   **📚 Knowledge Base Interaction**:
-    -   Build and query a personal or project-specific knowledge base stored in `storage.json`. The LLM can use `storage_search` to find information or `storage_set` to add new knowledge.
--   ** simulated Web Browsing/Research (Future Tool)**:
-    -   With a `web_fetch` tool, the LLM could direct the agent to "visit" a URL, summarize content, and store findings.
+-   **📝 long_form_content_generation**:
+    -   llm uses `set` to draft sections in `/working_memory/drafts/chapter1`.
+    -   Uses `set` with `target_path` like `/storage/story_elements/characters/draco` to save character details.
+    -   Uses `get` from `/storage/story_elements/plot_points` to retrieve information into `/working_memory/action_result/` for planning.
+-   **🤖 task_management**:
+    -   `set` to `/working_memory/tasks/todo/task_id` to add tasks.
+    -   `mv` from `/working_memory/tasks/todo/task_id` to `/working_memory/tasks/done/task_id`.
+    -   `set` to `/storage/archived_tasks/YYYY-MM/task_id` to archive.
 
-The `example/` directory in the project contains sample configurations or scenarios demonstrating these use cases:
--   `example/fantasy_story/`: Contains prompts or initial `memory.json` / `storage.json` setups for a story writing task.
--   `example/longlong_story/`: Similar to above, but perhaps focused on even longer narratives requiring more strategic use of storage.
-
-*(This section can be expanded with more concrete examples as the project evolves.)*
-
-## 📁 Project Structure
+## 📁 project_structure
 
 ```
 lkjagent/
-├── data/                     # Runtime data directory (gitignored by default)
-│   ├── config.json           # Agent configuration (LLM endpoint, memory limits)
-│   ├── memory.json           # Working memory state (volatile, current context)
-│   ├── storage.json          # Persistent storage (long-term knowledge, archives)
-│   └── log.json              # Action execution log (audit trail)
-├── docs/                     # Additional documentation (e.g., design docs, advanced guides)
-│   └── readme_jp.md          # Example: Japanese documentation
-├── example/                  # Example configurations, prompts, and use case setups
-│   ├── fantasy_story/        # Files for the fantasy story writing example
-│   └── longlong_story/       # Files for a long-form narrative example
-├── src/                      # TypeScript source code
-│   ├── index.ts              # Main entry point of the application
-│   ├── types/                # TypeScript interfaces, enums, and type definitions
-│   │   └── common.ts         # Core interfaces (ToolAction, LogEntry, Config etc.)
-│   ├── config/               # Configuration management
-│   │   └── config-manager.ts # Singleton or utility for loading and accessing config
-│   ├── util/                 # Core utility functions, organized by functionality
-│   │   ├── agent-loop.ts     # Main agent execution loop orchestration
-│   │   ├── action-validator.ts # Logic for validating LLM-proposed actions
-│   │   ├── executor.ts       # Centralized execution of validated actions
-│   │   ├── llm.ts            # LLM communication interface (API calls)
-│   │   ├── prompt.ts         # System prompt generation logic
-│   │   ├── xml.ts            # XML parsing and generation utilities
-│   │   └── json.ts           # JSON path manipulation utilities (get/set/update at path)
-│   └── tool/                 # Implementations for each specific tool/action
-│       ├── action_logger.ts  # Utility for logging actions to data/log.json
-│       ├── memory_set.ts     # Handles 'memory_set' action
-│       ├── memory_remove.ts  # Handles 'memory_remove' action
-│       ├── memory_mv.ts      # Handles 'memory_mv' action
-│       ├── storage_set.ts    # Handles 'storage_set' action
-│       ├── storage_get.ts    # Handles 'storage_get' action
-│       ├── storage_remove.ts # Handles 'storage_remove' action
-│       ├── storage_search.ts # Handles 'storage_search' action
-│       └── storage_ls.ts     # Handles 'storage_ls' action
-├── package.json              # Node.js project manifest (dependencies, scripts)
-├── tsconfig.json             # TypeScript compiler configuration
-├── .gitignore                # Specifies intentionally untracked files by Git
-└── README.md                 # This comprehensive documentation
+├── data/
+│   ├── config.json           # agent_configuration (root_level_settings)
+│   ├── memory.json           # contains /working_memory (runtime_context, action_results)
+│   ├── storage.json          # contains /storage (persistent_long_term_data)
+│   └── log.json              # action_execution_log
+├── src/
+│   ├── index.ts              # main_entry_point
+│   ├── types/
+│   │   └── common.ts         # core_interfaces (tool_action, log_entry, app_config etc.)
+│   ├── config/
+│   │   └── config_manager.ts # utility_for_loading_root_level_config
+│   ├── util/
+│   │   ├── agent_loop.ts
+│   │   ├── action_validator.ts
+│   │   ├── executor.ts       # dispatches_actions_to_working_memory_or_storage_based_on_path
+│   │   ├── llm.ts
+│   │   ├── prompt.ts         # generates_prompt (no_direct_storage_view)
+│   │   ├── xml.ts            # handles_simple_xml (json_like)
+│   │   └── json.ts           # json_path_ops_for_memory_storage_structures
+│   └── tool/
+│       ├── action_logger.ts
+│       ├── set_tool.ts       # handles 'set' for_both working_memory_and_storage
+│       ├── get_tool.ts       # handles 'get' for_both
+│       ├── rm_tool.ts        # handles 'rm' for_both
+│       ├── mv_tool.ts        # handles 'mv' for_both
+│       ├── ls_tool.ts        # handles 'ls' for_both (indicates directory status)
+│       └── search_tool.ts    # handles 'search' for_both
+├── ... (package.json, tsconfig.json, etc.)
+└── README.md
 ```
+*(Tool implementations in `src/tool/` would now be more generic, e.g., `set_tool.ts` would inspect the path prefix)*
 
-## 🔄 Development Workflow
+## 🔄 development_workflow
 
-### Building
+(Content remains similar)
 
--   **Development Build (with watch mode)**:
-    ```bash
-    npm run dev # Assuming 'tsc --watch' is configured in package.json
-    # Or manually:
-    npx tsc --watch
-    ```
--   **Production Build**:
-    ```bash
-    npm run build
-    # Or manually:
-    npx tsc
-    ```
+### building
+### testing
+### linting_and_formatting
 
-### Testing
+## 📚 api_reference (core_components)
 
-(Assuming a test runner like Jest or Vitest is set up)
-```bash
-# Run all tests
-npm test
+### core_utility_functions
 
-# Run tests in watch mode
-npm test -- --watch
-
-# Run type checking as a form of testing
-npm run typecheck # Assuming 'tsc --noEmit' is configured
-# Or manually:
-npx tsc --noEmit
-```
-Unit tests should be created for individual utilities in `src/util/` and tool implementations in `src/tool/`.
-
-### Linting and Formatting
-
-(Assuming ESLint and Prettier are set up)
-```bash
-# Lint code
-npm run lint
-
-# Fix linting issues automatically
-npm run lint:fix
-
-# Format code
-npm run format
-```
-
-## 📚 API Reference (Core Components)
-
-This section highlights key functions and interfaces. For full details, refer to the JSDoc comments within the source code.
-
-### Core Utility Functions
-
-Located in `src/util/`.
-
-#### Agent Loop (`util/agent-loop.ts`)
+#### action_execution (`util/executor.ts`)
 ```typescript
 /**
- * Runs the main agent loop: prompt generation, LLM call, action execution.
- * Handles top-level errors and continues the loop.
+ * Executes an array of validated tool_actions.
+ * Results are stored in working_memory at /working_memory/action_result/_${total_index}/.
+ * Increments a global action counter for ${total_index}.
+ * @param actions An array of tool_action objects to execute.
+ * @returns Promise<void>
  */
-async function runAgent(): Promise<void>;
+async function execute_actions(actions: tool_action[]): Promise<void>;
 
 /**
- * Resets any internal iteration counters for the agent loop (mainly for testing).
+ * Gets the next total_index for an action result.
+ * @returns number The next action index.
  */
-function resetIterationCounter(): void; // If applicable
+function get_next_action_total_index(): number; // Or similar mechanism
+
+/** Resets action counter (for testing) */
+function reset_action_total_index_counter(): void;
 ```
 
-#### Action Validation (`util/action-validator.ts`)
+#### system_prompts (`util/prompt.ts`)
 ```typescript
 /**
- * Validates a single ToolAction object.
- * @param action The ToolAction to validate.
- * @returns An array of error messages. Empty if valid.
+ * Generates the system_prompt for the llm. Includes context from /working_memory (including /working_memory/action_result/),
+ * and tool definitions. Does NOT include direct storage data.
+ * @returns The complete system_prompt string.
  */
-function validateAction(action: ToolAction): string[];
-
-/**
- * Checks if a ToolAction is valid.
- * @param action The ToolAction to check.
- * @returns True if valid, false otherwise.
- */
-function isValidAction(action: ToolAction): boolean;
+async function generate_system_prompt(): Promise<string>;
 ```
 
-#### Action Execution (`util/executor.ts`)
+#### xml_processing (`util/xml.ts`)
 ```typescript
 /**
- * Executes an array of validated ToolActions.
- * Results are stored in memory at /result_data/action_N/.
- * @param actions An array of ToolAction objects to execute.
+ * Parses a simple xml string (json_like) from the llm into an array of tool_action objects.
+ * @param xml The xml string.
+ * @returns An array of tool_action objects.
+ * @throws xml_error if parsing fails or format is not simple.
  */
-async function executeActions(actions: ToolAction[]): Promise<void>; // Modified to accept an array
-
-/**
- * Resets the internal action counter (mainly for testing).
- */
-function resetActionCounter(): void;
+function parse_actions_from_xml(xml: string): tool_action[];
 ```
 
-#### LLM Communication (`util/llm.ts`)
-```typescript
-/**
- * Calls the configured LLM with the given prompt.
- * @param prompt The system prompt string.
- * @returns The LLM's response string (expected to be XML).
- */
-async function callLLM(prompt: string): Promise<string>;
-```
-
-#### System Prompts (`util/prompt.ts`)
-```typescript
-/**
- * Generates the system prompt for the LLM, including context from memory, storage, and tool definitions.
- * @returns The complete system prompt string.
- */
-async function generateSystemPrompt(): Promise<string>;
-```
-
-#### XML Processing (`util/xml.ts`)
-```typescript
-/**
- * Parses an XML string from the LLM into an array of ToolAction objects.
- * @param xml The XML string.
- * @returns An array of ToolAction objects.
- * @throws XmlError if parsing fails or circular references are detected.
- */
-function parseActionsFromXml(xml: string): ToolAction[];
-
-/**
- * Converts a JSON object to an XML string.
- * @param obj The JSON object to convert.
- * @param rootTag The root tag name for the XML.
- * @param indent Optional indentation string for pretty printing.
- * @returns The XML string representation.
- * @throws XmlError if circular references are detected.
- */
-function jsonToXml(obj: any, rootTag: string, indent?: string): string;
-
-/** Custom error class for XML processing issues. */
-class XmlError extends Error {
-  constructor(message: string, public context?: any) { /* ... */ }
-}
-```
-
-#### JSON Path Operations (`util/json.ts`)
-```typescript
-/** Retrieves a value from an object at a given Unix-style path. */
-function getValueAtPath(obj: any, path: string): any;
-
-/** Sets a value in an object at a given Unix-style path, creating intermediate objects if necessary. */
-function setValueAtPath(obj: any, path: string, value: any): void;
-
-/** Updates an object at a given path by merging with the provided updates (non-destructive). */
-function updateObjectAtPath(obj: any, path: string, updates: any): void;
-
-/** Deletes a key/value or an object at a given path. */
-function deletePath(obj: any, path: string): boolean; // Returns true if deleted
-
-/** Validates if a path string is well-formed. Throws error if not. */
-function validatePath(path: string): void;
-```
-
-### Core Interfaces
+### core_interfaces
 
 Located in `src/types/common.ts`.
 
-#### `ToolAction`
+#### `tool_action`
 ```typescript
-interface ToolAction {
-  kind: ToolKind;
-  target_path?: string;  // For actions operating on a destination
-  source_path?: string;  // For actions operating on a source (e.g., mv, storage_get)
-  content?: any;         // For actions with data payload (e.g., memory_set, storage_search query)
-  result_path?: string;  // Optional: where to store results for actions like ls, search
+interface tool_action {
+  kind: tool_kind;
+  target_path: string;     // Path for set, get, rm, ls, search (scope), mv (destination).
+                           // Must start with /working_memory/ or /storage/.
+  source_path?: string;   // For mv (source only). Must start with /working_memory/ or /storage/.
+  content?: any;          // Data for 'set', query for 'search'. Expected to be simple json_like data if complex.
 }
 ```
 
-#### `ToolKind`
+#### `tool_kind`
 ```typescript
-type ToolKind =
-  | 'memory_set'
-  | 'memory_remove'
-  | 'memory_mv'
-  | 'storage_get'
-  | 'storage_set'
-  | 'storage_search'
-  | 'storage_remove'
-  | 'storage_ls';
+type tool_kind =
+  | 'set'
+  | 'get'
+  | 'rm'
+  | 'mv'
+  | 'ls'
+  | 'search';
 ```
 
-#### `LogEntry`
+#### `log_entry` (Reflects cumulative numbering)
 ```typescript
-interface LogEntry {
+interface log_entry {
   timestamp: number;
-  action_number_in_batch?: number; // If applicable
-  overall_action_sequence?: number; // If applicable
-  kind: ToolKind;
+  total_action_index: number; // Cumulative index for this action
+  kind: tool_kind;
   target_path?: string;
   source_path?: string;
-  content_summary?: string; // A summary or hash of the content
+  content_summary?: string;
   status: 'success' | 'error';
-  message?: string; // Success message or general info
-  error?: string;   // Error message if status is 'error'
-  result_summary?: string; // Summary of data produced by action
+  message?: string;
+  error?: string;
+  result_summary?: string;
 }
 ```
 
-### Configuration Interface
+#### `action_result` (Structure within `/working_memory/action_result/_N`)
+```typescript
+interface action_result {
+  action_index: number; // The N in _N
+  timestamp: number;
+  kind: tool_kind;
+  target_path: string;
+  source_path?: string; // if applicable (e.g. for mv)
+  status: 'success' | 'error';
+  data?: any; // For 'get', 'ls', 'search' results
+  message?: string; // For 'set', 'rm', 'mv' success, or general info
+  error?: string; // Error message if status is 'error'
+}
+```
 
-Likely defined in `src/types/common.ts` or `src/config/config-manager.ts`.
+### configuration_interface
+
+Defined in `src/types/common.ts` or loaded by `src/config/config_manager.ts`. **All root_level properties.**
 
 ```typescript
-interface MemoryConfig {
-  MemoryCharacterMax: number;
-  DirectChildMax: number;
-}
-
-interface LLMConfig {
-  apiUrl: string;
-  model: string;
-  maxTokens: number;
-  temperature: number;
-}
-
-interface SystemConfig {
-  maxLogEntries: number;
-  autoCleanup: boolean;
-  debugMode: boolean;
-}
-
-interface AppConfig {
-  memory: MemoryConfig;
-  llm: LLMConfig;
-  system: SystemConfig;
+interface app_config {
+  working_memory_character_max: number;
+  working_memory_direct_child_max: number;
+  llm_api_url: string;
+  llm_model: string;
+  llm_max_tokens: number;
+  llm_temperature: number;
+  system_max_log_entries: number;
+  system_auto_cleanup: boolean;
+  system_debug_mode: boolean;
 }
 ```
 
-## 🤝 Contributing
+## 🤝 contributing
 
-Contributions are welcome! Whether it's bug fixes, feature enhancements, documentation improvements, or new examples, your help is appreciated.
+(Content remains similar, but new tools would follow the generic `set`, `get`, etc., pattern, with logic branching on path prefixes.)
 
-1.  **Fork the repository** on GitHub.
-2.  **Clone your fork** locally: `git clone https://github.com/YOUR_USERNAME/lkjagent.git`
-3.  **Create a feature branch**: `git checkout -b feature/your-amazing-feature` or `fix/bug-description`.
-4.  **Make your changes**.
-5.  **Test your changes thoroughly**. Add unit tests if applicable.
-6.  **Ensure code lints and formats correctly**: `npm run lint` and `npm run format`.
-7.  **Commit your changes**: `git commit -m 'feat: Add amazing feature'` (follow Conventional Commits).
-8.  **Push to your branch**: `git push origin feature/your-amazing-feature`.
-9.  **Open a Pull Request** against the `main` (or `develop`) branch of the original repository. Provide a clear description of your changes.
+### development_guidelines
+### adding_new_utilities
+### adding_new_tools
+If adding a conceptually new *type* of action beyond `set`, `get`, `rm`, `mv`, `ls`, `search`:
+1.  Define new `tool_kind`.
+2.  Create `src/tool/new_tool_handler.ts`.
+3.  Update `action_validator.ts`.
+4.  Integrate into `executor.ts`.
+5.  Update `prompt.ts` with its xml definition.
+6.  Document in README. Add tests.
 
-### Development Guidelines
+If extending existing tools (e.g., new options for `search`), modify the respective tool handler and update validation/documentation.
 
--   **TypeScript Best Practices**: Adhere to modern TypeScript standards and maintain strict type safety.
--   **JSDoc Comments**: Add comprehensive JSDoc comments for all public functions, classes, interfaces, and complex logic.
--   **Error Handling**: Implement robust error handling for all operations, providing specific and informative error messages.
--   **Unit Tests**: Write unit tests for new utility functions, tool implementations, and critical logic paths. Aim for good test coverage.
--   **Documentation**: Update `README.md` and any other relevant documentation for API changes, new features, or significant architectural modifications.
--   **Modularity**:
-    -   Keep utility modules focused on single responsibilities.
-    -   Minimize cross-dependencies between utility modules where possible.
-    -   Use dependency injection or clear parameter passing rather than global state.
-    -   Follow consistent naming conventions across modules.
--   **Configuration**: Make new features configurable via `data/config.json` if they involve user-adjustable parameters.
+## ✨ implementation_order (todo_list_from_scratch)
 
-### Adding New Utilities
+Here's a suggested order for implementing `lkjagent` from scratch to achieve a "beautiful" and logical development flow:
 
-When adding new utility functions (e.g., to `src/util/`):
-1.  **Create Focused Modules**: Place the new utility in a new `.ts` file within `src/util/` (or an appropriate subdirectory) if it represents a distinct area of functionality. Ensure it has a single, clear responsibility.
-2.  **Export Clean Interfaces**: Define and export clear TypeScript interfaces for any functions or classes.
-3.  **Comprehensive Error Handling**: Include robust error handling and throw specific, descriptive errors.
-4.  **JSDoc Documentation**: Document all public functions and types.
-5.  **Unit Tests**: Add corresponding unit tests.
-6.  **Update README**: If the utility is user-facing or significantly impacts the architecture, document it in the `README.md`.
+1.  **project_setup_and_core_dependencies:**
+    *   Initialize node_js project (`npm init`).
+    *   Install typescript and basic dev dependencies (`typescript`, `ts-node`, `@types/node`).
+    *   Setup `tsconfig.json`.
+    *   Initialize Git repository.
+    *   Add linters/formatters (eslint, prettier).
 
-### Adding New Tools
+2.  **core_types_definition (`src/types/common.ts`):**
+    *   `app_config` (root_level properties).
+    *   `tool_kind` (set, get, rm, mv, ls, search).
+    *   `tool_action` interface.
+    *   `action_result` interface.
+    *   `log_entry` interface.
+    *   Basic json_like types if needed (`json_value`, `json_object`).
 
-When implementing new tools (actions the LLM can request):
-1.  **Define Action Kind**: Add the new tool's kind to the `ToolKind` type in `src/types/common.ts`.
-2.  **Implement Tool Logic**: Create a new file in `src/tool/` (e.g., `src/tool/my_new_tool.ts`) containing the logic for this tool. This function will typically take parameters from the `ToolAction` object and interact with memory, storage, or external systems.
-3.  **Update Action Validator**: Add validation rules for the new tool's parameters in `src/util/action-validator.ts`.
-4.  **Integrate into Executor**: Modify `src/util/executor.ts` to call your new tool's implementation when its `kind` is encountered.
-5.  **Update System Prompt**: Ensure `src/util/prompt.ts` includes the definition and XML usage example of the new tool in the system prompt given to the LLM.
-6.  **Documentation**: Add the new tool to the "Available Actions" table in this `README.md`.
-7.  **Unit Tests**: Write tests for the new tool's logic and its integration with the executor.
+3.  **configuration_management (`src/config/config_manager.ts`):**
+    *   Function to load `data/config.json`.
+    *   Provide a way to access configuration values (e.g., a singleton or exported getter).
+    *   Script for `npm run init-data` to create default `config.json`, `memory.json`, `storage.json`, `log.json`.
 
-## 🛣️ Roadmap (Future Enhancements)
+4.  **json_path_utilities (`src/util/json.ts`):**
+    *   `get_value_at_path(obj, path)`
+    *   `set_value_at_path(obj, path, value)`
+    *   `delete_path(obj, path)`
+    *   `list_path(obj, path)` (should return structure indicating directories)
+    *   Path validation helper. These will be fundamental for memory/storage operations.
 
--   [ ] **Advanced Memory Management**: Strategies for automatic summarization or eviction of older working memory items.
--   [ ] **Tool Schema Generation**: Automatically generate XML schema for tools to provide to the LLM for stricter validation.
--   [ ] **Web Interaction Tools**: Tools for fetching web content, searching online.
--   [ ] **File System Tools**: Tools for interacting with the local file system (with appropriate security sandboxing).
--   [ ] **Plugin System**: Allow users to easily add custom tools and utilities.
--   [ ] **Enhanced UI/Dashboard**: A simple web interface for monitoring agent activity and managing data.
--   [ ] **Vector Store Integration**: For more sophisticated semantic search in persistent storage.
--   [ ] **Multi-Agent Communication**: Protocols for lkjagent instances to interact.
+5.  **persistent_data_management (initial_file_io):**
+    *   Simple functions to read/write `memory.json` and `storage.json`.
+    *   These will be used by the tools later.
 
-## 📄 License
+6.  **action_logger (`src/tool/action_logger.ts`):**
+    *   Function to append `log_entry` objects to `data/log.json`.
+    *   Handle `system_max_log_entries` (simple truncation for now).
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file (you'll need to create this file if it doesn't exist) for details.
+7.  **tool_implementations (`src/tool/*.ts`):**
+    *   Create separate files for each `tool_kind` handler (e.g., `set_tool.ts`, `get_tool.ts`).
+    *   Each tool function will:
+        *   Accept `tool_action` parameters.
+        *   Parse `target_path` (and `source_path`) to determine if it's `/working_memory/` or `/storage/`.
+        *   Load the relevant json file (`memory.json` or `storage.json`).
+        *   Use `json.ts` utilities to perform the operation.
+        *   Save the modified json file.
+        *   Return a result structure (data for get/ls/search, or success/error message).
+    *   `ls_tool.ts`: Ensure it indicates if list items are directories (objects).
+    *   `search_tool.ts`: Basic keyword search logic for now.
 
+8.  **xml_processing_utilities (`src/util/xml.ts`):**
+    *   `parse_actions_from_xml(xmlString)`: Convert simple xml to `tool_action[]`. Emphasize only json_like structures.
+    *   `json_to_xml(obj, rootTag)`: For generating xml examples for the prompt if needed.
+
+9.  **action_validator (`src/util/action_validator.ts`):**
+    *   Function `validate_action(action: tool_action)`:
+        *   Check for valid `kind`.
+        *   Check for required parameters (`target_path`, `content` for set/search, `source_path` for mv).
+        *   Validate path prefixes (`/working_memory/` or `/storage/`).
+        *   Check `content` (e.g., if it's supposed to be an object for `set`).
+
+10. **executor (`src/util/executor.ts`):**
+    *   `execute_actions(actions: tool_action[])`:
+        *   Maintain/increment `total_action_index`.
+        *   Loop through validated actions.
+        *   Call the appropriate tool implementation based on `action.kind`.
+        *   Construct `action_result` object.
+        *   Save `action_result` to `/working_memory/action_result/_${total_action_index}` (this means updating `memory.json`).
+        *   Call `action_logger.ts` to log the action.
+        *   Handle errors from tools and record them in `action_result`.
+
+11. **llm_communication (`src/util/llm.ts`):**
+    *   `call_llm(prompt: string)`: Function to make HTTP POST request to `llm_api_url`.
+    *   Handle api response and potential errors.
+
+12. **system_prompt_generation (`src/util/prompt.ts`):**
+    *   `generate_system_prompt()`:
+        *   Load current `memory.json`.
+        *   Extract relevant parts of `/working_memory/` (respecting `working_memory_character_max`).
+        *   Include the entire `/working_memory/action_result/` object.
+        *   Include instructions, goals, and definitions of available tools in their simple xml format.
+        *   **Crucially: Do NOT include direct content from `storage.json`.**
+
+13. **agent_loop (`src/util/agent_loop.ts`):**
+    *   `run_agent()`: The main `async` function with the `while(true)` loop.
+        *   Call `generate_system_prompt()`.
+        *   Call `call_llm()`.
+        *   Call `parse_actions_from_xml()`.
+        *   Call `validate_action()` for each action (or validate all then execute).
+        *   Call `execute_actions()`.
+        *   Implement top_level error handling and continuation logic.
+
+14. **main_entry_point (`src/index.ts`):**
+    *   Import and call `run_agent()`.
+    *   Basic setup or initialization if any.
+
+15. **refinement_and_testing:**
+    *   Write unit tests for utilities and tools.
+    *   Write integration tests for the agent loop.
+    *   Refine error handling and logging.
+    *   Improve documentation (jsdoc, README).
+
+16. **build_and_run_scripts (`package.json`):**
+    *   `build`: `tsc`
+    *   `start`: `node dist/index.js`
+    *   `dev`: `tsc --watch` & `nodemon dist/index.js` (or similar)
+    *   `lint`, `format`, `test` scripts.
+
+This order builds foundational components first, then layers more complex logic on top, leading to a well_structured and "beautiful" implementation process.
+
+## 📄 license
+
+This project is licensed under the mit_license.
+
+## 🙏 acknowledgements
 ```
-MIT License
-
-Copyright (c) [Year] [Your Name/Organization]
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-## 🙏 Acknowledgements
-
--   Inspiration from existing AI agent frameworks (e.g., AutoGPT, BabyAGI, LangChain).
--   The open-source LLM community.
--   (Any specific libraries or individuals you want to thank).
-
----
-
-**lkjagent** - Empowering small LLMs with persistent memory, structured reasoning capabilities, and a clean modular architecture for maintainable AI agent development.
