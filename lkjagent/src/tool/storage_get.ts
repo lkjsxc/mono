@@ -6,10 +6,10 @@ import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Loads data from a specified path in Storage and places it in memory's loaded_data area
- * @param targetPath - Dot-separated path in Storage (e.g., 'storage.knowledge_base.policy')
+ * @param target_path - Dot-separated path in Storage (e.g., 'storage.knowledge_base.policy')
  * @returns The loaded data
  */
-export async function storage_get(targetPath: JsonPath): Promise<any> {
+export async function storage_get(target_path: JsonPath): Promise<any> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
   
   try {
@@ -17,7 +17,7 @@ export async function storage_get(targetPath: JsonPath): Promise<any> {
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
     
     // Split the path into parts and traverse the object structure
-    const parts = targetPath.split('/');
+    const parts = target_path.split('/');
     let current = storageData;
     
     // Traverse to the target data
@@ -72,6 +72,6 @@ export async function storage_get(targetPath: JsonPath): Promise<any> {
     
     return current;
   } catch (error) {
-    throw new Error(`Failed to load from Storage at path ${targetPath}: ${error}`);
+    throw new Error(`Failed to load from Storage at path ${target_path}: ${error}`);
   }
 }

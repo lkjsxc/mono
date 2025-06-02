@@ -50,9 +50,9 @@ function parseActionsFromXml(xml: string): ToolAction[] {
 
   for (const actionXml of actionMatches) {
     const kind = actionXml.match(/<kind>(.*?)<\/kind>/)?.[1];
-    const path = actionXml.match(/<path>(.*?)<\/path>/)?.[1];
+    const target_path = actionXml.match(/<target_path>(.*?)<\/target_path>/)?.[1];
+    const source_path = actionXml.match(/<source_path>(.*?)<\/source_path>/)?.[1];
     const content = actionXml.match(/<content>(.*?)<\/content>/)?.[1];
-    const sourcePath = actionXml.match(/<source_path>(.*?)<\/source_path>/)?.[1];
 
     if (kind) {
       // Convert XML content to JSON object if it contains XML tags
@@ -74,39 +74,39 @@ function parseActionsFromXml(xml: string): ToolAction[] {
       // Validate required fields based on action kind
       const action: ToolAction = {
         kind: kind as ToolAction['kind'],
-        path: path || '',
+        target_path: target_path || '',
         content: processedContent || {},
-        source_path: sourcePath || ''
+        source_path: source_path || ''
       };
 
       // Skip invalid actions
       switch (action.kind) {
         case 'memory_set':
-          if (!action.path || action.content === undefined) {
+          if (!action.target_path || action.content === undefined) {
             console.warn(`Skipping ${action.kind} action: missing path or content`);
             continue;
           }
           break;
         case 'memory_remove':
-          if (!action.path) {
+          if (!action.target_path) {
             console.warn('Skipping remove action: missing path');
             continue;
           }
           break;
         case 'storage_get':
-          if (!action.path) {
+          if (!action.target_path) {
             console.warn('Skipping storage_get action: missing path');
             continue;
           }
           break;
         case 'storage_remove':
-          if (!action.path) {
+          if (!action.target_path) {
             console.warn('Skipping storage_remove action: missing path');
             continue;
           }
           break;
         case 'storage_set':
-          if (!action.source_path || !action.path) {
+          if (!action.source_path || !action.target_path) {
             console.warn('Skipping storage_set action: missing source_path or path');
             continue;
           }
@@ -118,7 +118,7 @@ function parseActionsFromXml(xml: string): ToolAction[] {
           }
           break;
         case 'storage_ls':
-          if (!action.path) {
+          if (!action.target_path) {
             console.warn('Skipping storage_ls action: missing path');
             continue;
           }
@@ -184,12 +184,12 @@ async function generateSystemPrompt(): Promise<string> {
       <actions>
         <action>
           <kind>memory_set</kind>
-          <path>/user/todo/new_task</path>
+          <target_path>/user/todo/new_task</target_path>
           <content>Complete the project documentation</content>
         </action>
         <action>
           <kind>storage_set</kind>
-          <path>/completed_tasks</path>
+          <target_path>/completed_tasks</target_path>
           <source_path>/user/todo/completed</source_path>
         </action>
       </actions>
@@ -226,14 +226,14 @@ async function callLLM(prompt: string): Promise<string> {
     // Validate that the response is in XML format
     if (!llmResponse.includes('<actions>')) {
       console.warn('LLM response is not in expected XML format, wrapping it');
-      return `<actions><action><kind>add</kind><path>/sys/thinking_log</path><content>${llmResponse}</content></action></actions>`;
+      return `<actions><action><kind>memory_set</kind><target_path>/sys/thinking_log</target_path><content>${llmResponse}</content></action></actions>`;
     }
 
     return llmResponse;
   } catch (error: any) {
     console.error('Error calling LLM:', error);
     // Return a fallback response in case of error
-    return `<actions><action><kind>add</kind><path>/sys/thinking_log</path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
+    return `<actions><action><kind>memory_set</kind><target_path>/sys/thinking_log</target_path><content>Error communicating with LLM: ${error.message}</content></action></actions>`;
   }
 }
 
@@ -244,8 +244,8 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
   const entry: LogEntry = {
     timestamp: Date.now(),
     actionType: action.kind as ToolKind,
-    path: action.path,
-    sourcePath: action.source_path,
+    target_path: action.target_path,
+    source_path: action.source_path,
     content: action.content,
     status: 'error'  // Default to error, will be updated to success if no error
   };
@@ -262,53 +262,53 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
     // Handle each action type
     switch (action.kind) {
       case 'memory_set':
-        if (!action.path || action.content === undefined) {
+        if (!action.target_path || action.content === undefined) {
           console.warn(`Skipping ${action.kind}: missing path or content`);
-          entry.error = `Missing ${!action.path ? 'path' : 'content'}`;
+          entry.error = `Missing ${!action.target_path ? 'target_path' : 'content'}`;
           await logAction(entry);
           return;
         }
-        await memory_set(action.path, action.content);
+        await memory_set(action.target_path, action.content);
         break;
 
       case 'memory_remove':
-        if (!action.path) {
+        if (!action.target_path) {
           console.warn('Skipping remove: missing path');
           entry.error = 'Missing path';
           await logAction(entry);
           return;
         }
-        await memory_remove(action.path);
+        await memory_remove(action.target_path);
         break;
 
       case 'storage_set':
-        if (!action.source_path || !action.path) {
+        if (!action.source_path || !action.target_path) {
           console.warn('Skipping storage_set: missing paths');
-          entry.error = `Missing ${!action.source_path ? 'source_path' : 'path'}`;
+          entry.error = `Missing ${!action.source_path ? 'source_path' : 'target_path'}`;
           await logAction(entry);
           return;
         }
-        await storage_set(action.source_path, action.path);
+        await storage_set(action.source_path, action.target_path);
         break;
 
       case 'storage_remove':
-        if (!action.path) {
+        if (!action.target_path) {
           console.warn('Skipping storage_remove: missing path');
           entry.error = 'Missing path';
           await logAction(entry);
           return;
         }
-        await storage_remove(action.path);
+        await storage_remove(action.target_path);
         break;
 
       case 'storage_get':
-        if (!action.path) {
+        if (!action.target_path) {
           console.warn('Skipping storage_get: missing path');
           entry.error = 'Missing path';
           await logAction(entry);
           return;
         }
-        await memory_set('sys/loaded_data', storage_get(action.path));
+        await memory_set('sys/loaded_data', storage_get(action.target_path));
         break;
 
       case 'storage_search':
@@ -322,13 +322,13 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
         break;
 
       case 'storage_ls':
-        if (!action.path) {
+        if (!action.target_path) {
           console.warn('Skipping storage_ls: missing path');
           entry.error = 'Missing path';
           await logAction(entry);
           return;
         }
-        await memory_set('sys/loaded_data', storage_ls(action.path));
+        await memory_set('sys/loaded_data', storage_ls(action.target_path));
         break; default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
         entry.error = `Unknown action kind: ${action.kind}`;

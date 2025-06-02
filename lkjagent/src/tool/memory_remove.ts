@@ -5,20 +5,20 @@ import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Removes data at a specified path in memory
- * @param targetPath - Dot-separated path in memory (e.g., 'ram.todo.task_to_remove')
+ * @param target_path - Dot-separated path in memory (e.g., 'ram.todo.task_to_remove')
  */
-export async function memory_remove(targetPath: JsonPath): Promise<void> {
+export async function memory_remove(target_path: JsonPath): Promise<void> {
   const memoryPath = path.join(__dirname, '..', '..', 'data', 'memory.json');
   
   try {
     // Validate path format
-    validatePath(targetPath);
+    validatePath(target_path);
     
     // Read current memory state
     const memoryData = JSON.parse(await fs.readFile(memoryPath, 'utf-8'));
     
     // Split the path into parts
-    const parts = targetPath.split('/').filter(p => p);
+    const parts = target_path.split('/').filter(p => p);
     if (parts.length === 0) {
       throw new Error('Cannot remove root memory node');
     }
@@ -44,6 +44,6 @@ export async function memory_remove(targetPath: JsonPath): Promise<void> {
       throw new Error(`Target '${lastPart}' not found in memory`);
     }
   } catch (error) {
-    throw new Error(`Failed to remove from memory at path ${targetPath}: ${error}`);
+    throw new Error(`Failed to remove from memory at path ${target_path}: ${error}`);
   }
 }

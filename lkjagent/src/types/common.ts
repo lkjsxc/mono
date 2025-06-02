@@ -64,9 +64,9 @@ export type ToolKind = 'memory_set' | 'memory_remove' | 'storage_get' | 'storage
  */
 export interface ToolAction {
   kind: ToolKind;
-  path?: string;        // Path in memory or Storage to operate on
-  content?: any;        // Content to add/edit/search
-  source_path?: string; // For storage_set action
+  target_path?: string;        // Path in memory or Storage to operate on
+  source_path?: string;        // For storage_set action
+  content?: any;               // Content to add/edit/search
 }
 
 /**
@@ -82,12 +82,12 @@ export interface SearchResult {
  * Tool function signatures
  */
 export interface ToolFunctions {
-  memory_set: (path: string, content: any) => Promise<void>;
-  memory_remove: (path: string) => Promise<void>;
-  storage_get: (path: string) => Promise<any>;
-  storage_remove: (path: string) => Promise<void>;
+  memory_set: (target_path: string, content: any) => Promise<void>;
+  memory_remove: (target_path: string) => Promise<void>;
+  storage_get: (target_path: string) => Promise<any>;
+  storage_remove: (target_path: string) => Promise<void>;
   storage_search: (content: string) => Promise<SearchResult[]>;
-  storage_set: (source_path: string, destination_path: string) => Promise<void>;
+  storage_set: (source_path: string, target_path: string) => Promise<void>;
 }
 
 /**
@@ -107,8 +107,8 @@ export type XmlString = string;
 export interface LogEntry {
   timestamp: number;
   actionType: ToolKind;
-  path?: string;
-  sourcePath?: string;
+  target_path?: string;
+  source_path?: string;
   content?: any;
   status: 'success' | 'error';
   error?: string;

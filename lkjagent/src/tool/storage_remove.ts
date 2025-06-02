@@ -5,18 +5,18 @@ import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Removes data at a specified path in Storage
- * @param targetPath - Dot-separated path in Storage (e.g., 'storage.archived_data.old_task')
+ * @param target_path - Dot-separated path in Storage (e.g., 'storage.archived_data.old_task')
  */
-export async function storage_remove(targetPath: JsonPath): Promise<void> {
+export async function storage_remove(target_path: JsonPath): Promise<void> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
     try {
     // Validate path format
-    validatePath(targetPath);
+    validatePath(target_path);
     
     // Read current storage state
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
       // Split the path into parts and handle special cases
-    const parts = targetPath.split('/').filter(p => p);
+    const parts = target_path.split('/').filter(p => p);
     if (parts.length === 0) {
       throw new Error('Cannot remove root storage node');
     }
@@ -42,6 +42,6 @@ export async function storage_remove(targetPath: JsonPath): Promise<void> {
       throw new Error(`Target '${lastPart}' not found in Storage`);
     }
   } catch (error) {
-    throw new Error(`Failed to remove from Storage at path ${targetPath}: ${error}`);
+    throw new Error(`Failed to remove from Storage at path ${target_path}: ${error}`);
   }
 }
