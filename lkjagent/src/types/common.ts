@@ -57,7 +57,7 @@ export interface StorageState {
 /**
  * Kinds of tools available to the agent
  */
-export type ToolKind = 'memory_set' | 'memory_remove' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls';
+export type ToolKind = 'memory_set' | 'memory_remove' | 'memory_mv' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls';
 
 /**
  * Structure of an action the agent can execute
@@ -84,6 +84,7 @@ export interface SearchResult {
 export interface ToolFunctions {
   memory_set: (target_path: string, content: any) => Promise<void>;
   memory_remove: (target_path: string) => Promise<void>;
+  memory_mv: (source_path: string, target_path: string) => Promise<void>;
   storage_get: (target_path: string) => Promise<any>;
   storage_remove: (target_path: string) => Promise<void>;
   storage_search: (content: string) => Promise<SearchResult[]>;

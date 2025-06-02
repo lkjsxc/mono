@@ -6,6 +6,7 @@ import { ConfigManager } from './config/config-manager';
 import { logAction } from './tool/action_logger';
 import { memory_set } from './tool/memory_set';
 import { memory_remove } from './tool/memory_remove';
+import { memory_mv } from './tool/memory_mv';
 import { storage_get } from './tool/storage_get';
 import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
@@ -86,10 +87,15 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             console.warn(`Skipping ${action.kind} action: missing path or content`);
             continue;
           }
-          break;
-        case 'memory_remove':
+          break;        case 'memory_remove':
           if (!action.target_path) {
             console.warn('Skipping remove action: missing path');
+            continue;
+          }
+          break;
+        case 'memory_mv':
+          if (!action.source_path || !action.target_path) {
+            console.warn('Skipping memory_mv action: missing source_path or target_path');
             continue;
           }
           break;
@@ -161,11 +167,10 @@ async function generateSystemPrompt(): Promise<string> {
   ${jsonToXml(memoryData, 'root')}
 
   <output_format_specification>
-    <format>
-      You must respond with XML in this exact format:
+    <format>      You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>memory_set|memory_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
+          <kind>memory_set|memory_remove|memory_mv|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
           <target_path>target path</target_path>
           <source_path>source path</source_path>
           <content>content</content>
@@ -269,9 +274,7 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           return;
         }
         await memory_set(action.target_path, action.content);
-        break;
-
-      case 'memory_remove':
+        break;      case 'memory_remove':
         if (!action.target_path) {
           console.warn('Skipping remove: missing path');
           entry.error = 'Missing path';
@@ -279,6 +282,16 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           return;
         }
         await memory_remove(action.target_path);
+        break;
+
+      case 'memory_mv':
+        if (!action.source_path || !action.target_path) {
+          console.warn('Skipping memory_mv: missing paths');
+          entry.error = `Missing ${!action.source_path ? 'source_path' : 'target_path'}`;
+          await logAction(entry);
+          return;
+        }
+        await memory_mv(action.source_path, action.target_path);
         break;
 
       case 'storage_set':
