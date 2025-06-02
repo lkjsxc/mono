@@ -82,6 +82,7 @@ export interface SearchResult {
 export interface StorageLsResult {
   key: string;
   stringLength: number;
+  error?: string; // Optional error field for handling failures gracefully
 }
 
 /**

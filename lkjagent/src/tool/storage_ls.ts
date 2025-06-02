@@ -1,44 +1,72 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JsonPath, StorageLsResult } from '../types/common';
-import { validatePath, getValueAtPath } from '../util/json';
 
 /**
  * Lists all keys at a specified path in Storage with their string lengths
- * @param target_path - Dot-separated path in Storage (e.g., '/storage/archived_data')
+ * @param target_path - Unix-style path in Storage (e.g., '/archived_data')
  * @returns Array of objects with key names and their string lengths
  */
 export async function storage_ls(target_path: JsonPath): Promise<StorageLsResult[]> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
   
   try {
-    // Validate path format
-    validatePath(target_path);
+    // Read storage file
+    const storageContent = await fs.readFile(storagePath, 'utf-8');
+    const storageData = JSON.parse(storageContent);
     
-    // Read current storage state
-    const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
+    // Navigate to target path
+    let currentObj = storageData;
     
-    // Get the object at target path
-    const targetObj = getValueAtPath(storageData, target_path);
+    // Handle root path
+    if (target_path === '/') {
+      currentObj = storageData;
+    } else {
+      // Split path and navigate
+      const pathParts = target_path.split('/').filter(part => part.length > 0);
+      
+      for (const part of pathParts) {
+        if (currentObj && typeof currentObj === 'object' && part in currentObj) {
+          currentObj = currentObj[part];
+        } else {
+          // Path not found, return empty array
+          return [];
+        }
+      }
+    }
     
-    // If target is not an object or is null, return empty array
-    if (typeof targetObj !== 'object' || targetObj === null) {
+    // Check if current object is a valid object to list
+    if (!currentObj || typeof currentObj !== 'object' || Array.isArray(currentObj)) {
       return [];
     }
     
-    // Return array of objects with keys and their string lengths
-    return Object.keys(targetObj).map(key => {
-      const value = targetObj[key];
-      const stringLength = typeof value === 'string' 
-        ? value.length 
-        : JSON.stringify(value).length;
+    // Create results array
+    const results: StorageLsResult[] = [];
+    
+    for (const key of Object.keys(currentObj)) {
+      const value = currentObj[key];
+      let stringLength = 0;
       
-      return {
+      if (typeof value === 'string') {
+        stringLength = value.length;
+      } else if (value !== null && value !== undefined) {
+        try {
+          stringLength = JSON.stringify(value).length;
+        } catch {
+          stringLength = 0;
+        }
+      }
+      
+      results.push({
         key,
         stringLength
-      };
-    });
+      });
+    }
+    
+    return results;
+    
   } catch (error) {
-    throw new Error(`Failed to list Storage contents at path ${target_path}: ${error}`);
+    console.error(`storage_ls error for path ${target_path}:`, error);
+    return [];
   }
 }

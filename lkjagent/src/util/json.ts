@@ -19,10 +19,20 @@ export function validatePath(path: JsonPath): void {
  * @throws Error if any part of the path is invalid
  */
 export function getValueAtPath(obj: any, path: JsonPath): any {
+  // Handle root path case
+  if (path === '/') {
+    return obj;
+  }
+  
   const parts = path.split('/').slice(1); // Remove empty string from split('/')
   let current = obj;
 
   for (const part of parts) {
+    // Skip empty parts (can happen with trailing slashes)
+    if (part === '') {
+      continue;
+    }
+    
     if (current === null || typeof current !== 'object') {
       throw new Error(`Cannot traverse path at '${part}': parent is not an object`);
     }
@@ -43,12 +53,24 @@ export function getValueAtPath(obj: any, path: JsonPath): any {
  * @throws Error if any part of the path is invalid or if parent is not an object
  */
 export function setValueAtPath(obj: any, path: JsonPath, value: any): void {
+  // Handle root path case - replace the entire object (not recommended but handled)
+  if (path === '/') {
+    throw new Error('Cannot set value at root path - this would replace the entire object');
+  }
+  
   const parts = path.split('/').slice(1); // Remove empty string from split('/')
+  // Filter out empty parts
+  const filteredParts = parts.filter(part => part !== '');
+  
+  if (filteredParts.length === 0) {
+    throw new Error('Invalid path: no valid path segments found');
+  }
+  
   let current = obj;
 
   // Traverse/create path except last part
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
+  for (let i = 0; i < filteredParts.length - 1; i++) {
+    const part = filteredParts[i];
     if (current === null || typeof current !== 'object') {
       throw new Error(`Cannot traverse path at '${part}': parent is not an object`);
     }
@@ -59,7 +81,7 @@ export function setValueAtPath(obj: any, path: JsonPath, value: any): void {
   }
 
   // Set value at final path segment
-  const lastPart = parts[parts.length - 1];
+  const lastPart = filteredParts[filteredParts.length - 1];
   if (current === null || typeof current !== 'object') {
     throw new Error(`Cannot set property '${lastPart}': parent is not an object`);
   }

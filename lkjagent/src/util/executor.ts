@@ -10,10 +10,36 @@ import { storage_set } from '../tool/storage_set';
 import { storage_ls } from '../tool/storage_ls';
 import { validateAction } from './action-validator';
 
+// Global counter for action numbering
+let actionCounter = 0;
+
+/**
+ * Get the next action number for result_data storage
+ */
+function getNextActionNumber(): number {
+  return ++actionCounter;
+}
+
+/**
+ * Reset the action counter (useful for testing or fresh starts)
+ */
+export function resetActionCounter(): void {
+  actionCounter = 0;
+}
+
+/**
+ * Get the current action counter value
+ */
+export function getCurrentActionCount(): number {
+  return actionCounter;
+}
+
 /**
  * Execute a single tool action with error handling
  */
 export async function executeAction(action: ToolAction): Promise<void> {
+  const actionNumber = getNextActionNumber();
+  
   // Create initial log entry
   const entry: LogEntry = {
     timestamp: Date.now(),
@@ -24,12 +50,29 @@ export async function executeAction(action: ToolAction): Promise<void> {
     status: 'error'  // Default to error, will be updated to success if no error
   };
 
-  try {
-    // Validate action first
+  try {    // Validate action first
     const validationErrors = validateAction(action);
     if (validationErrors.length > 0) {
       console.warn(`Skipping ${action.kind} action: ${validationErrors.join(', ')}`);
       entry.error = validationErrors.join(', ');
+      
+      // Store validation error in numbered result_data path
+      const validationErrorInfo = {
+        action_number: actionNumber,
+        timestamp: Date.now(),
+        action: action.kind,
+        target_path: action.target_path,
+        source_path: action.source_path,
+        error: validationErrors.join(', '),
+        error_type: 'validation',
+        action_content: action.content
+      };
+        try {
+        await memory_set(`/result_data/action_${actionNumber}`, validationErrorInfo);
+      } catch (memoryError) {
+        console.error('Failed to store validation error in result_data:', memoryError);
+      }
+      
       await logAction(entry);
       return;
     }
@@ -54,18 +97,36 @@ export async function executeAction(action: ToolAction): Promise<void> {
 
       case 'storage_remove':
         await storage_remove(action.target_path!);
-        break;
-
-      case 'storage_get':
-        await memory_set('/sys/result_data', storage_get(action.target_path!));
-        break;
-
-      case 'storage_search':
-        await memory_set('/sys/result_data', storage_search(action.content!));
-        break;
-
-      case 'storage_ls':
-        await memory_set('/sys/result_data', storage_ls(action.target_path!));
+        break;      case 'storage_get':
+        const getResult = storage_get(action.target_path!);
+        await memory_set(`/result_data/action_${actionNumber}`, {
+          action_number: actionNumber,
+          timestamp: Date.now(),
+          action: action.kind,
+          target_path: action.target_path,
+          status: 'success',
+          data: getResult
+        });
+        break;      case 'storage_search':
+        const searchResult = storage_search(action.content!);
+        await memory_set(`/result_data/action_${actionNumber}`, {
+          action_number: actionNumber,
+          timestamp: Date.now(),
+          action: action.kind,
+          search_content: action.content,
+          status: 'success',
+          data: searchResult
+        });
+        break;      case 'storage_ls':
+        const lsResult = storage_ls(action.target_path!);
+        await memory_set(`/result_data/action_${actionNumber}`, {
+          action_number: actionNumber,
+          timestamp: Date.now(),
+          action: action.kind,
+          target_path: action.target_path,
+          status: 'success',
+          data: lsResult
+        });
         break;
 
       default:
@@ -79,7 +140,26 @@ export async function executeAction(action: ToolAction): Promise<void> {
     entry.status = 'success';
     await logAction(entry);  } catch (error) {
     console.warn(`Error executing ${action.kind} action:`, error);
-    entry.error = error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    entry.error = errorMessage;
+    
+    // Store error information in numbered result_data path for continued execution
+    const errorInfo = {
+      action_number: actionNumber,
+      timestamp: Date.now(),
+      action: action.kind,
+      target_path: action.target_path,
+      source_path: action.source_path,
+      error: errorMessage,
+      error_type: 'execution',
+      action_content: action.content
+    };
+      try {
+      await memory_set(`/result_data/action_${actionNumber}`, errorInfo);
+    } catch (memoryError) {
+      console.error('Failed to store error in result_data:', memoryError);
+    }
+    
     await logAction(entry);
   }
 }

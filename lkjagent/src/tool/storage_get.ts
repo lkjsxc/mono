@@ -70,8 +70,15 @@ export async function storage_get(target_path: JsonPath): Promise<any> {
       }
     }
     
-    return current;
-  } catch (error) {
-    throw new Error(`Failed to load from Storage at path ${target_path}: ${error}`);
+    return current;  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`storage_get failed for path ${target_path}: ${errorMessage}`);
+    
+    // Return an error object instead of throwing
+    return {
+      _error: `Failed to load from Storage at path ${target_path}: ${errorMessage}`,
+      _timestamp: Date.now(),
+      _path: target_path
+    };
   }
 }

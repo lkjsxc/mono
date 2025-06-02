@@ -58,13 +58,20 @@ export async function storage_search(content: string): Promise<SearchResult[]> {
   try {
     // Read current storage state
     const storageData = JSON.parse(await fs.readFile(storagePath, 'utf-8'));
-    
-    // Perform recursive search through the storage data
+      // Perform recursive search through the storage data
     const results = searchRecursive(storageData, content, '/');
     
     // Sort results by relevance (highest first)
     return results.sort((a, b) => (b.relevance || 0) - (a.relevance || 0));
   } catch (error) {
-    throw new Error(`Failed to search Storage for content '${content}': ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`storage_search failed for content '${content}': ${errorMessage}`);
+    
+    // Return an error result instead of throwing
+    return [{
+      path: '_error',
+      content: `Failed to search Storage for content '${content}': ${errorMessage}`,
+      relevance: 0
+    }];
   }
 }
