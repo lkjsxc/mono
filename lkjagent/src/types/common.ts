@@ -57,7 +57,7 @@ export interface StorageState {
 /**
  * Kinds of tools available to the agent
  */
-export type ToolKind = 'memory_set' | 'memory_remove' | 'memory_mv' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls';
+export type ToolKind = 'memory_set' | 'memory_remove' | 'memory_mv' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls' | 'think_log' | 'think_log_get' | 'think_log_get_range' | 'think_log_count';
 
 /**
  * Structure of an action the agent can execute
@@ -79,6 +79,14 @@ export interface SearchResult {
 }
 
 /**
+ * Result of a storage_ls operation
+ */
+export interface StorageLsResult {
+  key: string;
+  stringLength: number;
+}
+
+/**
  * Tool function signatures
  */
 export interface ToolFunctions {
@@ -89,6 +97,11 @@ export interface ToolFunctions {
   storage_remove: (target_path: string) => Promise<void>;
   storage_search: (content: string) => Promise<SearchResult[]>;
   storage_set: (source_path: string, target_path: string) => Promise<void>;
+  storage_ls: (target_path: string) => Promise<StorageLsResult[]>;
+  think_log: (content: string) => Promise<void>;
+  think_log_get: (index: number) => Promise<any>;
+  think_log_get_range: (start: number, end?: number) => Promise<any[]>;
+  think_log_count: () => Promise<number>;
 }
 
 /**

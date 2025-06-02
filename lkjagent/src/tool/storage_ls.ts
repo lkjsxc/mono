@@ -1,14 +1,14 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { JsonPath } from '../types/common';
+import { JsonPath, StorageLsResult } from '../types/common';
 import { validatePath, getValueAtPath } from '../util/json';
 
 /**
- * Lists all keys at a specified path in Storage
+ * Lists all keys at a specified path in Storage with their string lengths
  * @param target_path - Dot-separated path in Storage (e.g., '/storage/archived_data')
- * @returns Array of keys found at the target path
+ * @returns Array of objects with key names and their string lengths
  */
-export async function storage_ls(target_path: JsonPath): Promise<string[]> {
+export async function storage_ls(target_path: JsonPath): Promise<StorageLsResult[]> {
   const storagePath = path.join(__dirname, '..', '..', 'data', 'storage.json');
   
   try {
@@ -26,8 +26,18 @@ export async function storage_ls(target_path: JsonPath): Promise<string[]> {
       return [];
     }
     
-    // Return array of keys at this path
-    return Object.keys(targetObj);
+    // Return array of objects with keys and their string lengths
+    return Object.keys(targetObj).map(key => {
+      const value = targetObj[key];
+      const stringLength = typeof value === 'string' 
+        ? value.length 
+        : JSON.stringify(value).length;
+      
+      return {
+        key,
+        stringLength
+      };
+    });
   } catch (error) {
     throw new Error(`Failed to list Storage contents at path ${target_path}: ${error}`);
   }

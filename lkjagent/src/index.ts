@@ -12,6 +12,7 @@ import { storage_remove } from './tool/storage_remove';
 import { storage_search } from './tool/storage_search';
 import { storage_set } from './tool/storage_set';
 import { storage_ls } from './tool/storage_ls';
+import { think_log, think_log_get, think_log_get_range, think_log_count } from './tool/think_log';
 
 /**
  * Convert JSON data to XML format for LLM communication
@@ -122,12 +123,31 @@ function parseActionsFromXml(xml: string): ToolAction[] {
             console.warn('Skipping storage_search action: missing content');
             continue;
           }
-          break;
-        case 'storage_ls':
+          break;        case 'storage_ls':
           if (!action.target_path) {
             console.warn('Skipping storage_ls action: missing path');
             continue;
           }
+          break;        case 'think_log':
+          if (!action.content) {
+            console.warn('Skipping think_log action: missing content');
+            continue;
+          }
+          break;
+        case 'think_log_get':
+          if (action.content === undefined) {
+            console.warn('Skipping think_log_get action: missing content (index)');
+            continue;
+          }
+          break;
+        case 'think_log_get_range':
+          if (action.content === undefined) {
+            console.warn('Skipping think_log_get_range action: missing content (start index)');
+            continue;
+          }
+          break;
+        case 'think_log_count':
+          // No validation needed for count
           break;
         default:
           console.warn(`Skipping unknown action kind: ${action.kind}`);
@@ -166,11 +186,10 @@ async function generateSystemPrompt(): Promise<string> {
 
   ${jsonToXml(memoryData, 'root')}
 
-  <output_format_specification>
-    <format>      You must respond with XML in this exact format:
+  <output_format_specification>    <format>      You must respond with XML in this exact format:
       <actions>
         <action>
-          <kind>memory_set|memory_remove|memory_mv|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
+          <kind>memory_set|memory_remove|memory_mv|storage_set|storage_remove|storage_get|storage_search|storage_ls|think_log|think_log_get|think_log_get_range|think_log_count</kind>
           <target_path>target path</target_path>
           <source_path>source path</source_path>
           <content>content</content>
@@ -340,9 +359,53 @@ async function executeAction(action: ToolAction): Promise<void> {  // Create ini
           entry.error = 'Missing path';
           await logAction(entry);
           return;
+        }        await memory_set('sys/loaded_data', storage_ls(action.target_path));
+        break;      case 'think_log':
+        if (!action.content) {
+          console.warn('Skipping think_log: missing content');
+          entry.error = 'Missing content';
+          await logAction(entry);
+          return;
         }
-        await memory_set('sys/loaded_data', storage_ls(action.target_path));
-        break; default:
+        await think_log(action.content);
+        break;
+
+      case 'think_log_get':
+        if (action.content === undefined) {
+          console.warn('Skipping think_log_get: missing content (index)');
+          entry.error = 'Missing content (index)';
+          await logAction(entry);
+          return;
+        }
+        const logEntry = await think_log_get(Number(action.content));
+        await memory_set('sys/loaded_data', logEntry);
+        break;
+
+      case 'think_log_get_range':
+        if (action.content === undefined) {
+          console.warn('Skipping think_log_get_range: missing content (start index)');
+          entry.error = 'Missing content (start index)';
+          await logAction(entry);
+          return;
+        }
+        // Parse start and optional end from content
+        let start: number, end: number | undefined;
+        if (typeof action.content === 'object' && action.content.start !== undefined) {
+          start = Number(action.content.start);
+          end = action.content.end !== undefined ? Number(action.content.end) : undefined;
+        } else {
+          start = Number(action.content);
+        }
+        const logRange = await think_log_get_range(start, end);
+        await memory_set('sys/loaded_data', logRange);
+        break;
+
+      case 'think_log_count':
+        const count = await think_log_count();
+        await memory_set('sys/loaded_data', count);
+        break;
+
+      default:
         console.warn(`Skipping unknown action kind: ${action.kind}`);
         entry.error = `Unknown action kind: ${action.kind}`;
         await logAction(entry);
