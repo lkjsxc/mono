@@ -18,7 +18,7 @@ let total_action_index = 0;
 /**
  * Execute an array of validated tool actions
  */
-export async function execute_actions(actions: tool_action[]): Promise<void> {
+export async function execute_actions(actions: tool_action[], clearResults: boolean = false): Promise<void> {
   if (actions.length === 0) {
     return;
   }
@@ -26,6 +26,12 @@ export async function execute_actions(actions: tool_action[]): Promise<void> {
   // Load current state
   let working_memory = await load_working_memory();
   let storage = await load_storage();
+  
+  // Clear action results if requested
+  if (clearResults) {
+    working_memory.action_result = {};
+    console.log('🧹 Cleared previous action results');
+  }
   
   // Ensure action_result exists in working memory
   if (!working_memory.action_result || typeof working_memory.action_result !== 'object') {
@@ -113,6 +119,19 @@ export async function execute_actions(actions: tool_action[]): Promise<void> {
   // Save updated state
   await save_working_memory(working_memory);
   await save_storage(storage);
+}
+
+/**
+ * Clear all action results from working memory
+ */
+export async function clear_action_results(): Promise<void> {
+  const working_memory = await load_working_memory();
+  
+  // Clear action_result object
+  working_memory.action_result = {};
+  
+  await save_working_memory(working_memory);
+  console.log('🧹 Cleared all action results from working memory');
 }
 
 /**

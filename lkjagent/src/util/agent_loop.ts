@@ -38,7 +38,7 @@ export async function run_agent(): Promise<void> {
     if (welcome_actions.length > 0) {
       const validation = validate_actions(welcome_actions);
       if (validation.valid) {
-        await execute_actions(welcome_actions);
+        await execute_actions(welcome_actions, true);
         console.log('✅ Welcome actions executed successfully');
       } else {
         console.warn('⚠️ Welcome actions validation failed:', validation.errors);
@@ -84,7 +84,7 @@ export async function run_agent(): Promise<void> {
         
         // Execute actions
         console.log('⚙️ Executing actions...');
-        await execute_actions(actions);
+        await execute_actions(actions, true);
         console.log('✅ Actions executed successfully');
         
         // Small delay between iterations

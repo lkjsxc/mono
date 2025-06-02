@@ -108,8 +108,9 @@ Always respond with actions wrapped in \`<actions></actions>\` tags:
 1. Use working memory for immediate context and temporary data
 2. Use storage for long-term knowledge and persistent data
 3. Check action_result in working memory to see results of previous actions
-4. Be efficient with working memory space (limited to ${max_size} characters)
-5. Structure data logically using paths
+4. action_result is overwritten every time
+5. Be efficient with working memory space (limited to ${max_size} characters)
+6. Structure data logically using paths
 
 ## Current Goal
 Help the user with their tasks while maintaining organized memory and persistent knowledge.
