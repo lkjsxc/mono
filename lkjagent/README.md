@@ -1,4 +1,3 @@
-```markdown
 # 🤖 lkjagent
 
 [![build_status](https://img.shields.io/your_ci_badge_url)](https://your_ci_link)
@@ -814,4 +813,3 @@ This order builds foundational components first, then layers more complex logic 
 This project is licensed under the mit_license.
 
 ## 🙏 acknowledgements
-```
