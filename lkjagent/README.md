@@ -15,7 +15,7 @@ This framework empowers developers to build advanced AI agents that can handle t
 -   **📡 XML-Based Communication**: Structured action protocol for reliable and verifiable LLM interaction.
 -   **⚡ Modular TypeScript Design**: Clean, maintainable, and scalable architecture built with TypeScript.
 -   **🔄 Persistent Task Management**: Enables long-running tasks with state preservation across sessions.
--   **📊 Comprehensive Action Logging**: Full audit trail of all agent operations, with results stored in `/sys/result_data/action_N/`.
+-   **📊 Comprehensive Action Logging**: Full audit trail of all agent operations, with results stored in `/result_data/action_N/`.
 -   **🛡️ Robust Error Handling**: Graceful failure recovery with detailed error reporting for enhanced stability.
 -   **🎯 Action Numbering System**: Sequential tracking of all operations, facilitating debugging and state recovery.
 -   **🔍 Advanced XML Processing**: Safe XML parsing with circular reference detection, validation, and content escaping.
@@ -115,7 +115,7 @@ graph TB
     E -->|Provides Context| G(JSON Path Operations)
     F -->|Provides Context| G
     G -->|Logs Actions/Results| H(Action Logger)
-    H -->|Creates| I[Audit Trail (in /sys/result_data & log.json)]
+    H -->|Creates| I[Audit Trail (in /result_data & log.json)]
 ```
 
 #### 🐏 Working Memory (RAM - `data/memory.json`)
@@ -280,7 +280,7 @@ Configure `lkjagent` via `data/config.json`.
 
 ### 🎯 Action Numbering System Details
 
-`lkjagent` features an advanced action numbering system that tracks all operations sequentially. The results and status of each action requested by the LLM are stored in working memory under `/sys/result_data/action_N/`.
+`lkjagent` features an advanced action numbering system that tracks all operations sequentially. The results and status of each action requested by the LLM are stored in working memory under `/result_data/action_N/`.
 
 **Example structure in `data/memory.json` after actions:**
 ```json
@@ -319,7 +319,7 @@ Configure `lkjagent` via `data/config.json`.
 
 **Benefits:**
 -   **Sequential Tracking**: Every LLM-requested action gets a unique sequential number.
--   **Result & Status Feedback**: The LLM receives feedback on the outcome of its requested actions in the next turn via the system prompt (which includes `/sys/result_data`).
+-   **Result & Status Feedback**: The LLM receives feedback on the outcome of its requested actions in the next turn via the system prompt (which includes `/result_data`).
 -   **Error Isolation**: Failed actions are logged with detailed error information, allowing the LLM to potentially retry or adjust its strategy.
 -   **Debugging Support**: Easy to trace the execution flow and identify issues by examining `sys.result_data`.
 -   **State Recovery**: In more advanced scenarios, this log could be used to replay or recover from specific action points.
@@ -378,12 +378,12 @@ The centralized engine for carrying out validated actions:
 ```typescript
 import { executeActions } from './util/executor';
 // const actionsToExecute = [ /* array of validated ToolAction objects */ ];
-// await executeActions(actionsToExecute); // Results are stored in /sys/result_data
+// await executeActions(actionsToExecute); // Results are stored in /result_data
 ```
 **Execution Features:**
 -   **Unified Execution Logic**: A single point for processing all types of `ToolAction`.
 -   **Automatic Logging**: Integrates with `action_logger.ts` to record executed actions and their outcomes.
--   **Result Management**: Populates `/sys/result_data/action_N/` with the outcome of each action.
+-   **Result Management**: Populates `/result_data/action_N/` with the outcome of each action.
 -   **Error Handling**: Gracefully handles errors during action execution and records them in `result_data`.
 
 #### 🤖 LLM Communication (`llm.ts`)
@@ -470,9 +470,9 @@ The LLM can request the agent to perform actions by generating XML. Each `<actio
 2.  **XML Parsing**: The `xml.ts` utility parses this string into an array of `ToolAction` objects.
 3.  **Validation**: Each `ToolAction` is validated by `action-validator.ts` for correct structure, valid paths, and adherence to constraints. Invalid actions are flagged.
 4.  **Execution**: Valid actions are passed to `executor.ts`. Each action is performed by its corresponding tool implementation (e.g., `memory_set.ts` handles `memory_set` kind).
-5.  **Result Recording**: The outcome (success or error, along with any data) of each action is recorded in working memory at `/sys/result_data/action_N/`.
+5.  **Result Recording**: The outcome (success or error, along with any data) of each action is recorded in working memory at `/result_data/action_N/`.
 6.  **Logging**: `action_logger.ts` logs the action and its outcome to `data/log.json` for auditing.
-7.  **Feedback Loop**: In the next cycle, `prompt.ts` includes `/sys/result_data` in the system prompt, informing the LLM about the results of its previous requests.
+7.  **Feedback Loop**: In the next cycle, `prompt.ts` includes `/result_data` in the system prompt, informing the LLM about the results of its previous requests.
 
 ## 📊 Data Management
 
@@ -613,14 +613,14 @@ The agent will then start its main loop:
     *   Snippets from `storage.json` (e.g., relevant knowledge).
     *   List of available tools/actions and their XML format.
     *   The current goal or task.
-    *   Results from previous actions (`/sys/result_data`).
+    *   Results from previous actions (`/result_data`).
 3.  **LLM Interaction**: `llm.ts` sends this prompt to the LLM via the configured API.
 4.  **LLM Responds**: The LLM processes the prompt and returns a response, ideally containing XML-formatted actions.
 5.  **Action Processing**:
     *   `xml.ts` parses the XML into `ToolAction` objects.
     *   `action-validator.ts` validates each action.
     *   `executor.ts` executes valid actions, updating `memory.json` or `storage.json`.
-    *   Results (success/failure, data) are stored in `memory.json` under `/sys/result_data/action_N/`.
+    *   Results (success/failure, data) are stored in `memory.json` under `/result_data/action_N/`.
 6.  **Logging**: `action_logger.ts` writes details of the executed action to `data/log.json`.
 7.  **Loop**: The process repeats, allowing for continuous, stateful interaction.
 
@@ -781,7 +781,7 @@ function isValidAction(action: ToolAction): boolean;
 ```typescript
 /**
  * Executes an array of validated ToolActions.
- * Results are stored in memory at /sys/result_data/action_N/.
+ * Results are stored in memory at /result_data/action_N/.
  * @param actions An array of ToolAction objects to execute.
  */
 async function executeActions(actions: ToolAction[]): Promise<void>; // Modified to accept an array
