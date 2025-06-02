@@ -5,7 +5,7 @@ import { memory_set } from './memory_set';
 import { validatePath, getValueAtPath } from '../util/json';
 
 /**
- * Loads data from a specified path in Storage and places it in memory's loaded_data area
+ * Loads data from a specified path in Storage and places it in memory's result_data area
  * @param target_path - Dot-separated path in Storage (e.g., 'storage.knowledge_base.policy')
  * @returns The loaded data
  */

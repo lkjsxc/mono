@@ -9,9 +9,10 @@
         "op_note_3": "Segments must be substantial before storage, respecting memory character limits.",
         "op_note_4": "Save completed segment to '/storage/the_unending_chronicle/segments/segment_{N}' from '/user/story_crafting/current_segment_text', where {N} is current segment number.",
         "op_note_5": "After successful storage, increment '/user/story_progress/next_segment_to_draft'.",
-        "op_note_6": "Then, clear '/user/story_crafting/current_segment_text' (e.g., set to empty string).",
+        "op_note_6": "Then, clear '/user/story_crafting/current_segment_text' (e.g., set to empty string or remove).",
         "op_note_7": "Update '/user/story_progress/current_segment_number' to match 'next_segment_to_draft' before starting a new draft.",
-        "op_note_8": "The story requires rich detail, evolving characters, expansive world-building, and compelling plotlines for maximal length and engagement."
+        "op_note_8": "The story requires rich detail, evolving characters, expansive world-building, and compelling plotlines for maximal length and engagement.",
+        "op_note_9": "Before drafting a new segment, execute `storage_ls` on the path `/storage/the_unending_chronicle/segments/` to verify the status of previously saved segments and ensure correct sequencing."
       }
     },
     "story_progress": {
@@ -48,8 +49,8 @@
     },
     "agent_self_reflection": {
       "last_action_summary": "Attempted to clear '/user/story_crafting/current_segment_text' as part of Segment 1 post-processing (op_note_6). This failed because the path was not found. Assuming Segment 1 save (op_note_4), next draft increment (op_note_5), and current segment number update (op_note_7) were successful as reflected by 'current_segment_number' and 'next_segment_to_draft' both being '2'. The path for current_segment_text being missing means its objective (cleared state) is met.",
-      "confidence_in_plan": "Medium. Procedural error encountered, but core objectives for Segment 1 completion seem met. Next step is to align phase and commence Segment 2.",
-      "next_immediate_goal": "Commence drafting Segment 2 in '/user/story_crafting/current_segment_text'. Ensure `lkjagent_memory_state.current_phase` is updated to 'Drafting Segment 2' or similar to reflect this new activity." 
+      "confidence_in_plan": "Medium. Procedural error encountered. Will verify storage before proceeding.",
+      "next_immediate_goal": "First, verify the status of previously saved segments by executing `storage_ls` on the path `/storage/the_unending_chronicle/segments/` as per op_note_9. After confirming, commence drafting Segment 2 in '/user/story_crafting/current_segment_text'. Ensure `lkjagent_memory_state.current_phase` is updated to 'Drafting Segment 2' or similar to reflect this new activity."
     }
   },
   "sys": {

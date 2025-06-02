@@ -19,11 +19,9 @@ export interface RamData {
   current_task?: {
     id: string;
     description: string;
-    status: 'pending' | 'in_progress' | 'completed';
-  };
-  thinking_log: string[];
+    status: 'pending' | 'in_progress' | 'completed';  };
   todo: Record<string, TodoItem>;
-  loaded_data?: any; // Temporary area for data loaded from storage
+  result_data?: any; // Temporary area for data loaded from storage
   [key: string]: any; // Allow additional dynamic paths
 }
 
@@ -57,7 +55,7 @@ export interface StorageState {
 /**
  * Kinds of tools available to the agent
  */
-export type ToolKind = 'memory_set' | 'memory_remove' | 'memory_mv' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls' | 'think_log' | 'think_log_get' | 'think_log_get_range' | 'think_log_count';
+export type ToolKind = 'memory_set' | 'memory_remove' | 'memory_mv' | 'storage_get' | 'storage_set' | 'storage_search' | 'storage_remove' | 'storage_ls';
 
 /**
  * Structure of an action the agent can execute
@@ -98,10 +96,6 @@ export interface ToolFunctions {
   storage_search: (content: string) => Promise<SearchResult[]>;
   storage_set: (source_path: string, target_path: string) => Promise<void>;
   storage_ls: (target_path: string) => Promise<StorageLsResult[]>;
-  think_log: (content: string) => Promise<void>;
-  think_log_get: (index: number) => Promise<any>;
-  think_log_get_range: (start: number, end?: number) => Promise<any[]>;
-  think_log_count: () => Promise<number>;
 }
 
 /**
