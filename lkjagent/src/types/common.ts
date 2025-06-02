@@ -5,7 +5,8 @@
 // Configuration interface - all root level properties
 export interface app_config {
   working_memory_character_max: number;
-  working_memory_direct_child_max?: number;
+  key_token_max?: number;
+  dir_child_max?: number;
   llm_api_url?: string;
   llm_model?: string;
   llm_max_tokens?: number;

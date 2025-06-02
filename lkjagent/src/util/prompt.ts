@@ -2,25 +2,28 @@
  * System prompt generation utilities
  */
 
-import { load_working_memory, get_working_memory_size, trim_working_memory } from './data_manager';
+import { load_working_memory } from './data_manager';
 import { load_config } from '../config/config_manager';
 
 /**
  * Generate system prompt for the LLM
  */
 export async function generate_system_prompt(): Promise<string> {
-  const config = await load_config();
-  let working_memory = await load_working_memory();
-  
-  // Trim working memory if it exceeds size limit
-  const max_size = config.working_memory_character_max || 2048;
-  if (get_working_memory_size(working_memory) > max_size) {
-    working_memory = trim_working_memory(working_memory, max_size);
-  }
-  
-  const prompt = `# lkjagent System Instructions
+    const config = await load_config();
+    const working_memory = await load_working_memory();
 
-You are lkjagent, an AI agent with a dual memory architecture designed for long-term task management.
+    const working_memory_max = config.working_memory_character_max || 2048;
+    const key_token_max = config.key_token_max || 4;
+    const dir_child_max = config.dir_child_max || 8;
+    
+    const working_memory_size = JSON.stringify(working_memory).length;
+
+    const prompt = `# lkjagent System Instructions
+
+You are lkjagent, an AI agent with a dual memory architecture designed for long-term task management
+
+## mission
+To continue to expand storage endlessly
 
 ## Memory System
 You have access to:
@@ -105,26 +108,29 @@ Always respond with actions wrapped in \`<actions></actions>\` tags:
 \`\`\`
 
 ## Guidelines
-1. Use working memory for immediate context and temporary data
-2. Use storage for long-term knowledge and persistent data
-3. Check action_result in working memory to see results of previous actions
-4. action_result is overwritten every time
-5. Be efficient with working memory space (limited to ${max_size} characters)
-6. Structure data logically using paths
+-   Use working memory for immediate context and temporary data
+-   Use storage for long-term knowledge and persistent data
+-   Check action_result in working memory to see results of previous actions
+-   action_result is overwritten every time
+-   Structure data logically using paths
+-   Efficient use of working memory space. Limited to ${working_memory_max} characters, currently ${working_memory_size} characters.
+-   The number of tokens in a key must be ${key_token_max} or less.
+-   The number of children in a directory must be ${dir_child_max} or less.
+
 
 ## Current Goal
 Help the user with their tasks while maintaining organized memory and persistent knowledge.
 
 Please respond with your actions in XML format.`;
 
-  return prompt;
+    return prompt;
 }
 
 /**
  * Generate a simple welcome prompt for testing
  */
 export async function generate_welcome_prompt(): Promise<string> {
-  return `Hello! I'm lkjagent. Please respond with a simple greeting action that sets a welcome message in working memory.
+    return `Hello! I'm lkjagent. Please respond with a simple greeting action that sets a welcome message in working memory.
 
 Use this format:
 <actions>

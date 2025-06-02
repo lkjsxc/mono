@@ -103,37 +103,3 @@ export function get_working_memory_size(working_memory: json_object): number {
     return 0;
   }
 }
-
-/**
- * Check if working memory exceeds the maximum size
- */
-export function is_working_memory_oversized(working_memory: json_object, max_size: number): boolean {
-  return get_working_memory_size(working_memory) > max_size;
-}
-
-/**
- * Trim working memory to fit within size constraints
- * This is a simple implementation that removes older action results
- */
-export function trim_working_memory(working_memory: json_object, max_size: number): json_object {
-  const trimmed = JSON.parse(JSON.stringify(working_memory)); // Deep clone
-  
-  // If still too large, try removing older action results
-  if (is_working_memory_oversized(trimmed, max_size) && 
-      typeof trimmed.action_result === 'object' && 
-      trimmed.action_result !== null) {
-    
-    const action_results = trimmed.action_result as json_object;
-    const keys = Object.keys(action_results).sort();
-    
-    // Remove oldest action results until size is acceptable
-    while (keys.length > 0 && is_working_memory_oversized(trimmed, max_size)) {
-      const oldest_key = keys.shift();
-      if (oldest_key) {
-        delete action_results[oldest_key];
-      }
-    }
-  }
-  
-  return trimmed;
-}

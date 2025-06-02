@@ -2,67 +2,61 @@
   "storage": {
     "knowledge_base": {
       "system_policy_summary": "lkjagent is a sophisticated AI agent framework designed for small language models.",
-      "greeting_message": "Hello! I am lkjagent, your AI assistant. I can help you manage data and perform various tasks using my memory system.",
-      "agent_capabilities": {
-        "memory_management": true,
-        "task_tracking": true,
-        "data_persistence": true
-      },
-      "documentation_status": {
-        "last_checked": "2024-10-05"
-      },
-      "documentation_guidelines": {
-        "guidelines": "Create structured documentation following the project plan, including task details, priorities, and status updates."
-      },
-      "documentation": {
-        "introduction": {
-          "description": "lkjagent is an AI agent with dual memory architecture for long-term task management",
-          "status": "draft"
-        }
-      },
-      "documentation_structure": {
-        "sections": [
-          "overview",
-          "architecture",
-          "usage_guides",
-          "api_reference"
-        ],
-        "status": "draft"
-      },
-      "lkjagent_documentation": {
-        "overview": {
-          "description": "Overview of lkjagent's features and purpose",
-          "status": "draft"
-        },
-        "introduction": {
-          "description": "Overview of lkjagent's dual memory architecture and task management capabilities",
-          "status": "draft"
-        },
-        "getting_started": {
-          "description": "Step-by-step guide for using lkjagent",
-          "status": "draft"
-        },
-        "documentation_sections": {
-          "introduction.md": {
-            "content": "Introduction section content here"
-          },
-          "getting_started.md": {
-            "description": "Getting started guide content",
-            "status": "in_progress"
-          },
-          "features.md": {
-            "description": "lkjagent core features and capabilities",
-            "status": "in_progress"
-          }
-        }
-      }
+      "greeting_message": "Hello! I am lkjagent, your AI assistant. I can help you manage data and perform various tasks using my memory system."
     },
     "archived_data": {},
-    "test_data": {},
-    "moved_data": {
-      "test_item": {
-        "message": "Hello lkjagent!",
-        "value": 42
+    "projects": {
+      "type": "directory"
+    },
+    "expansion": {
+      "testfile.txt": {
+        "content": "test data"
+      },
+      "data_chunk_2.txt": {
+        "size": "1024MB",
+        "timestamp": "2025-03-28T14:30:00Z"
+      },
+      "data_chunk_3.txt": {
+        "status": "stored",
+        "chunk_number": 3
+      },
+      "data_chunk_4.txt": {
+        "size": "1024MB",
+        "checksum": "abc123xyz"
+      },
+      "data_chunk_5.txt": {
+        "status": "in_progress",
+        "chunk_number": 5
+      },
+      "data_chunk_6.txt": {
+        "description": "Expanded storage segment",
+        "status": "stored"
+      },
+      "data_chunk_7.txt": {
+        "status": "active",
+        "timestamp": 1748850061519
+      },
+      "data_chunk_8.txt": {
+        "status": "initialized"
+      },
+      "data_chunk_9.txt": {
+        "_is_directory": true
+      },
+      "data_chunk_10.txt": {
+        "chunk_data": "expanded_storage_content",
+        "timestamp": "2025-04-05T12:34:56Z"
+      },
+      "data_chunk_11.txt": {
+        "description": "Expanded storage segment",
+        "status": "stored"
+      },
+      "data_chunk_12.txt": {
+        "description": "Expanded storage segment",
+        "status": "active"
+      },
+      "data_chunk_13.txt": {
+        "status": "active",
+        "timestamp": 1748850142511
       }
     }
   }
