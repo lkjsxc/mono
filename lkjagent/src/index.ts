@@ -165,20 +165,19 @@ async function generateSystemPrompt(): Promise<string> {
       <actions>
         <action>
           <kind>memory_set|memory_remove|storage_set|storage_remove|storage_get|storage_search|storage_ls</kind>
-          <path>/path/to/data</path>
-          <content>optional content</content>
-          <source_path>optional source path for storage operations</source_path>
+          <target_path>target path</target_path>
+          <source_path>source path</source_path>
+          <content>content</content>
         </action>
       </actions>
     </format>
     <rules>
-      1. Always wrap your response in <actions> tags
-      2. Each action must be wrapped in <action> tags
-      3. The source_path tag is required only for storage_set action
-      4. must not exceed ${memoryCharacterLimit} tokens
-      5. A directory should have no more than 8 direct children
-      6. It is recommended that the key be 4 tokens or less
-      7. Make proactive use of storage
+      Always wrap your response in <actions> tags
+      Each action must be wrapped in <action> tags
+      must not exceed ${memoryCharacterLimit} tokens
+      A directory should have no more than 8 direct children
+      It is recommended that the key be 4 tokens or less
+      Make proactive use of storage
     </rules>
     <example>
       <actions>
