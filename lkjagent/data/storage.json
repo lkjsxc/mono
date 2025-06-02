@@ -1,0 +1,25 @@
+{
+  "storage": {
+    "knowledge_base": {
+      "system_policy_summary": "lkjagent is a sophisticated AI agent framework designed for small language models.",
+      "greeting_message": "Hello! I am lkjagent, your AI assistant. I can help you manage data and perform various tasks using my memory system.",
+      "agent_capabilities": {
+        "memory_management": true,
+        "task_tracking": true,
+        "data_persistence": true
+      },
+      "documentation_status": {
+        "status": "completed",
+        "last_checked": "2024-10-05"
+      }
+    },
+    "archived_data": {},
+    "test_data": {},
+    "moved_data": {
+      "test_item": {
+        "message": "Hello lkjagent!",
+        "value": 42
+      }
+    }
+  }
+}
