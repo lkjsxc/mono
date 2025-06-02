@@ -2,7 +2,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 export interface MemoryConfig {
-  memoryCharacterLimit: number;
+  MemoryCharacterMax: number;
+  DirectChildMax: number;
 }
 
 export interface Config {

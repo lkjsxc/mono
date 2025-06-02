@@ -1,5 +1,6 @@
 {
   "memory": {
-    "memoryCharacterLimit": 2048
+    "MemoryCharacterMax": 2048,
+    "DirectChildMax": 8
   }
 }

@@ -149,7 +149,8 @@ async function generateSystemPrompt(): Promise<string> {
 
   const configManager = await ConfigManager.getInstance();
   const memoryConfig = configManager.getMemoryConfig();
-  const memoryCharacterLimit = memoryConfig.memoryCharacterLimit;
+  const MemoryCharacterMax = memoryConfig.MemoryCharacterMax;
+  const DirectChildMax = memoryConfig.DirectChildMax;
 
   return `<lkjagent_system_setup>
   <persona>
@@ -174,8 +175,8 @@ async function generateSystemPrompt(): Promise<string> {
     <rules>
       Always wrap your response in <actions> tags
       Each action must be wrapped in <action> tags
-      must not exceed ${memoryCharacterLimit} tokens
-      A directory should have no more than 8 direct children
+      must not exceed ${MemoryCharacterMax} tokens
+      A directory should have no more than ${DirectChildMax} direct children
       It is recommended that the key be 4 tokens or less
       Make proactive use of storage
     </rules>
