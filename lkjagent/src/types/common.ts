@@ -6,7 +6,7 @@
 export interface app_config {
   working_memory_character_max: number;
   key_token_max?: number;
-  dir_child_max?: number;
+  working_memory_children_max?: number;
   llm_api_url?: string;
   llm_model?: string;
   llm_max_tokens?: number;

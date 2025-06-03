@@ -9,7 +9,7 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const DEFAULT_CONFIG: app_config = {
   working_memory_character_max: 2048,
   key_token_max: 4,
-  dir_child_max: 8,
+  working_memory_children_max: 8,
   llm_api_url: 'http://localhost:1234/v1/chat/completions',
   llm_model: 'local-model',
   llm_max_tokens: 1000,
