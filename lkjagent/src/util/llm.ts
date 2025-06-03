@@ -27,7 +27,7 @@ export async function call_llm(prompt: string): Promise<string> {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 60000 // 60 second timeout
+      timeout: 600000 // 600 second timeout
     });
     
     if (response.data && response.data.choices && response.data.choices.length > 0) {

@@ -1,26 +1,14 @@
 {
   "working_memory": {
+    "current_task": "Enrich working_memory",
     "action_result": {
-      "_18": {
-        "action_index": 18,
-        "timestamp": 1748858846081,
-        "kind": "get",
-        "target_path": "/storage/test_data",
-        "status": "success",
-        "data": {
-          "content": "This is a test document",
-          "status": "active"
-        },
-        "message": "Retrieved data from /storage/test_data"
-      },
-      "_19": {
-        "action_index": 19,
-        "timestamp": 1748858846088,
-        "kind": "search",
+      "_7": {
+        "action_index": 7,
+        "timestamp": 1748908915555,
+        "kind": "ls",
         "target_path": "/storage",
         "status": "success",
-        "data": {},
-        "message": "Search for \"test_data\" in /storage found 0 matches"
+        "message": "Listed 6 items in /storage:\nprojects/ (dir)\nknowledge_base/ (dir)\nresearch/ (dir)\nlogs/ (dir)\nproject_files/ (dir)\ntest_data/ (dir)"
       }
     },
     "cache": {}
