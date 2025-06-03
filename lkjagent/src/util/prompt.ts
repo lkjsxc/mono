@@ -14,7 +14,7 @@ export async function generate_system_prompt(): Promise<string> {
     const working_memory = await load_working_memory();
 
     const working_memory_xml = json_to_xml(working_memory, 'working_memory');
-    const working_memory_size = working_memory_xml.length;
+    const working_memory_size = working_memory_xml.trim().length;
     const working_memory_max = config.working_memory_character_max || 4096;
     const working_memory_children_max = config.working_memory_children_max || 4;
 
