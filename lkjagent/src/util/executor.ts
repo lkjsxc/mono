@@ -4,6 +4,8 @@
 
 import { tool_action, action_result, json_object, json_value } from '../types/common';
 import { load_working_memory, save_working_memory, load_storage, save_storage } from './data_manager';
+import { load_config } from '../config/config_manager';
+import { json_to_xml } from './xml';
 import { handle_set_action } from '../tool/set_tool';
 import { handle_get_action } from '../tool/get_tool';
 import { handle_rm_action } from '../tool/rm_tool';
@@ -27,24 +29,6 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
   // Load current state
   let working_memory = await load_working_memory();
   let storage = await load_storage();
-
-  // Clear action results if requested
-  if (clearResults) {
-    working_memory.action_result = {};
-    console.log('🧹 Cleared previous action results');
-  }
-
-  // Post process working memory
-  if (typeof working_memory.action_result !== 'object') {
-    working_memory.action_result = {};
-  }
-  if (typeof working_memory.current_task !== 'object') {
-    working_memory.prev_task = working_memory.current_task;
-  }
-  if (typeof working_memory.next_task !== 'object') {
-    working_memory.current_task = working_memory.next_task;
-    working_memory.next_task = {};
-  }
 
   // Execute each action
   for (const action of actions) {
@@ -108,12 +92,14 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
       if (action.source_path) {
         result.source_path = action.source_path;
       }
-    }
-
-    // Store result in working memory
-    if (result.status === 'error' || ['get', 'ls', 'search'].includes(action.kind)) {
-      const result_key = `_${action_index}`;
-      (working_memory.action_result as json_object)[result_key] = result as json_value;
+    }    // Store action result in working memory
+    try {
+      if (!working_memory.action_result) {
+        working_memory.action_result = {};
+      }
+      (working_memory.action_result as json_object)[action_index.toString()] = result;
+    } catch (error) {
+      console.error('Failed to store action result in working memory:', error);
     }
 
     // Log the action
@@ -128,6 +114,21 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
       console.error(`   Error: ${result.error}`);
     }
   }
+  
+  // System statistics processing
+  const config = await load_config();
+  const working_memory_size = json_to_xml(working_memory, 'working_memory').trim().length;
+  const working_memory_size_hard_limit = config.working_memory_character_max || 4096;
+  const working_memory_children_max = config.working_memory_children_max || 4;
+  // Store system statistics in working memory
+  if (!working_memory.system_info) {
+    working_memory.system_info = {};
+  }
+  (working_memory.system_info as json_object).system_stat = {
+    working_memory_size,
+    working_memory_size_hard_limit,
+    working_memory_children_max
+  };
 
   // Save updated state
   await save_working_memory(working_memory);
