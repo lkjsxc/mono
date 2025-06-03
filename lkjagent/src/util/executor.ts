@@ -23,29 +23,36 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
   if (actions.length === 0) {
     return;
   }
-  
+
   // Load current state
   let working_memory = await load_working_memory();
   let storage = await load_storage();
-  
+
   // Clear action results if requested
   if (clearResults) {
     working_memory.action_result = {};
     console.log('🧹 Cleared previous action results');
   }
-  
-  // Ensure action_result exists in working memory
-  if (!working_memory.action_result || typeof working_memory.action_result !== 'object') {
+
+  // Post process working memory
+  if (typeof working_memory.action_result !== 'object') {
     working_memory.action_result = {};
   }
-  
+  if (typeof working_memory.current_task !== 'object') {
+    working_memory.prev_task = working_memory.current_task;
+  }
+  if (typeof working_memory.next_task !== 'object') {
+    working_memory.current_task = working_memory.next_task;
+    working_memory.next_task = {};
+  }
+
   // Execute each action
   for (const action of actions) {
     total_action_index++;
     const action_index = total_action_index;
-    
+
     let result: action_result;
-    
+
     try {
       // Execute the action based on its kind
       switch (action.kind) {
@@ -63,7 +70,8 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
           break;
         case 'ls':
           result = await handle_ls_action(action, working_memory, storage, action_index);
-          break;        case 'search':
+          break;
+        case 'search':
           result = await handle_search_action(action, working_memory, storage, action_index);
           break;
         case 'mkdir':
@@ -79,14 +87,14 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
             error: `Unknown action kind: ${action.kind}`
           };
       }
-      
+
       // Add action details to result
       result.kind = action.kind;
       result.target_path = action.target_path;
       if (action.source_path) {
         result.source_path = action.source_path;
       }
-      
+
     } catch (error) {
       result = {
         action_index,
@@ -96,29 +104,31 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
         status: 'error',
         error: `Action execution failed: ${error instanceof Error ? error.message : String(error)}`
       };
-      
+
       if (action.source_path) {
         result.source_path = action.source_path;
       }
     }
-    
+
     // Store result in working memory
-    const result_key = `_${action_index}`;
-    (working_memory.action_result as json_object)[result_key] = result as json_value;
-    
+    if (result.status === 'error' || ['get', 'ls', 'search'].includes(action.kind)) {
+      const result_key = `_${action_index}`;
+      (working_memory.action_result as json_object)[result_key] = result as json_value;
+    }
+
     // Log the action
     try {
       await log_action(action, result);
     } catch (error) {
       console.error('Failed to log action:', error);
     }
-    
+
     console.log(`✅ Action ${action_index} (${action.kind}): ${result.status}`);
     if (result.status === 'error') {
       console.error(`   Error: ${result.error}`);
     }
   }
-  
+
   // Save updated state
   await save_working_memory(working_memory);
   await save_storage(storage);
@@ -129,10 +139,10 @@ export async function execute_actions(actions: tool_action[], clearResults: bool
  */
 export async function clear_action_results(): Promise<void> {
   const working_memory = await load_working_memory();
-  
+
   // Clear action_result object
   working_memory.action_result = {};
-  
+
   await save_working_memory(working_memory);
   console.log('🧹 Cleared all action results from working memory');
 }
