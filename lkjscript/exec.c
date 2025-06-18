@@ -28,7 +28,9 @@ static inline void* provide_global(uint8_t* mem, int64_t offset) {
     return (void*)(mem + offset);
 }
 
-result_t exec(uint8_t* mem) {
+__attribute__((warn_unused_result))
+result_t
+exec(uint8_t* mem) {
     while (1) {
         nodetype_t opcode = *(nodetype_t*)provide_inst(mem, 0);
         *provide_ip(mem) += sizeof(opcode);
@@ -66,16 +68,17 @@ result_t exec(uint8_t* mem) {
                 break;
             case NODETYPE_CALL:
                 break;
-            case NODETYPE_RETURN:
+            case NODETYPE_RETURN: {
                 write(STDOUT_FILENO, "test\n", 5);
                 ERROUT;
+                return ERR;
+            }
             case NODETYPE_ASSIGN: {
                 int64_t addr = *(int64_t*)provide_stack(mem, -16);
                 int64_t val = *(int64_t*)provide_stack(mem, -8);
                 *(int64_t*)provide_global(mem, addr) = val;
                 *provide_sp(mem) -= sizeof(int64_t) + sizeof(int64_t);
             } break;
-                break;
             case NODETYPE_ASSIGN1:
                 break;
             case NODETYPE_ASSIGN2:

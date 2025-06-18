@@ -16,16 +16,6 @@ static node_t* node_new(node_t** node_itr) {
     return node;
 }
 
-static void node_pushback(node_t** rbegin, node_t* node) {
-    (*rbegin)->next = node;
-    *rbegin = node;
-}
-
-static void node_pushfront(node_t** begin, node_t* node) {
-    node->next = *begin;
-    *begin = node;
-}
-
 static void node_addmember(node_t* parent, node_t* node) {
     node->parent = parent;
     if (parent->child == NULL) {
@@ -57,28 +47,17 @@ static node_t* node_find(node_t* parent, token_t* token, nodetype_t nodetype) {
 }
 
 // when token_itr is at the end of the file, return ERR
+__attribute__((warn_unused_result))
 static result_t tokenitr_next(token_t** token_itr) {
     *token_itr += 1;
     if ((*token_itr)->data == NULL) {
         ERROUT;
         return ERR;
     }
+    return OK;
 }
 
-static result_t tokenitr_skipsplit(token_t** token_itr) {
-    while (1) {
-        if ((*token_itr)->data == NULL) {
-            return OK;
-        } else if (token_eqstr(*token_itr, "\n")) {
-            *token_itr += 1;
-        } else if (token_eqstr(*token_itr, ",")) {
-            *token_itr += 1;
-        } else {
-            break;
-        }
-    }
-}
-
+__attribute__((warn_unused_result))
 static result_t parse_stmt_pre(stat_t stat, token_t* token_start) {
     token_t* token_itr = token_start;
     int64_t nest = 0;
@@ -128,6 +107,7 @@ static result_t parse_stmt_pre(stat_t stat, token_t* token_start) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_type(stat_t stat) {
     node_t* node_type_head;
     node_t* findstruct_result = node_find(stat.parent, *stat.token_itr, NODETYPE_STRUCT);
@@ -164,6 +144,7 @@ static result_t parse_type(stat_t stat) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_var(stat_t stat) {
     node_t* node_var = node_new(stat.node_itr);
     stat_t stat2 = (stat_t){
@@ -204,10 +185,14 @@ static result_t parse_var(stat_t stat) {
     }
 
     // type body
-    parse_type(stat2);
+    if(parse_type(stat2) == ERR) {
+        ERROUT;
+        return ERR;
+    }
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_fn(stat_t stat) {
     // fn
     if (tokenitr_next(stat.token_itr) == ERR) {
@@ -290,6 +275,7 @@ static result_t parse_fn(stat_t stat) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_struct(stat_t stat) {
     if (tokenitr_next(stat.token_itr) == ERR) {
         ERROUT;
@@ -334,9 +320,13 @@ static result_t parse_struct(stat_t stat) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_structmember(stat_t stat, node_t* node_struct) {
+    ERROUT;
+    return ERR;  // TODO: implement this later
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_block(stat_t stat) {
     node_t* node_block = node_new(stat.node_itr);
     *node_block = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
@@ -364,8 +354,10 @@ static result_t parse_block(stat_t stat) {
         ERROUT;
         return ERR;
     }
+    return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_primary(stat_t stat) {
     node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
     if (findvar_result != NULL) {
@@ -416,6 +408,7 @@ static result_t parse_primary(stat_t stat) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_postfix(stat_t stat) {
     while (1) {
         node_t* findfn_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_FN);
@@ -461,6 +454,7 @@ static result_t parse_postfix(stat_t stat) {
     }
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_unary(stat_t stat) {
     if (token_eqstr(*stat.token_itr, "&")) {    // TODO: fix this later
         if (tokenitr_next(stat.token_itr) == ERR) {
@@ -482,14 +476,18 @@ static result_t parse_unary(stat_t stat) {
     } else if (token_eqstr(*stat.token_itr, "*")) {
     } else if (token_eqstr(*stat.token_itr, "-")) {
     } else if (token_eqstr(*stat.token_itr, "!")) {
+            ERROUT;
+            return ERR;
     } else {
         if (parse_postfix(stat) == ERR) {
             ERROUT;
             return ERR;
         }
     }
+    return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_binary(stat_t stat) {
     struct {
         const char* str;
@@ -520,7 +518,7 @@ static result_t parse_binary(stat_t stat) {
     nodetype_t optype = NODETYPE_NULL;
     while (1) {
         int64_t operator_found = 0;
-        for (int64_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
+        for (uint64_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
             if (!token_eqstr(*stat.token_itr, binary_operators[i].str)) {
                 continue;
             }
@@ -551,6 +549,7 @@ static result_t parse_binary(stat_t stat) {
     }
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_assign(stat_t stat) {
     if (parse_binary(stat) == ERR) {
         ERROUT;
@@ -572,6 +571,7 @@ static result_t parse_assign(stat_t stat) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_expr(stat_t stat) {
     while (1) {
         if (parse_assign(stat) == ERR) {
@@ -589,6 +589,7 @@ static result_t parse_expr(stat_t stat) {
     }
 }
 
+__attribute__((warn_unused_result))
 static result_t parse_stmt(stat_t stat) {
     token_t* token_start = *stat.token_itr;
     if (parse_stmt_pre(stat, token_start) == ERR) {
@@ -655,6 +656,7 @@ static result_t parse_stmt(stat_t stat) {
     }
 }
 
+__attribute__((warn_unused_result))
 result_t parse(token_t* token, node_t* node) {
     token_t* token_itr = token;
     node_t* node_itr = node;
@@ -674,4 +676,5 @@ result_t parse(token_t* token, node_t* node) {
         ERROUT;
         return ERR;
     }
+    return OK;
 }

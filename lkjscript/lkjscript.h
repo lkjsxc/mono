@@ -22,6 +22,7 @@
 
 typedef unsigned char uint8_t;
 typedef long long int int64_t;
+typedef long long unsigned int uint64_t;
 
 typedef enum {
     OK,
@@ -141,10 +142,15 @@ int64_t token_isdigit(token_t* token);
 int64_t token_isstr(token_t* token);
 int64_t token_toint(token_t* token);
 
+__attribute__((warn_unused_result))
 result_t readsrc(const char* filename, char* dst, int64_t max_size);
+__attribute__((warn_unused_result))
 result_t tokenize(const char* src, token_t* token_array);
+__attribute__((warn_unused_result))
 result_t parse(token_t* token, node_t* node);
+__attribute__((warn_unused_result))
 result_t genbin(node_t* root, uint8_t* bin);
+__attribute__((warn_unused_result))
 result_t exec(uint8_t* mem);
 
 #endif

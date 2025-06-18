@@ -64,6 +64,7 @@ static void emit_pending_token(const char** p_src_base, const char* src_itr, tok
     }
 }
 
+__attribute__((warn_unused_result))
 result_t tokenize(const char* src, token_t* token_array) {
     const char* src_base = src;
     const char* src_itr = src;

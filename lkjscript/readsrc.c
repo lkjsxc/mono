@@ -1,5 +1,6 @@
 #include "lkjscript.h"
 
+__attribute__((warn_unused_result))
 result_t readsrc(const char *filename, char* dst, int64_t max_size) {
     int64_t fd = open(filename, O_RDONLY);
     if (fd < 0) {

@@ -8,6 +8,7 @@
 
 static mem_t mem;
 
+__attribute__((warn_unused_result))
 result_t compile() {
     if (readsrc(SRC_PATH, mem.compile.src, sizeof(mem.compile.src)) == ERR) {
         write(STDERR_FILENO, "Error reading source file\n", 26);

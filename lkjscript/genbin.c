@@ -20,6 +20,7 @@ static int64_t provide_offset(node_t* parent, node_t* node) {
     return offset;
 }
 
+__attribute__((warn_unused_result))
 static result_t bin_link(uint8_t* bin, node_t* node) {
     if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
         if (bin_link(bin, node->child) == ERR) {
@@ -39,6 +40,7 @@ static result_t bin_link(uint8_t* bin, node_t* node) {
     return OK;
 }
 
+__attribute__((warn_unused_result))
 static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
     if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
         if (bin_gen(bin, node->child, bin_itr) == ERR) {
@@ -136,8 +138,10 @@ static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
             return ERR;
         }
     }
+    return OK;
 }
 
+__attribute__((warn_unused_result))
 result_t genbin(node_t* root, uint8_t* bin) {
     int64_t bin_itr = GLOBALOFFSET_INST;
     if (bin_gen(bin, root, &bin_itr) == ERR) {
@@ -151,4 +155,5 @@ result_t genbin(node_t* root, uint8_t* bin) {
     *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_IP)) = GLOBALOFFSET_INST;
     *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_SP)) = bin_itr;
     *(int64_t*)((uint8_t*)(bin + GLOBALOFFSET_BP)) = bin_itr + 256;
+    return OK;
 }
