@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C HTTP Server</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to C HTTP Server</h1>
+        <p>This is a simple HTTP/1.1 server implemented in C.</p>
+        
+        <h2>Features</h2>
+        <ul>
+            <li>Static file serving</li>
+            <li>JSON event handling via POST requests</li>
+            <li>B-Tree database for event storage</li>
+            <li>Basic HTTP/1.1 compliance</li>
+        </ul>
+        
+        <h2>Test Event Submission</h2>
+        <form id="eventForm">
+            <div class="form-group">
+                <label for="eventId">Event ID:</label>
+                <input type="text" id="eventId" name="eventId" required>
+            </div>
+            <div class="form-group">
+                <label for="content">Content:</label>
+                <textarea id="content" name="content" required></textarea>
+            </div>
+            <button type="submit">Submit Event</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
