@@ -1,10 +1,18 @@
 # arch
 
-## inst
+## byte_base
 
-|opecode|dst|src|
+|opecode|op2|op1|
 |---|---|---|
 |2bit|3bit|3bit|
+
+## register
+
+|name|description|
+|---|---|
+|reg0|calculation_left, input|
+|reg1|calculation_right|
+|reg2|calculation_result, output|
 
 ## opcode
 
@@ -15,7 +23,11 @@
 |10|copy|
 |11|system|
 
+## immediate
+0 ~ 63 to reg0
+
 ## calculation
+reg0, reg1 to reg2
 
 |code|description|
 |---|---|
@@ -27,22 +39,14 @@
 |101|sub|
 |110|mul|
 
-## register
-
-|name|description|
-|---|---|
-|reg0|calculation_left, input|
-|reg1|calculation_right|
-|reg2|calculation_result, output|
-
 ## system
 
-|code|description|
-|---|---|
-|000|input|
-|001|output|
-|010|mem_load|
-|011|mem_save|
-|100|jmp|
-|101|jze|
-|110|jnz|
+|code|name|description|
+|---|---|---|
+|000|input|input to reg0|
+|001|output|reg2 to output|
+|010|mem_load|addr is reg3, load to reg0|
+|011|mem_save|addr is reg3, value is reg2|
+|100|jmp|addr is reg3|
+|101|jze|addr is reg3, condition is reg2|
+|110|jnz|addr is reg3, condition is reg2|
