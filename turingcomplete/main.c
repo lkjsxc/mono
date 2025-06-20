@@ -1,7 +1,22 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #define OK 0
 #define ERR 1
+
+#define op_immediate 0b00000000
+#define op_calulate 0b01000000
+#define op_copy 0b10000000
+#define op_sys 0b11000000
+#define sys_input 0b00000000
+#define sys_output 0b00001000
+#define sys_mem_load 0b00010000
+#define sys_mem_save 0b00011000
+#define calc_add 0b00000100
+#define calc_sub 0b00000101
+#define sys_jmp 0b00100000
+#define sys_jze 0b00101000
+#define sys_jnz 0b00110000
 
 typedef enum {
     TY_NULL,
@@ -30,18 +45,22 @@ typedef struct node_t {
 typedef struct {
     const char* token_itr;
     node_t* node_itr;
+    int code_size;
+    int stack_size;
+    int localvar_size;
 } stat_t;
 
 char src_data[2048];
 char code_data[2048];
-node_t* stack_data[2048];
 node_t node_data[2048];
+node_t* stack_data[2048];
+node_t* localvar_data[2048];
 
 int file_read(const char* filename, char* buffer, size_t buffer_size) {
     FILE* file = fopen(filename, "r");
     if (!file) {
         perror("Failed to open file");
-        return ERR;
+        exit(ERR);
     }
     size_t n = fread(buffer, 1, buffer_size - 1, file);
     buffer[n] = '\0';
@@ -92,31 +111,21 @@ int token_to_num(const char* token) {
     return value;
 }
 
-int token_reg_to_num(const char* token) {
-    if (token_eqstr(token, "r0")) {
-        return 0;
-    }
-    if (token_eqstr(token, "r1")) {
-        return 1;
-    }
-    if (token_eqstr(token, "r2")) {
-        return 2;
-    }
-    if (token_eqstr(token, "r3")) {
-        return 3;
-    }
-    if (token_eqstr(token, "r4")) {
-        return 4;
-    }
-    if (token_eqstr(token, "r5")) {
-        return 5;
-    }
-}
-
 node_t* node_push(node_t* node_itr, type_t type, const char* token) {
     node_itr->type = type;
     node_itr->token = token;
     return node_itr + 1;
+}
+
+int localvar_provide(int* localvar_size, node_t* node) {
+    for (int i = 0; i < *localvar_size; i++) {
+        if (token_eq(localvar_data[i]->token, node->token)) {
+            return i;
+        }
+    }
+    localvar_data[*localvar_size] = node;
+    (*localvar_size)++;
+    return *localvar_size - 1;
 }
 
 stat_t parse_primary(stat_t stat) {
@@ -150,46 +159,19 @@ stat_t parse_exprlist(stat_t stat) {
 }
 
 void codegen(stat_t stat) {
-    int code_size = 0;
-    int stack_size = 0;
-    for (node_t* node = stat.node_itr; node->type != TY_NULL; node++) {
-        switch (node->type) {
-            case TY_PUSH: {
-                if (token_is_num(node->token)) {
-                    int val = token_to_num(node->token);
-                    code_data[code_size++] = val;
-                } else {
-                    int val = token_reg_to_num(node->token);
-                    code_data[code_size++] = 0b1000000 | val;
-                }
+    while (stat.node_itr->type != TY_NULL) {
+        switch (stat.node_itr->type) {
+            case TY_PUSH:
+                stack_data[stat.stack_size++] = stat.node_itr;
+                break;
+            case TY_ADD: {
             } break;
-            case TY_ASSIGN: {
-                int dst = token_reg_to_num(stack_data[--stack_size]->token);
-                int src = token_reg_to_num(stack_data[--stack_size]->token);
-                code_data[code_size++] = 0b10000000 | (dst << 3) | src;
-            } break;
-            case TY_ADD:
-                code_data[code_size++] = 0b01000100;
-                break;
-            case TY_SUB:
-                code_data[code_size++] = 0b01000101;
-                break;
-            case TY_MUL:
-                code_data[code_size++] = 0b01000110;
-                break;
-            case TY_OR:
-                code_data[code_size++] = 0b01000000;
-                break;
-            case TY_AND:
-                code_data[code_size++] = 0b01000011;
-                break;
-            default:
-                fprintf(stderr, "Error: Unknown node type %d\n", node->type);
         }
+        stat.node_itr++;
     }
     FILE* code_file = fopen("code.txt", "wb");
-    for (int i = 0; i < code_size; i++) {
-        fprintf(code_file, "%d\n", code_data[i]);
+    for (int i = 0; i < stat.code_size; i++) {
+        fprintf(code_file, "%hhu\n", code_data[i]);
     }
     fclose(code_file);
 }
@@ -199,7 +181,7 @@ int main() {
         return ERR;
     }
 
-    stat_t stat1 = {src_data, node_data};
+    stat_t stat1 = {.token_itr = src_data, .node_itr = node_data, .code_size = 0, .stack_size = 0, .localvar_size = 0};
 
     stat_t stat2 = parse_exprlist(stat1);
 
