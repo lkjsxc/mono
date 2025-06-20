@@ -38,6 +38,7 @@ reg0, reg1 to reg2
 |100|add|
 |101|sub|
 |110|mul|
+|111|xor|
 
 ## system
 
