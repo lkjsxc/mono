@@ -10,11 +10,14 @@
 
 |name|description|
 |---|---|
-|reg0|calculation_left, input|
+|reg0|calculation_left, io|
 |reg1|calculation_right|
-|reg2|calculation_result, output|
-|reg3|jmp_addr|
-|reg4|mem_addr|
+|reg2||
+|reg3||
+|reg4||
+|reg5|stack_addr|
+|reg6|jmp_addr|
+|reg7|ram_addr|
 
 ## opcode
 
@@ -29,7 +32,7 @@
 0 ~ 63 to reg0
 
 ## calculation
-reg0, reg1 to reg2
+reg0, reg1 to reg0
 
 |code|description|
 |---|---|
@@ -39,17 +42,20 @@ reg0, reg1 to reg2
 |011|and|
 |100|add|
 |101|sub|
-|110|mul|
-|111|xor|
+|110|shl|
+|111|shr|
 
 ## system
 
 |code|name|description|
 |---|---|---|
-|000|input|input to reg0|
-|001|output|reg2 to output|
-|010|mem_load|addr is reg3, load to reg0|
-|011|mem_save|addr is reg3, value is reg2|
-|100|jmp|addr is reg3|
-|101|jze|addr is reg3, condition is reg2|
-|110|jnz|addr is reg3, condition is reg2|
+|0000|input|input to reg0|
+|0001|output|reg0 to output|
+|0010|mem_load|addr is reg7, load to reg0|
+|0011|mem_save|addr is reg7, value is reg0|
+|0100|jmp|addr is reg6|
+|0101|je|addr is reg6, condition is reg0|
+|0110|jne|addr is reg6, condition is reg0|
+|0111|ja|addr is reg6, condition is reg0|
+|1000|push|mem_save then inc reg5|
+|1001|pop|dec reg5 then mem_load|
