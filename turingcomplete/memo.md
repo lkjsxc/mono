@@ -13,6 +13,8 @@
 |reg0|calculation_left, input|
 |reg1|calculation_right|
 |reg2|calculation_result, output|
+|reg3|jmp_addr|
+|reg4|mem_addr|
 
 ## opcode
 
