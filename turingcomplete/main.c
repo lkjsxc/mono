@@ -8,15 +8,16 @@
 #define op_calulate 0b01000000
 #define op_copy 0b10000000
 #define op_sys 0b11000000
+#define calc_add 0b00000100
+#define calc_sub 0b00000101
 #define sys_input 0b00000000
 #define sys_output 0b00001000
 #define sys_mem_load 0b00010000
 #define sys_mem_save 0b00011000
-#define calc_add 0b00000100
-#define calc_sub 0b00000101
 #define sys_jmp 0b00100000
-#define sys_jze 0b00101000
-#define sys_jnz 0b00110000
+#define sys_je 0b00101000
+#define sys_jne 0b00110000
+#define sys_jl 0b00111000
 
 typedef enum {
     TY_NULL,

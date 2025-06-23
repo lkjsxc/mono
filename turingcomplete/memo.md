@@ -56,6 +56,6 @@ reg0, reg1 to reg0
 |0100|jmp|addr is reg6|
 |0101|je|addr is reg6, condition is reg0|
 |0110|jne|addr is reg6, condition is reg0|
-|0111|ja|addr is reg6, condition is reg0|
+|0111|jl|addr is reg6, condition is reg0|
 |1000|push|mem_save then inc reg5|
 |1001|pop|dec reg5 then mem_load|
