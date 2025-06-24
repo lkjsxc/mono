@@ -244,9 +244,9 @@ void codegen(stat_t stat) {
             case TY_ASSIGN: {
                 stat = emit_system(stat, SYS_POP);
                 stat = emit_copy(stat, REG0, REG1);
-                int localvar_index = localvar_provide(&stat.localvar_size, node_ptr);
-                stat = emit_immediate(stat, localvar_index);
+                stat = emit_system(stat, SYS_POP);
                 stat = emit_copy(stat, REG0, REG7);
+                stat = emit_copy(stat, REG1, REG0);
                 stat = emit_system(stat, SYS_MEM_SAVE);
             } break;
         }
