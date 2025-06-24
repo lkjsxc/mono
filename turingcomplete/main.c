@@ -10,24 +10,24 @@
 #define OP_SYSTEM 0b11000000
 
 #define CALC_OR 0b00000000
-#define CALC_NAND 0b00001000
-#define CALC_NOR 0b00010000
-#define CALC_AND 0b00011000
-#define CALC_ADD 0b00100000
-#define CALC_SUB 0b00101000
-#define CALC_SHL 0b00110000
-#define CALC_SHR 0b00111000
+#define CALC_NAND 0b00000001
+#define CALC_NOR 0b00000010
+#define CALC_AND 0b00000011
+#define CALC_ADD 0b00000100
+#define CALC_SUB 0b00000101
+#define CALC_SHL 0b00000110
+#define CALC_SHR 0b00000111
 
 #define SYS_INPUT 0b00000000
-#define SYS_OUTPUT 0b00001000
-#define SYS_MEM_LOAD 0b00010000
-#define SYS_MEM_SAVE 0b00011000
-#define SYS_JMP 0b00100000
-#define SYS_JE 0b00101000
-#define SYS_JNE 0b00110000
-#define SYS_JL 0b00111000
-#define SYS_PUSH 0b01000000
-#define SYS_POP 0b01001000
+#define SYS_OUTPUT 0b00000001
+#define SYS_MEM_LOAD 0b00000010
+#define SYS_MEM_SAVE 0b00000011
+#define SYS_JMP 0b00000100
+#define SYS_JE 0b00000101
+#define SYS_JNE 0b00000110
+#define SYS_JL 0b00000111
+#define SYS_PUSH 0b00001000
+#define SYS_POP 0b00001001
 
 #define REG0 0
 #define REG1 1
@@ -49,6 +49,12 @@ typedef enum {
     TY_OR,
     TY_AND,
     TY_ASSIGN,
+    TY_CALL,
+    TY_RETURN,
+    TY_JMP,
+    TY_JE,
+    TY_JNE,
+    TY_JL,
     TY_INPUT,
     TY_OUTPUT,
 } type_t;
@@ -99,7 +105,7 @@ const char* token_next(const char* token) {
 }
 
 int token_eq(const char* token1, const char* token2) {
-    while (*token1 == *token2) {
+    while (*token1 == *token2 && !is_space(*token1)) {
         token1++;
         token2++;
     }
@@ -144,18 +150,8 @@ int localvar_provide(int* localvar_size, node_t* node) {
     return *localvar_size - 1;
 }
 
-stat_t parse_primary(stat_t stat) {
-    if (stat.token_itr[0] == '&') {
-        stat.node_itr = node_push(stat.node_itr, TY_PUSH_ADDR, stat.token_itr + 1);
-        stat.token_itr = token_next(stat.token_itr);
-    } else {
-        stat.node_itr = node_push(stat.node_itr, TY_PUSH_VAL, stat.token_itr);
-        stat.token_itr = token_next(stat.token_itr);
-    }
-    return stat;
-}
-
 stat_t parse_exprlist(stat_t stat) {
+    // nest
     if (token_eqstr(stat.token_itr, "(")) {
         stat.token_itr = token_next(stat.token_itr);
         while (!token_eqstr(stat.token_itr, ")")) {
@@ -164,7 +160,26 @@ stat_t parse_exprlist(stat_t stat) {
         stat.token_itr = token_next(stat.token_itr);
         return stat;
     }
-    stat = parse_primary(stat);
+    // primary
+    if (stat.token_itr[0] == '&') {
+        stat.node_itr = node_push(stat.node_itr, TY_PUSH_ADDR, stat.token_itr + 1);
+        stat.token_itr = token_next(stat.token_itr);
+    } else if (token_eqstr(token_next(stat.token_itr), "(")) {
+        const char* token = stat.token_itr;
+        stat.token_itr = token_next(stat.token_itr);
+        stat = parse_exprlist(stat);
+        if (token_eqstr(token, "input")) {
+            stat.node_itr = node_push(stat.node_itr, TY_INPUT, token);
+        } else if (token_eqstr(token, "output")) {
+            stat.node_itr = node_push(stat.node_itr, TY_OUTPUT, token);
+        } else {
+            stat.node_itr = node_push(stat.node_itr, TY_CALL, token);
+        }
+    } else {
+        stat.node_itr = node_push(stat.node_itr, TY_PUSH_VAL, stat.token_itr);
+        stat.token_itr = token_next(stat.token_itr);
+    }
+    // binary
     if (token_eqstr(stat.token_itr, "+")) {
         const char* token = stat.token_itr;
         stat.token_itr = token_next(stat.token_itr);
@@ -215,6 +230,9 @@ stat_t emit_system(stat_t stat, int sys_op) {
 void codegen(stat_t stat) {
     node_t* node_ptr = node_data;
 
+    stat = emit_immediate(stat, 32);
+    stat = emit_copy(stat, REG0, REG5);
+
     while (node_ptr->type != TY_NULL) {
         switch (node_ptr->type) {
             case TY_PUSH_VAL: {
@@ -248,6 +266,14 @@ void codegen(stat_t stat) {
                 stat = emit_copy(stat, REG0, REG7);
                 stat = emit_copy(stat, REG1, REG0);
                 stat = emit_system(stat, SYS_MEM_SAVE);
+            } break;
+            case TY_INPUT: {
+                stat = emit_system(stat, SYS_INPUT);
+                stat = emit_system(stat, SYS_PUSH);
+            } break;
+            case TY_OUTPUT: {
+                stat = emit_system(stat, SYS_POP);
+                stat = emit_system(stat, SYS_OUTPUT);
             } break;
         }
         node_ptr++;
