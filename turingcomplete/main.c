@@ -229,6 +229,11 @@ void codegen(stat_t stat) {
                 }
                 stat = emit_system(stat, SYS_PUSH);
             } break;
+            case TY_PUSH_ADDR: {
+                int localvar_index = localvar_provide(&stat.localvar_size, node_ptr);
+                stat = emit_immediate(stat, localvar_index);
+                stat = emit_system(stat, SYS_PUSH);
+            } break;
             case TY_ADD: {
                 stat = emit_system(stat, SYS_POP);
                 stat = emit_copy(stat, REG0, REG1);
