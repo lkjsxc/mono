@@ -4,30 +4,45 @@
 #define OK 0
 #define ERR 1
 
-#define op_immediate 0b00000000
-#define op_calulate 0b01000000
-#define op_copy 0b10000000
-#define op_sys 0b11000000
-#define calc_add 0b00000100
-#define calc_sub 0b00000101
-#define sys_input 0b00000000
-#define sys_output 0b00001000
-#define sys_mem_load 0b00010000
-#define sys_mem_save 0b00011000
-#define sys_jmp 0b00100000
-#define sys_je 0b00101000
-#define sys_jne 0b00110000
-#define sys_jl 0b00111000
+#define OP_IMMEDIATE 0b00000000
+#define OP_CALCULATE 0b01000000
+#define OP_COPY 0b10000000
+#define OP_SYSTEM 0b11000000
+
+#define CALC_OR 0b00000000
+#define CALC_NAND 0b00001000
+#define CALC_NOR 0b00010000
+#define CALC_AND 0b00011000
+#define CALC_ADD 0b00100000
+#define CALC_SUB 0b00101000
+#define CALC_SHL 0b00110000
+#define CALC_SHR 0b00111000
+
+#define SYS_INPUT 0b00000000
+#define SYS_OUTPUT 0b00001000
+#define SYS_MEM_LOAD 0b00010000
+#define SYS_MEM_SAVE 0b00011000
+#define SYS_JMP 0b00100000
+#define SYS_JE 0b00101000
+#define SYS_JNE 0b00110000
+#define SYS_JL 0b00111000
+#define SYS_PUSH 0b01000000
+#define SYS_POP 0b01001000
+
+#define REG0 0
+#define REG1 1
+#define REG2 2
+#define REG3 3
+#define REG4 4
+#define REG5 5
+#define REG6 6
+#define REG7 7
 
 typedef enum {
     TY_NULL,
-    TY_PUSH,
-    TY_POP1,
-    TY_POP2,
-    TY_POP3,
-    TY_POP4,
-    TY_POP5,
-    TY_POP6,
+    TY_PUSH_VAL,
+    TY_PUSH_ADDR,
+    TY_POP,
     TY_ADD,
     TY_SUB,
     TY_MUL,
@@ -130,8 +145,13 @@ int localvar_provide(int* localvar_size, node_t* node) {
 }
 
 stat_t parse_primary(stat_t stat) {
-    stat.node_itr = node_push(stat.node_itr, TY_PUSH, stat.token_itr);
-    stat.token_itr = token_next(stat.token_itr);
+    if (stat.token_itr[0] == '&') {
+        stat.node_itr = node_push(stat.node_itr, TY_PUSH_ADDR, stat.token_itr + 1);
+        stat.token_itr = token_next(stat.token_itr);
+    } else {
+        stat.node_itr = node_push(stat.node_itr, TY_PUSH_VAL, stat.token_itr);
+        stat.token_itr = token_next(stat.token_itr);
+    }
     return stat;
 }
 
@@ -159,16 +179,73 @@ stat_t parse_exprlist(stat_t stat) {
     return stat;
 }
 
+stat_t emit_byte(stat_t stat, unsigned char byte) {
+    code_data[stat.code_size++] = byte;
+    return stat;
+}
+
+stat_t emit_immediate(stat_t stat, int value) {
+    if (value < 0 || value > 63) {
+        fprintf(stderr, "Immediate value out of range: %d\n", value);
+        exit(ERR);
+    }
+    unsigned char instruction = OP_IMMEDIATE | (value & 0x3F);
+    stat = emit_byte(stat, instruction);
+    return stat;
+}
+
+stat_t emit_copy(stat_t stat, int src_reg, int dst_reg) {
+    unsigned char instruction = OP_COPY | (dst_reg << 3) | src_reg;
+    stat = emit_byte(stat, instruction);
+    return stat;
+}
+
+stat_t emit_calculation(stat_t stat, int calc_op) {
+    unsigned char instruction = OP_CALCULATE | calc_op;
+    stat = emit_byte(stat, instruction);
+    return stat;
+}
+
+stat_t emit_system(stat_t stat, int sys_op) {
+    unsigned char instruction = OP_SYSTEM | sys_op;
+    stat = emit_byte(stat, instruction);
+    return stat;
+}
+
 void codegen(stat_t stat) {
-    while (stat.node_itr->type != TY_NULL) {
-        switch (stat.node_itr->type) {
-            case TY_PUSH:
-                stack_data[stat.stack_size++] = stat.node_itr;
-                break;
+    node_t* node_ptr = node_data;
+
+    while (node_ptr->type != TY_NULL) {
+        switch (node_ptr->type) {
+            case TY_PUSH_VAL: {
+                if (token_is_num(node_ptr->token)) {
+                    int value = token_to_num(node_ptr->token);
+                    stat = emit_immediate(stat, value);
+                } else {
+                    int localvar_index = localvar_provide(&stat.localvar_size, node_ptr);
+                    stat = emit_immediate(stat, localvar_index);
+                    stat = emit_copy(stat, REG0, REG7);
+                    stat = emit_system(stat, SYS_MEM_LOAD);
+                }
+                stat = emit_system(stat, SYS_PUSH);
+            } break;
             case TY_ADD: {
+                stat = emit_system(stat, SYS_POP);
+                stat = emit_copy(stat, REG0, REG1);
+                stat = emit_system(stat, SYS_POP);
+                stat = emit_calculation(stat, CALC_ADD);
+                stat = emit_system(stat, SYS_PUSH);
+            } break;
+            case TY_ASSIGN: {
+                stat = emit_system(stat, SYS_POP);
+                stat = emit_copy(stat, REG0, REG1);
+                int localvar_index = localvar_provide(&stat.localvar_size, node_ptr);
+                stat = emit_immediate(stat, localvar_index);
+                stat = emit_copy(stat, REG0, REG7);
+                stat = emit_system(stat, SYS_MEM_SAVE);
             } break;
         }
-        stat.node_itr++;
+        node_ptr++;
     }
     FILE* code_file = fopen("code.txt", "wb");
     for (int i = 0; i < stat.code_size; i++) {
