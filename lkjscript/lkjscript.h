@@ -111,14 +111,14 @@ typedef struct {
 typedef struct node_t {
     nodetype_t nodetype;
     token_t* token;
-    struct node_t* next;
+    struct node_t* node_next;
 
     // PUSH_CONST: val, STRUCT: size, PUSH_LOCAL: offset, LABEL: bin_addr
     int64_t val;
 
     // STRUCT: member, FN: type and stmt, (JMP,JZE,CALL): target, decl: type
-    struct node_t* child;
-    struct node_t* parent;
+    struct node_t* node_child;
+    struct node_t* node_parent;
 
     // bin index
     int64_t bin;

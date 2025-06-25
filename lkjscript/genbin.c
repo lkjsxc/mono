@@ -3,36 +3,36 @@
 static int64_t provide_offset(node_t* parent, node_t* node) {
     // TODO: when parent is root or function, offset be 0. when else offset is recursively decided
     int64_t offset = 0;
-    node_t* itr = parent->child;
-    while (itr != node->child) {
+    node_t* itr = parent->node_child;
+    while (itr != node->node_child) {
         if (itr->nodetype == NODETYPE_VAR) {
-            if (token_eqstr(itr->child->token, "*")) {
+            if (token_eqstr(itr->node_child->token, "*")) {
                 offset += sizeof(void*);
-            } else if (token_eqstr(itr->child->token, "i64")) {
+            } else if (token_eqstr(itr->node_child->token, "i64")) {
                 offset += sizeof(int64_t*);
             } else {
                 // TODO: implement offset later (inc struct size)
                 ERROUT;
             }
         }
-        itr = itr->next;
+        itr = itr->node_next;
     }
     return offset;
 }
 
 __attribute__((warn_unused_result))
 static result_t bin_link(uint8_t* bin, node_t* node) {
-    if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
-        if (bin_link(bin, node->child) == ERR) {
+    if (node->node_child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
+        if (bin_link(bin, node->node_child) == ERR) {
             ERROUT;
             return ERR;
         }
     }
     if (node->nodetype == NODETYPE_JMP || node->nodetype == NODETYPE_JZE || node->nodetype == NODETYPE_CALL) {
-        *(int64_t*)((uint8_t*)(bin + node->bin + 1)) = node->child->bin;
+        *(int64_t*)((uint8_t*)(bin + node->bin + 1)) = node->node_child->bin;
     }
-    if (node->next != NULL) {
-        if (bin_link(bin, node->next) == ERR) {
+    if (node->node_next != NULL) {
+        if (bin_link(bin, node->node_next) == ERR) {
             ERROUT;
             return ERR;
         }
@@ -42,8 +42,8 @@ static result_t bin_link(uint8_t* bin, node_t* node) {
 
 __attribute__((warn_unused_result))
 static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
-    if (node->child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
-        if (bin_gen(bin, node->child, bin_itr) == ERR) {
+    if (node->node_child != NULL && node->nodetype != NODETYPE_PUSH_LOCAL_ADDR && node->nodetype != NODETYPE_PUSH_LOCAL_VAL) {
+        if (bin_gen(bin, node->node_child, bin_itr) == ERR) {
             ERROUT;
             return ERR;
         }
@@ -79,7 +79,7 @@ static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         case NODETYPE_PUSH_LOCAL_ADDR: {
             *(nodetype_t*)((uint8_t*)(bin + *bin_itr)) = node->nodetype;
             *bin_itr += sizeof(nodetype_t);
-            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = provide_offset(node->parent, node);  // TODO: implement offset later (parse_stmt_post in parser.c)
+            *(int64_t*)((uint8_t*)(bin + *bin_itr)) = provide_offset(node->node_parent, node);  // TODO: implement offset later (parse_stmt_post in parser.c)
             *bin_itr += sizeof(int64_t);
         } break;
         case NODETYPE_JMP:
@@ -132,8 +132,8 @@ static result_t bin_gen(uint8_t* bin, node_t* node, int64_t* bin_itr) {
         default:
             break;
     }
-    if (node->next != NULL) {
-        if (bin_gen(bin, node->next, bin_itr) == ERR) {
+    if (node->node_next != NULL) {
+        if (bin_gen(bin, node->node_next, bin_itr) == ERR) {
             ERROUT;
             return ERR;
         }

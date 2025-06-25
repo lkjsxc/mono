@@ -17,16 +17,16 @@ static node_t* node_new(node_t** node_itr) {
 }
 
 static void node_addmember(node_t* parent, node_t* node) {
-    node->parent = parent;
-    if (parent->child == NULL) {
-        parent->child = node;
+    node->node_parent = parent;
+    if (parent->node_child == NULL) {
+        parent->node_child = node;
         return;
     }
-    node_t* member_itr = parent->child;
-    while (member_itr->next != NULL) {
-        member_itr = member_itr->next;
+    node_t* member_itr = parent->node_child;
+    while (member_itr->node_next != NULL) {
+        member_itr = member_itr->node_next;
     }
-    member_itr->next = node;
+    member_itr->node_next = node;
 }
 
 // when not found, return NULL
@@ -34,14 +34,14 @@ static node_t* node_find(node_t* parent, token_t* token, nodetype_t nodetype) {
     node_t* parent_itr = parent;
     node_t* member_itr;
     while (parent_itr != NULL) {
-        member_itr = parent_itr->child;
+        member_itr = parent_itr->node_child;
         while (member_itr != NULL) {
             if (token_eq(member_itr->token, token) && member_itr->nodetype == nodetype) {
                 return member_itr;
             }
-            member_itr = member_itr->next;
+            member_itr = member_itr->node_next;
         }
-        parent_itr = parent_itr->parent;
+        parent_itr = parent_itr->node_parent;
     }
     return NULL;
 }
@@ -87,7 +87,7 @@ static result_t parse_stmt_pre(stat_t stat, token_t* token_start) {
                 ERROUT;
                 return ERR;
             }
-            *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = token_itr, .parent = stat.parent};
+            *node_fn = (node_t){.nodetype = NODETYPE_FN, .token = token_itr, .node_parent = stat.parent};
             node_addmember(stat.parent, node_fn);
         } else if (token_eqstr(token_itr, "struct")) {
             node_t* node_struct = node_new(stat.node_itr);
@@ -95,7 +95,7 @@ static result_t parse_stmt_pre(stat_t stat, token_t* token_start) {
                 ERROUT;
                 return ERR;
             }
-            *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .token = token_itr, .parent = stat.parent};
+            *node_struct = (node_t){.nodetype = NODETYPE_STRUCT, .token = token_itr, .node_parent = stat.parent};
             node_addmember(stat.parent, node_struct);
         } else {
             if (tokenitr_next(&token_itr) == ERR) {
@@ -130,7 +130,7 @@ static result_t parse_type(stat_t stat) {
         if (token_eqstr(*stat.token_itr, "*")) {
             node_t* node_type_ptr = node_new(stat.node_itr);
             *node_type_ptr = (node_t){.nodetype = NODETYPE_NOP, .token = *stat.token_itr};
-            node_type_ptr->child = node_type_head;
+            node_type_ptr->node_child = node_type_head;
             node_type_head = node_type_ptr;
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
@@ -359,10 +359,10 @@ static result_t parse_block(stat_t stat) {
 
 __attribute__((warn_unused_result))
 static result_t parse_primary(stat_t stat) {
-    node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
+    node_t* findvar_result = node_find(stat.parent->node_child, *stat.token_itr, NODETYPE_VAR);
     if (findvar_result != NULL) {
         node_t* node_var = node_new(stat.node_itr);
-        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_VAL, .token = *stat.token_itr, .child = findvar_result};
+        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_VAL, .token = *stat.token_itr, .node_child = findvar_result};
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
@@ -411,14 +411,14 @@ static result_t parse_primary(stat_t stat) {
 __attribute__((warn_unused_result))
 static result_t parse_postfix(stat_t stat) {
     while (1) {
-        node_t* findfn_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_FN);
+        node_t* findfn_result = node_find(stat.parent->node_child, *stat.token_itr, NODETYPE_FN);
         if (parse_primary(stat) == ERR) {
             ERROUT;
             return ERR;
         }
         if (findfn_result != NULL) {
             node_t* node_call = node_new(stat.node_itr);
-            *node_call = (node_t){.nodetype = NODETYPE_FN, .token = *stat.token_itr, .child = findfn_result};
+            *node_call = (node_t){.nodetype = NODETYPE_FN, .token = *stat.token_itr, .node_child = findfn_result};
             if (tokenitr_next(stat.token_itr) == ERR) {
                 ERROUT;
                 return ERR;
@@ -461,13 +461,13 @@ static result_t parse_unary(stat_t stat) {
             ERROUT;
             return ERR;
         }
-        node_t* findvar_result = node_find(stat.parent->child, *stat.token_itr, NODETYPE_VAR);
+        node_t* findvar_result = node_find(stat.parent->node_child, *stat.token_itr, NODETYPE_VAR);
         if (findvar_result == NULL) {
             ERROUT;
             return ERR;
         }
         node_t* node_var = node_new(stat.node_itr);
-        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_ADDR, .token = *stat.token_itr, .child = findvar_result};
+        *node_var = (node_t){.nodetype = NODETYPE_PUSH_LOCAL_ADDR, .token = *stat.token_itr, .node_child = findvar_result};
         if (tokenitr_next(stat.token_itr) == ERR) {
             ERROUT;
             return ERR;
