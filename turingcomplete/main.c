@@ -219,15 +219,15 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
     }
     if (token_eqstr(*token_itr + 1, "(")) {
         if (token_eqstr(*token_itr, "input")) {
-            node_t* node_input = node_create(node_itr, TY_INPUT, *token_itr);
+            node_t* node = node_create(node_itr, TY_INPUT, *token_itr);
             *token_itr += 1;
-            parse_exprlist(token_itr, node_itr, node_input);
-            node_addchild(node_parent, node_input);
+            parse_exprlist(token_itr, node_itr, node_parent);
+            node_addchild(node_parent, node);
         } else if (token_eqstr(*token_itr, "output")) {
-            node_t* node_output = node_create(node_itr, TY_OUTPUT, *token_itr);
+            node_t* node = node_create(node_itr, TY_OUTPUT, *token_itr);
             *token_itr += 1;
-            parse_exprlist(token_itr, node_itr, node_output);
-            node_addchild(node_parent, node_output);
+            parse_exprlist(token_itr, node_itr, node_parent);
+            node_addchild(node_parent, node);
         } else {
             exit(EXIT_FAILURE);
         }
@@ -346,8 +346,10 @@ void codegen_node(node_t* node, char* code_data, int* code_size) {
             break;
         case TY_ASSIGN:
             code_data[(*code_size)++] = OP_SYSTEM | SYS_POP;
-            code_data[(*code_size)++] = OP_COPY | REG7 << 3 | REG0;
+            code_data[(*code_size)++] = OP_COPY | REG1 << 3 | REG0;
             code_data[(*code_size)++] = OP_SYSTEM | SYS_POP;
+            code_data[(*code_size)++] = OP_COPY | REG7 << 3 | REG0;
+            code_data[(*code_size)++] = OP_COPY | REG0 << 3 | REG1;
             code_data[(*code_size)++] = OP_SYSTEM | SYS_MEM_SAVE;
             break;
         case TY_INPUT:
