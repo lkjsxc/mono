@@ -1,7 +1,6 @@
 (
-    &a1 = input()
-    &a2 = (a1 + a1)
-    &a4 = (a2 + a2)
-    &a6 = (a4 + a2)
-    output(a6)
+    &i = 0
+    loop (
+        &i = i + 1
+    )
 )

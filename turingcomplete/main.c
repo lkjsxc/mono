@@ -61,6 +61,7 @@ typedef enum type_t {
     TY_PUSH,
     TY_POP,
     TY_BLOCK,
+    TY_PUSH_LABEL,
 } type_t;
 
 typedef struct token_t {
@@ -221,6 +222,62 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         *token_itr += 1;
         return;
     }
+    
+    if (token_eqstr(*token_itr, "loop")) {
+        node_t* node_block = node_create(node_itr, TY_BLOCK);
+        node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
+        node_t* node_copy = node_create(node_itr, TY_COPY);
+        node_t* node_jmp = node_create(node_itr, TY_JMP);
+        node_t* node_continue = node_create(node_itr, TY_NOP);
+        node_t* node_break = node_create(node_itr, TY_NOP);
+        *token_itr += 1;
+        node_push_label->node_child = node_continue;
+        node_copy->copy_src = 0;
+        node_copy->copy_dst = 6;
+        node_block->node_continue = node_continue;
+        node_block->node_break = node_break;
+        node_addchild(node_parent, node_block);
+        node_addchild(node_block, node_continue);
+        parse_exprlist(token_itr, node_itr, node_block);
+        node_addchild(node_block, node_push_label);
+        node_addchild(node_block, node_copy);
+        node_addchild(node_block, node_jmp);
+        node_addchild(node_block, node_break);
+        return;
+    }
+    if (token_eqstr(*token_itr, "continue")) {
+        node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
+        node_t* node_copy = node_create(node_itr, TY_COPY);
+        node_t* node_jmp = node_create(node_itr, TY_JMP);
+        node_copy->copy_src = 0;
+        node_copy->copy_dst = 6;
+        node_t* node_loop = node_parent;
+        while(node_loop->node_continue == NULL) {
+            node_loop = node_loop->node_parent;
+        }
+        node_push_label->node_child = node_loop->node_continue;
+        *token_itr += 1;
+        node_addchild(node_parent, node_push_label);
+        node_addchild(node_parent, node_copy);
+        node_addchild(node_parent, node_jmp);
+    }
+    if (token_eqstr(*token_itr, "break")) {
+        node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
+        node_t* node_copy = node_create(node_itr, TY_COPY);
+        node_t* node_jmp = node_create(node_itr, TY_JMP);
+        node_copy->copy_src = 0;
+        node_copy->copy_dst = 6;
+        node_t* node_loop = node_parent;
+        while(node_loop->node_break == NULL) {
+            node_loop = node_loop->node_parent;
+        }
+        node_push_label->node_child = node_loop->node_break;
+        *token_itr += 1;
+        node_addchild(node_parent, node_push_label);
+        node_addchild(node_parent, node_copy);
+        node_addchild(node_parent, node_jmp);
+    }
+
     if (token_eqstr(*token_itr + 1, "(")) {
         if (token_eqstr(*token_itr, "input")) {
             node_t* node_input = node_create(node_itr, TY_INPUT);
@@ -240,23 +297,6 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
             exit(EXIT_FAILURE);
         }
         return;
-    }
-    if (token_eqstr(*token_itr, "loop")) {
-        node_t* node_block = node_create(node_itr, TY_BLOCK);
-        node_t* node_continue = node_create(node_itr, TY_NOP);
-        node_t* node_break = node_create(node_itr, TY_NOP);
-        *token_itr += 1;
-        node_block->node_continue = node_continue;
-        node_block->node_break = node_break;
-        node_addchild(node_parent, node_block);
-        node_addchild(node_block, node_continue);
-        parse_exprlist(token_itr, node_itr, node_block);
-        node_addchild(node_block, node_break);
-        return;
-    }
-    if (token_eqstr(*token_itr, "continue")) {
-    }
-    if (token_eqstr(*token_itr, "break")) {
     }
 
     if (token_eqstr(*token_itr, "&")) {
@@ -366,9 +406,10 @@ void codegen_pre(char* code_data, int* code_size) {
 }
 
 void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodelist_data, int* nodelist_size) {
+    node->code_index = *code_size;
     switch (node->type) {
-        case TY_NOP:
-            break;
+        case TY_NOP: {
+        } break;
         case TY_IMMEDIATE: {
             if (token_isdigit(node->token)) {
                 int value = token_toint(node->token);
@@ -383,54 +424,62 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
             int dst_reg = node->copy_dst;
             code_data[(*code_size)++] = OP_COPY | dst_reg << 3 | src_reg;
         } break;
-        case TY_OR:
+        case TY_OR: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_OR;
-            break;
-        case TY_NAND:
+        } break;
+        case TY_NAND: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_NAND;
-            break;
-        case TY_NOR:
+        } break;
+        case TY_NOR: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_NOR;
-            break;
-        case TY_AND:
+        } break;
+        case TY_AND: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_AND;
-            break;
-        case TY_ADD:
+        } break;
+        case TY_ADD: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_ADD;
-            break;
-        case TY_SUB:
+        } break;
+        case TY_SUB: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_SUB;
-            break;
-        case TY_SHL:
+        } break;
+        case TY_SHL: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_SHL;
-            break;
-        case TY_SHR:
+        } break;
+        case TY_SHR: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_SHR;
-            break;
-        case TY_INPUT:
+        } break;
+        case TY_INPUT: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_INPUT;
-            break;
-        case TY_OUTPUT:
+        } break;
+        case TY_OUTPUT: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_OUTPUT;
-            break;
-        case TY_MEM_LOAD:
+        } break;
+        case TY_MEM_LOAD: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_MEM_LOAD;
-            break;
-        case TY_MEM_SAVE:
+        } break;
+        case TY_MEM_SAVE: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_MEM_SAVE;
-            break;
+        } break;
+        case TY_JMP: {
+            code_data[(*code_size)++] = OP_SYSTEM | SYS_JMP;
+        } break;
         case TY_PUSH: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_PUSH;
         } break;
         case TY_POP: {
             code_data[(*code_size)++] = OP_SYSTEM | SYS_POP;
         } break;
-        case TY_BLOCK:
+        case TY_BLOCK: {
             for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
                 codegen_base(child, code_data, code_size, nodelist_data, nodelist_size);
             }
             break;
+        }
+        case TY_PUSH_LABEL: {
+            code_data[(*code_size)++] = OP_IMMEDIATE | 0;
+        } break;
         default:
+            fprintf(stderr, "Unknown node type: %d\n", node->type);
             exit(EXIT_FAILURE);
     }
 }
@@ -440,7 +489,7 @@ void codegen_link(node_t* node, char* code_data) {
         for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
             codegen_link(child, code_data);
         }
-    } else if (node->type == TY_JMP) {
+    } else if (node->type == TY_PUSH_LABEL) {
         int target_index = node->node_child->code_index;
         code_data[node->code_index] = OP_IMMEDIATE | target_index;
     }
