@@ -595,7 +595,6 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
 
 void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* code_size) {
     int nodelist_size = 0;
-    *code_size = 0;
     codegen_base(node_data, code_data, code_size, nodelist_data, &nodelist_size);
 }
 
@@ -610,16 +609,16 @@ void optimize1(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t*
             }
         } break;
         case TY_PUSH: {
-            // if (node->node_next && node->node_next->type == TY_POP) {
-            //     node->optimize_isreduce = 1;
-            //     node->node_next->optimize_isreduce = 1;
-            // } else {
-            //     nodelist_data[(*nodelist_size)++] = node;
-            //     reglist_data[0] = node;
-            // }
+            if (node->node_next && node->node_next->type == TY_POP) {
+                node->optimize_isreduce = 1;
+                node->node_next->optimize_isreduce = 1;
+            } else {
+                nodelist_data[(*nodelist_size)++] = node;
+            }
         } break;
         case TY_POP: {
-            // node_t* last_push = nodelist_data[--(*nodelist_size)];
+            node_t* last_push = nodelist_data[--(*nodelist_size)];
+            reglist_data[0] = last_push;
         } break;
         case TY_COPY: {
             reglist_data[node->copy_dst] = reglist_data[node->copy_src];
@@ -649,35 +648,38 @@ void optimize1(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t*
     }
 }
 
-void optimize2(node_t* node, char* code_data, int* code_size) {
-    node->code_index = *code_size;
+void optimize2(node_t* node, char* code1_data, char* code2_data, int* code2_size) {
     if (node->type == TY_BLOCK) {
+        node->code_index = *code2_size;
         for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
-            optimize2(child, code_data, code_size);
+            optimize2(child, code1_data, code2_data, code2_size);
         }
         return;
     }
     if (node->type == TY_NOP) {
+        node->code_index = *code2_size;
         return;
     }
     if (node->optimize_isreduce) {
+        node->code_index = *code2_size;
         return;
     }
     if ((node->type == TY_IMMEDIATE || node->type == TY_IMMEDIATE_LABEL)) {
-        memcpy(code_data + *code_size, code_data + node->code_index, 7);
-        *code_size += 7;
+        memcpy(code2_data + *code2_size, code1_data + node->code_index, 7);
+        node->code_index = *code2_size;
+        *code2_size += 7;
     } else {
-        code_data[*code_size] = code_data[node->code_index];
-        *code_size += 1;
+        code2_data[*code2_size] = code1_data[node->code_index];
+        node->code_index = *code2_size;
+        *code2_size += 1;
     }
 }
 
-void optimize(node_t* node_data, node_t** nodelist_data, char* code_data, int* code_size) {
+void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char* code2_data, int* code2_size) {
     node_t* reglist_data[8] = {NULL};
     int nodelist_size = 0;
-    *code_size = 0;
     optimize1(node_data, nodelist_data, &nodelist_size, reglist_data);
-    optimize2(node_data, code_data, code_size);
+    optimize2(node_data, code1_data, code2_data, code2_size);
 }
 
 void codelink(node_t* node, char* code_data) {
@@ -695,11 +697,13 @@ void codelink(node_t* node, char* code_data) {
 
 int main() {
     char src_data[4096];
-    char code_data[4096];
+    char code1_data[4096];
+    char code2_data[4096];
     token_t token_data[4096];
     node_t node_data[4096];
     node_t* nodelist_data[4096];
-    int code_size = 0;
+    int code1_size = 0;
+    int code2_size = 0;
 
     file_read("src.txt", src_data, sizeof(src_data));
 
@@ -707,19 +711,19 @@ int main() {
 
     parse(token_data, node_data);
 
-    codegen(node_data, code_data, nodelist_data, &code_size);
+    codegen(node_data, code1_data, nodelist_data, &code1_size);
 
-    optimize(node_data, nodelist_data, code_data, &code_size);
+    optimize(node_data, nodelist_data, code1_data, code2_data, &code2_size);
 
-    codelink(node_data, code_data);
+    codelink(node_data, code2_data);
 
     FILE* file = fopen("code.txt", "wb");
     if (!file) {
         perror("Failed to open code file");
         exit(EXIT_FAILURE);
     }
-    for (int i = 0; i < code_size; i++) {
-        fprintf(file, "%hhu\n", code_data[i]);
+    for (int i = 0; i < code2_size; i++) {
+        fprintf(file, "%hhu\n", code2_data[i]);
     }
     fclose(file);
 
