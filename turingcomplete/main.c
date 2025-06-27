@@ -78,7 +78,6 @@ typedef struct node_t {
     struct node_t* node_child;
     struct node_t* node_break;
     struct node_t* node_continue;
-    int reg_index;
     int copy_src;
     int copy_dst;
 } node_t;
@@ -132,8 +131,7 @@ node_t* node_create(node_t** node_itr, type_t type) {
         .node_parent = NULL,
         .node_child = NULL,
         .node_break = NULL,
-        .node_continue = NULL,
-        .reg_index = -1};
+        .node_continue = NULL};
     return node;
 }
 
@@ -252,7 +250,7 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_copy->copy_src = REG0;
         node_copy->copy_dst = REG6;
         node_t* node_loop = node_parent;
-        while(node_loop->node_continue == NULL) {
+        while (node_loop->node_continue == NULL) {
             node_loop = node_loop->node_parent;
         }
         node_push_label->node_child = node_loop->node_continue;
@@ -268,7 +266,7 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_copy->copy_src = REG0;
         node_copy->copy_dst = REG6;
         node_t* node_loop = node_parent;
-        while(node_loop->node_break == NULL) {
+        while (node_loop->node_break == NULL) {
             node_loop = node_loop->node_parent;
         }
         node_push_label->node_child = node_loop->node_break;
@@ -400,9 +398,25 @@ void optimize(node_t* node, node_t** nodelist_data) {
     optimize_block(node, nodelist_data, &nodelist_size, reglist_data);
 }
 
+int codegen_copy(char* code_data, int code_index, int dst_reg, int src_reg) {
+    code_data[code_index++] = OP_COPY | dst_reg << 3 | src_reg;
+    return code_index;
+}
+
+int codegen_immediate(char* code_data, int code_index, unsigned char value) {
+    code_data[code_index++] = OP_IMMEDIATE | 4;
+    code_index = codegen_copy(code_data, code_index, REG1, REG0);
+    code_data[code_index++] = OP_IMMEDIATE | (value >> 4);
+    code_data[code_index++] = OP_CALCULATE | CALC_SHL;
+    code_index = codegen_copy(code_data, code_index, REG1, REG0);
+    code_data[code_index++] = OP_IMMEDIATE | (value & 0b00001111);
+    code_data[code_index++] = OP_CALCULATE | CALC_OR;
+    return code_index;
+}
+
 void codegen_pre(char* code_data, int* code_size) {
-    code_data[(*code_size)++] = OP_IMMEDIATE | 63;
-    code_data[(*code_size)++] = OP_COPY | REG5 << 3 | REG0;
+    *code_size = codegen_immediate(code_data, *code_size, 128);
+    *code_size = codegen_copy(code_data, *code_size, REG5, REG0);
 }
 
 void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodelist_data, int* nodelist_size) {
@@ -413,16 +427,14 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
         case TY_IMMEDIATE: {
             if (token_isdigit(node->token)) {
                 int value = token_toint(node->token);
-                code_data[(*code_size)++] = OP_IMMEDIATE | value;
+                *code_size = codegen_immediate(code_data, *code_size, value);
             } else {
                 int value = node_provide_var(nodelist_data, nodelist_size, node);
-                code_data[(*code_size)++] = OP_IMMEDIATE | value;
+                *code_size = codegen_immediate(code_data, *code_size, value);
             }
         } break;
         case TY_COPY: {
-            int src_reg = node->copy_src;
-            int dst_reg = node->copy_dst;
-            code_data[(*code_size)++] = OP_COPY | dst_reg << 3 | src_reg;
+            *code_size = codegen_copy(code_data, *code_size, node->copy_dst, node->copy_src);
         } break;
         case TY_OR: {
             code_data[(*code_size)++] = OP_CALCULATE | CALC_OR;
@@ -476,7 +488,7 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
             break;
         }
         case TY_PUSH_LABEL: {
-            code_data[(*code_size)++] = OP_IMMEDIATE | 0;
+            *code_size = codegen_immediate(code_data, *code_size, 0);
         } break;
         default:
             fprintf(stderr, "Unknown node type: %d\n", node->type);
@@ -491,7 +503,7 @@ void codegen_link(node_t* node, char* code_data) {
         }
     } else if (node->type == TY_PUSH_LABEL) {
         int target_index = node->node_child->code_index;
-        code_data[node->code_index] = OP_IMMEDIATE | target_index;
+        codegen_immediate(code_data, node->code_index, target_index);
     }
 }
 
