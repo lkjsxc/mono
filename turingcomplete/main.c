@@ -222,7 +222,7 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         *token_itr += 1;
         return;
     }
-    
+
     if (token_eqstr(*token_itr, "loop")) {
         node_t* node_block = node_create(node_itr, TY_BLOCK);
         node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
@@ -232,8 +232,8 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_break = node_create(node_itr, TY_NOP);
         *token_itr += 1;
         node_push_label->node_child = node_continue;
-        node_copy->copy_src = 0;
-        node_copy->copy_dst = 6;
+        node_copy->copy_src = REG0;
+        node_copy->copy_dst = REG6;
         node_block->node_continue = node_continue;
         node_block->node_break = node_break;
         node_addchild(node_parent, node_block);
@@ -249,8 +249,8 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
         node_t* node_copy = node_create(node_itr, TY_COPY);
         node_t* node_jmp = node_create(node_itr, TY_JMP);
-        node_copy->copy_src = 0;
-        node_copy->copy_dst = 6;
+        node_copy->copy_src = REG0;
+        node_copy->copy_dst = REG6;
         node_t* node_loop = node_parent;
         while(node_loop->node_continue == NULL) {
             node_loop = node_loop->node_parent;
@@ -265,8 +265,8 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_push_label = node_create(node_itr, TY_PUSH_LABEL);
         node_t* node_copy = node_create(node_itr, TY_COPY);
         node_t* node_jmp = node_create(node_itr, TY_JMP);
-        node_copy->copy_src = 0;
-        node_copy->copy_dst = 6;
+        node_copy->copy_src = REG0;
+        node_copy->copy_dst = REG6;
         node_t* node_loop = node_parent;
         while(node_loop->node_break == NULL) {
             node_loop = node_loop->node_parent;
@@ -320,8 +320,8 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_mem_load = node_create(node_itr, TY_MEM_LOAD);
         node_t* node_push = node_create(node_itr, TY_PUSH);
         node_primary->token = *token_itr;
-        node_copy->copy_src = 0;
-        node_copy->copy_dst = 7;
+        node_copy->copy_src = REG0;
+        node_copy->copy_dst = REG7;
         *token_itr += 1;
         node_addchild(node_parent, node_primary);
         node_addchild(node_parent, node_copy);
@@ -336,12 +336,12 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_copy1 = node_create(node_itr, TY_COPY);
         node_t* node_copy2 = node_create(node_itr, TY_COPY);
         node_t* node_copy3 = node_create(node_itr, TY_COPY);
-        node_copy1->copy_src = 0;
-        node_copy1->copy_dst = 1;
-        node_copy2->copy_src = 0;
-        node_copy2->copy_dst = 7;
-        node_copy3->copy_src = 1;
-        node_copy3->copy_dst = 0;
+        node_copy1->copy_src = REG0;
+        node_copy1->copy_dst = REG1;
+        node_copy2->copy_src = REG0;
+        node_copy2->copy_dst = REG7;
+        node_copy3->copy_src = REG1;
+        node_copy3->copy_dst = REG0;
         *token_itr += 1;
         parse_exprlist(token_itr, node_itr, node_parent);
         node_addchild(node_parent, node_pop1);
@@ -358,8 +358,8 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_t* node_pop2 = node_create(node_itr, TY_POP);
         node_t* node_copy1 = node_create(node_itr, TY_COPY);
         node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = 0;
-        node_copy1->copy_dst = 1;
+        node_copy1->copy_src = REG0;
+        node_copy1->copy_dst = REG1;
         *token_itr += 1;
         parse_exprlist(token_itr, node_itr, node_parent);
         node_addchild(node_parent, node_pop1);
