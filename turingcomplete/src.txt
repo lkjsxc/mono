@@ -1,6 +1,14 @@
 (
+    &in = input()
+    &a = 0
+
     &i = 0
     loop (
-        &i = i + 1
+        if (i == 6) (
+            break
+        )
+        &a = (a + in)
+        &i = (i + 1)
     )
+    output(a)
 )

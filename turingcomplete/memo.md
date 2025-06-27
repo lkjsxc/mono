@@ -36,14 +36,18 @@ reg0, reg1 to reg0
 
 |code|description|
 |---|---|
-|000|or|
-|001|nand|
-|010|nor|
-|011|and|
-|100|add|
-|101|sub|
-|110|shl|
-|111|shr|
+|0000|or|
+|0001|nand|
+|0010|nor|
+|0011|and|
+|0100|add|
+|0101|sub|
+|0110|shl|
+|0111|shr|
+|1000|xor|
+|1001|eq|
+|1010|neq|
+|1011|lt|
 
 ## system
 
@@ -54,8 +58,8 @@ reg0, reg1 to reg0
 |0010|mem_load|addr is reg7, load to reg0|
 |0011|mem_save|addr is reg7, value is reg0|
 |0100|jmp|addr is reg6|
-|0101|je|addr is reg6, condition is reg0|
-|0110|jne|addr is reg6, condition is reg0|
-|0111|jl|addr is reg6, condition is reg0|
+|0101|jze|addr is reg6, condition is reg0|
+|0110|||
+|0111|||
 |1000|push|mem_save then inc reg5|
 |1001|pop|dec reg5 then mem_load|
