@@ -321,7 +321,7 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         return;
     }
 
-    if (token_eqstr(*token_itr, "&")) {
+    if (token_eqstr(*token_itr, "&") && (*token_itr)->data[1] != ' ') {
         node_t* node_primary = node_create(node_itr, TY_IMMEDIATE);
         node_t* node_push = node_create(node_itr, TY_PUSH);
         *token_itr += 1;
