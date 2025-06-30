@@ -27,8 +27,8 @@
 #define SYS_MEM_SAVE 0b00000011
 #define SYS_JMP 0b00000100
 #define SYS_JZE 0b00000101
-#define SYS_PUSH 0b00001000
-#define SYS_POP 0b00001001
+#define SYS_PUSH 0b00000110
+#define SYS_POP 0b00000111
 
 #define REG0 0
 #define REG1 1
