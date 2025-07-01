@@ -77,9 +77,9 @@ typedef struct node_t {
     type_t type;
     token_t* token;
     int code_index;
-    struct node_t* node_next;
-    struct node_t* node_parent;
-    struct node_t* node_child;
+    struct node_t* next;
+    struct node_t* parent;
+    struct node_t* child;
     struct node_t* node_break;
     struct node_t* node_continue;
     int copy_src;
@@ -126,9 +126,9 @@ node_t* node_create(node_t** node_itr, type_t type) {
         .type = type,
         .token = NULL,
         .code_index = 0,
-        .node_next = NULL,
-        .node_parent = NULL,
-        .node_child = NULL,
+        .next = NULL,
+        .parent = NULL,
+        .child = NULL,
         .node_break = NULL,
         .node_continue = NULL,
     };
@@ -136,16 +136,16 @@ node_t* node_create(node_t** node_itr, type_t type) {
 }
 
 void node_addchild(node_t* parent, node_t* node) {
-    if (parent->node_child == NULL) {
-        parent->node_child = node;
+    if (parent->child == NULL) {
+        parent->child = node;
     } else {
-        node_t* current = parent->node_child;
-        while (current->node_next != NULL) {
-            current = current->node_next;
+        node_t* current = parent->child;
+        while (current->next != NULL) {
+            current = current->next;
         }
-        current->node_next = node;
+        current->next = node;
     }
-    node->node_parent = parent;
+    node->parent = parent;
 }
 
 int node_provide_var(node_t** nodelist_data, int* nodelist_size, node_t* node) {
@@ -217,7 +217,7 @@ void parse_loop(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     node_t* node_label_continue = node_create(node_itr, TY_NOP);
     node_t* node_label_break = node_create(node_itr, TY_NOP);
     *token_itr += 1;
-    node_push_label->node_child = node_label_continue;
+    node_push_label->child = node_label_continue;
     node_copy->copy_src = REG0;
     node_copy->copy_dst = REG6;
     node_block->node_continue = node_label_continue;
@@ -239,9 +239,9 @@ void parse_continue(token_t** token_itr, node_t** node_itr, node_t* node_parent)
     node_copy->copy_dst = REG6;
     node_t* node_loop = node_parent;
     while (node_loop->node_continue == NULL) {
-        node_loop = node_loop->node_parent;
+        node_loop = node_loop->parent;
     }
-    node_push_label->node_child = node_loop->node_continue;
+    node_push_label->child = node_loop->node_continue;
     *token_itr += 1;
     node_addchild(node_parent, node_push_label);
     node_addchild(node_parent, node_copy);
@@ -256,9 +256,9 @@ void parse_break(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     node_copy->copy_dst = REG6;
     node_t* node_loop = node_parent;
     while (node_loop->node_break == NULL) {
-        node_loop = node_loop->node_parent;
+        node_loop = node_loop->parent;
     }
-    node_push_label->node_child = node_loop->node_break;
+    node_push_label->child = node_loop->node_break;
     *token_itr += 1;
     node_addchild(node_parent, node_push_label);
     node_addchild(node_parent, node_copy);
@@ -272,7 +272,7 @@ void parse_if(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     node_t* node_cmp_pop = node_create(node_itr, TY_POP);
     node_t* node_jze = node_create(node_itr, TY_JZE);
     node_t* node_label_ifend = node_create(node_itr, TY_NOP);
-    node_ifend_immediate->node_child = node_label_ifend;
+    node_ifend_immediate->child = node_label_ifend;
     node_ifend_copy->copy_src = REG0;
     node_ifend_copy->copy_dst = REG6;
     *token_itr += 1;
@@ -449,9 +449,9 @@ void parse(token_t* token_data, node_t* node_data) {
         .type = TY_BLOCK,
         .token = NULL,
         .code_index = 0,
-        .node_next = NULL,
-        .node_parent = NULL,
-        .node_child = NULL,
+        .next = NULL,
+        .parent = NULL,
+        .child = NULL,
         .node_break = NULL,
         .node_continue = NULL};
     node_t* node_sp_immediate = node_create(&node_itr, TY_IMMEDIATE);
@@ -484,7 +484,7 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
     node->code_index = *code_size;
     switch (node->type) {
         case TY_BLOCK: {
-            for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+            for (node_t* child = node->child; child != NULL; child = child->next) {
                 codegen_base(child, code_data, code_size, nodelist_data, nodelist_size);
             }
         } break;
@@ -582,14 +582,14 @@ void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* co
 void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size) {
     switch (node->type) {
         case TY_BLOCK: {
-            for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+            for (node_t* child = node->child; child != NULL; child = child->next) {
                 optimize_node1(child, nodelist_data, nodelist_size);
             }
         } break;
         case TY_PUSH: {
-            if (node->node_next && node->node_next->type == TY_POP) {
+            if (node->next && node->next->type == TY_POP) {
                 node->type = TY_NOP;
-                node->node_next->type = TY_NOP;
+                node->next->type = TY_NOP;
             } else {
                 nodelist_data[(*nodelist_size)++] = node;
             }
@@ -605,7 +605,7 @@ void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size) {
 void optimize_node2(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
     switch (node->type) {
         case TY_BLOCK: {
-            for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+            for (node_t* child = node->child; child != NULL; child = child->next) {
                 optimize_node2(child, nodelist_data, nodelist_size, reglist_data);
             }
         } break;
@@ -619,7 +619,7 @@ void optimize_node2(node_t* node, node_t** nodelist_data, int* nodelist_size, no
 void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_size) {
     if (node->type == TY_BLOCK) {
         node->code_index = *code2_size;
-        for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+        for (node_t* child = node->child; child != NULL; child = child->next) {
             optimize_code(child, code1_data, code2_data, code2_size);
         }
         return;
@@ -660,11 +660,11 @@ void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char*
 
 void codelink(node_t* node, char* code_data) {
     if (node->type == TY_BLOCK) {
-        for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+        for (node_t* child = node->child; child != NULL; child = child->next) {
             codelink(child, code_data);
         }
     } else if (node->type == TY_IMMEDIATE_LABEL) {
-        int target_index = node->node_child->code_index;
+        int target_index = node->child->code_index;
         codegen_immediate(code_data, node->code_index, target_index);
     }
 }
