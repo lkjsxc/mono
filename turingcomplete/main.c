@@ -694,12 +694,12 @@ void codelink(node_t* node, char* code_data) {
 }
 
 int main() {
-    char src_data[4096];
-    char code1_data[4096];
-    char code2_data[4096];
-    token_t token_data[4096];
-    node_t node_data[4096];
-    node_t* nodelist_data[4096];
+    static char src_data[65536];
+    static char code1_data[65536];
+    static char code2_data[65536];
+    static token_t token_data[65536];
+    static node_t node_data[65536];
+    static node_t* nodelist_data[65536];
     int code1_size = 0;
     int code2_size = 0;
 
