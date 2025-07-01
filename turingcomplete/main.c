@@ -85,6 +85,7 @@ typedef struct node_t {
     int copy_src;
     int copy_dst;
     int immidiate_value;
+    struct node_t* optimize_lastreg[8];
 } node_t;
 
 void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent);
@@ -577,11 +578,12 @@ void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* co
     codegen_base(node_data, code_data, code_size, nodelist_data, &nodelist_size);
 }
 
-void optimize_node(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
+void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
+    memcpy(node->optimize_lastreg, reglist_data, sizeof(node_t*) * 8);
     switch (node->type) {
         case TY_BLOCK: {
             for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
-                optimize_node(child, nodelist_data, nodelist_size, reglist_data);
+                optimize_node1(child, nodelist_data, nodelist_size, reglist_data);
             }
         } break;
         case TY_NOP: {
@@ -626,6 +628,20 @@ void optimize_node(node_t* node, node_t** nodelist_data, int* nodelist_size, nod
     }
 }
 
+void optimize_node2(node_t* node, node_t** nodelist_data, int* nodelist_size) {
+    switch (node->type) {
+        case TY_BLOCK: {
+            for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
+                optimize_node2(child, nodelist_data, nodelist_size);
+            }
+        } break;
+        case TY_NOP: {
+        } break;
+        default: {
+        } break;
+    }
+}
+
 void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_size) {
     if (node->type == TY_BLOCK) {
         node->code_index = *code2_size;
@@ -662,7 +678,8 @@ void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_
 void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char* code2_data, int* code2_size) {
     node_t* reglist_data[8] = {NULL};
     int nodelist_size = 0;
-    optimize_node(node_data, nodelist_data, &nodelist_size, reglist_data);
+    optimize_node1(node_data, nodelist_data, &nodelist_size, reglist_data);
+    optimize_node2(node_data, nodelist_data, &nodelist_size);
     optimize_code(node_data, code1_data, code2_data, code2_size);
 }
 
