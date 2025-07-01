@@ -88,8 +88,6 @@ typedef struct node_t {
     int optimize_isreduce;
 } node_t;
 
-void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent);
-
 int token_eq(token_t* token1, token_t* token2) {
     if (token1->size != token2->size)
         return 0;
