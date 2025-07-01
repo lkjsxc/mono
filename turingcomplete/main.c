@@ -596,14 +596,14 @@ void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* co
     codegen_base(node_data, code_data, code_size, nodelist_data, &nodelist_size);
 }
 
-void optimize1(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
+void optimize_node(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
     if (node->optimize_isreduce) {
         return;
     }
     switch (node->type) {
         case TY_BLOCK: {
             for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
-                optimize1(child, nodelist_data, nodelist_size, reglist_data);
+                optimize_node(child, nodelist_data, nodelist_size, reglist_data);
             }
         } break;
         case TY_PUSH: {
@@ -646,11 +646,11 @@ void optimize1(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t*
     }
 }
 
-void optimize2(node_t* node, char* code1_data, char* code2_data, int* code2_size) {
+void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_size) {
     if (node->type == TY_BLOCK) {
         node->code_index = *code2_size;
         for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
-            optimize2(child, code1_data, code2_data, code2_size);
+            optimize_code(child, code1_data, code2_data, code2_size);
         }
         return;
     }
@@ -686,8 +686,8 @@ void optimize2(node_t* node, char* code1_data, char* code2_data, int* code2_size
 void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char* code2_data, int* code2_size) {
     node_t* reglist_data[8] = {NULL};
     int nodelist_size = 0;
-    optimize1(node_data, nodelist_data, &nodelist_size, reglist_data);
-    optimize2(node_data, code1_data, code2_data, code2_size);
+    optimize_node(node_data, nodelist_data, &nodelist_size, reglist_data);
+    optimize_code(node_data, code1_data, code2_data, code2_size);
 }
 
 void codelink(node_t* node, char* code_data) {
