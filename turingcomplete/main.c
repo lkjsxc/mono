@@ -586,8 +586,6 @@ void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size, no
                 optimize_node1(child, nodelist_data, nodelist_size, reglist_data);
             }
         } break;
-        case TY_NOP: {
-        } break;
         case TY_PUSH: {
             if (node->node_next && node->node_next->type == TY_POP) {
                 node->type = TY_NOP;
@@ -621,8 +619,6 @@ void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size, no
         case TY_MEM_LOAD: {
             reglist_data[0] = node;
         } break;
-        case TY_MEM_SAVE: {
-        } break;
         default: {
         } break;
     }
@@ -634,8 +630,6 @@ void optimize_node2(node_t* node, node_t** nodelist_data, int* nodelist_size) {
             for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
                 optimize_node2(child, nodelist_data, nodelist_size);
             }
-        } break;
-        case TY_NOP: {
         } break;
         default: {
         } break;
