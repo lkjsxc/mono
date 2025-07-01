@@ -87,6 +87,8 @@ typedef struct node_t {
     int immidiate_value;
 } node_t;
 
+void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent);
+
 int token_eq(token_t* token1, token_t* token2) {
     if (token1->size != token2->size)
         return 0;
@@ -207,117 +209,104 @@ void tokenize(const char* src, token_t* token_data) {
     token_itr->size = 0;
 }
 
-void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
-    if (token_eqstr(*token_itr, "(")) {
-        node_t* node_block = node_create(node_itr, TY_BLOCK);
-        node_addchild(node_parent, node_block);
-        *token_itr += 1;
-        while (!token_eqstr(*token_itr, ")")) {
-            parse_exprlist(token_itr, node_itr, node_block);
-        }
-        *token_itr += 1;
-        return;
-    }
+void parse_loop(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_block = node_create(node_itr, TY_BLOCK);
+    node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
+    node_t* node_copy = node_create(node_itr, TY_COPY);
+    node_t* node_jmp = node_create(node_itr, TY_JMP);
+    node_t* node_label_continue = node_create(node_itr, TY_NOP);
+    node_t* node_label_break = node_create(node_itr, TY_NOP);
+    *token_itr += 1;
+    node_push_label->node_child = node_label_continue;
+    node_copy->copy_src = REG0;
+    node_copy->copy_dst = REG6;
+    node_block->node_continue = node_label_continue;
+    node_block->node_break = node_label_break;
+    node_addchild(node_parent, node_block);
+    node_addchild(node_block, node_label_continue);
+    parse_exprlist(token_itr, node_itr, node_block);
+    node_addchild(node_block, node_push_label);
+    node_addchild(node_block, node_copy);
+    node_addchild(node_block, node_jmp);
+    node_addchild(node_block, node_label_break);
+}
 
-    if (token_eqstr(*token_itr, "loop")) {
-        node_t* node_block = node_create(node_itr, TY_BLOCK);
-        node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
-        node_t* node_copy = node_create(node_itr, TY_COPY);
-        node_t* node_jmp = node_create(node_itr, TY_JMP);
-        node_t* node_label_continue = node_create(node_itr, TY_NOP);
-        node_t* node_label_break = node_create(node_itr, TY_NOP);
-        *token_itr += 1;
-        node_push_label->node_child = node_label_continue;
-        node_copy->copy_src = REG0;
-        node_copy->copy_dst = REG6;
-        node_block->node_continue = node_label_continue;
-        node_block->node_break = node_label_break;
-        node_addchild(node_parent, node_block);
-        node_addchild(node_block, node_label_continue);
-        parse_exprlist(token_itr, node_itr, node_block);
-        node_addchild(node_block, node_push_label);
-        node_addchild(node_block, node_copy);
-        node_addchild(node_block, node_jmp);
-        node_addchild(node_block, node_label_break);
-        return;
+void parse_continue(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
+    node_t* node_copy = node_create(node_itr, TY_COPY);
+    node_t* node_jmp = node_create(node_itr, TY_JMP);
+    node_copy->copy_src = REG0;
+    node_copy->copy_dst = REG6;
+    node_t* node_loop = node_parent;
+    while (node_loop->node_continue == NULL) {
+        node_loop = node_loop->node_parent;
     }
-    if (token_eqstr(*token_itr, "continue")) {
-        node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
-        node_t* node_copy = node_create(node_itr, TY_COPY);
-        node_t* node_jmp = node_create(node_itr, TY_JMP);
-        node_copy->copy_src = REG0;
-        node_copy->copy_dst = REG6;
-        node_t* node_loop = node_parent;
-        while (node_loop->node_continue == NULL) {
-            node_loop = node_loop->node_parent;
-        }
-        node_push_label->node_child = node_loop->node_continue;
-        *token_itr += 1;
-        node_addchild(node_parent, node_push_label);
-        node_addchild(node_parent, node_copy);
-        node_addchild(node_parent, node_jmp);
-        return;
-    }
-    if (token_eqstr(*token_itr, "break")) {
-        node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
-        node_t* node_copy = node_create(node_itr, TY_COPY);
-        node_t* node_jmp = node_create(node_itr, TY_JMP);
-        node_copy->copy_src = REG0;
-        node_copy->copy_dst = REG6;
-        node_t* node_loop = node_parent;
-        while (node_loop->node_break == NULL) {
-            node_loop = node_loop->node_parent;
-        }
-        node_push_label->node_child = node_loop->node_break;
-        *token_itr += 1;
-        node_addchild(node_parent, node_push_label);
-        node_addchild(node_parent, node_copy);
-        node_addchild(node_parent, node_jmp);
-        return;
-    }
-    if (token_eqstr(*token_itr, "if")) {
-        node_t* node_block = node_create(node_itr, TY_BLOCK);
-        node_t* node_ifend_immediate = node_create(node_itr, TY_IMMEDIATE_LABEL);
-        node_t* node_ifend_copy = node_create(node_itr, TY_COPY);
-        node_t* node_cmp_pop = node_create(node_itr, TY_POP);
-        node_t* node_jze = node_create(node_itr, TY_JZE);
-        node_t* node_label_ifend = node_create(node_itr, TY_NOP);
-        node_ifend_immediate->node_child = node_label_ifend;
-        node_ifend_copy->copy_src = REG0;
-        node_ifend_copy->copy_dst = REG6;
-        *token_itr += 1;
-        node_addchild(node_parent, node_block);
-        parse_exprlist(token_itr, node_itr, node_block);
-        node_addchild(node_block, node_ifend_immediate);
-        node_addchild(node_block, node_ifend_copy);
-        node_addchild(node_block, node_cmp_pop);
-        node_addchild(node_block, node_jze);
-        parse_exprlist(token_itr, node_itr, node_block);
-        node_addchild(node_block, node_label_ifend);
-        return;
-    }
+    node_push_label->node_child = node_loop->node_continue;
+    *token_itr += 1;
+    node_addchild(node_parent, node_push_label);
+    node_addchild(node_parent, node_copy);
+    node_addchild(node_parent, node_jmp);
+}
 
-    if (token_eqstr(*token_itr + 1, "(")) {
-        if (token_eqstr(*token_itr, "input")) {
-            node_t* node_input = node_create(node_itr, TY_INPUT);
-            node_t* node_push = node_create(node_itr, TY_PUSH);
-            *token_itr += 1;
-            parse_exprlist(token_itr, node_itr, node_parent);
-            node_addchild(node_parent, node_input);
-            node_addchild(node_parent, node_push);
-        } else if (token_eqstr(*token_itr, "output")) {
-            node_t* node_output = node_create(node_itr, TY_OUTPUT);
-            node_t* node_pop = node_create(node_itr, TY_POP);
-            *token_itr += 1;
-            parse_exprlist(token_itr, node_itr, node_parent);
-            node_addchild(node_parent, node_pop);
-            node_addchild(node_parent, node_output);
-        } else {
-            exit(EXIT_FAILURE);
-        }
-        return;
+void parse_break(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_push_label = node_create(node_itr, TY_IMMEDIATE_LABEL);
+    node_t* node_copy = node_create(node_itr, TY_COPY);
+    node_t* node_jmp = node_create(node_itr, TY_JMP);
+    node_copy->copy_src = REG0;
+    node_copy->copy_dst = REG6;
+    node_t* node_loop = node_parent;
+    while (node_loop->node_break == NULL) {
+        node_loop = node_loop->node_parent;
     }
+    node_push_label->node_child = node_loop->node_break;
+    *token_itr += 1;
+    node_addchild(node_parent, node_push_label);
+    node_addchild(node_parent, node_copy);
+    node_addchild(node_parent, node_jmp);
+}
 
+void parse_if(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_block = node_create(node_itr, TY_BLOCK);
+    node_t* node_ifend_immediate = node_create(node_itr, TY_IMMEDIATE_LABEL);
+    node_t* node_ifend_copy = node_create(node_itr, TY_COPY);
+    node_t* node_cmp_pop = node_create(node_itr, TY_POP);
+    node_t* node_jze = node_create(node_itr, TY_JZE);
+    node_t* node_label_ifend = node_create(node_itr, TY_NOP);
+    node_ifend_immediate->node_child = node_label_ifend;
+    node_ifend_copy->copy_src = REG0;
+    node_ifend_copy->copy_dst = REG6;
+    *token_itr += 1;
+    node_addchild(node_parent, node_block);
+    parse_exprlist(token_itr, node_itr, node_block);
+    node_addchild(node_block, node_ifend_immediate);
+    node_addchild(node_block, node_ifend_copy);
+    node_addchild(node_block, node_cmp_pop);
+    node_addchild(node_block, node_jze);
+    parse_exprlist(token_itr, node_itr, node_block);
+    node_addchild(node_block, node_label_ifend);
+}
+
+void parse_function_call(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    if (token_eqstr(*token_itr, "input")) {
+        node_t* node_input = node_create(node_itr, TY_INPUT);
+        node_t* node_push = node_create(node_itr, TY_PUSH);
+        *token_itr += 1;
+        parse_exprlist(token_itr, node_itr, node_parent);
+        node_addchild(node_parent, node_input);
+        node_addchild(node_parent, node_push);
+    } else if (token_eqstr(*token_itr, "output")) {
+        node_t* node_output = node_create(node_itr, TY_OUTPUT);
+        node_t* node_pop = node_create(node_itr, TY_POP);
+        *token_itr += 1;
+        parse_exprlist(token_itr, node_itr, node_parent);
+        node_addchild(node_parent, node_pop);
+        node_addchild(node_parent, node_output);
+    } else {
+        exit(EXIT_FAILURE);
+    }
+}
+
+void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     if (token_eqstr(*token_itr, "&") && (*token_itr)->data[1] != ' ') {
         node_t* node_primary = node_create(node_itr, TY_IMMEDIATE);
         node_t* node_push = node_create(node_itr, TY_PUSH);
@@ -347,113 +336,106 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         node_addchild(node_parent, node_mem_load);
         node_addchild(node_parent, node_push);
     }
+}
+
+void parse_binary_op(token_t** token_itr, node_t** node_itr, node_t* node_parent, type_t op_type) {
+    node_t* node_op = node_create(node_itr, op_type);
+    node_t* node_pop1 = node_create(node_itr, TY_POP);
+    node_t* node_pop2 = node_create(node_itr, TY_POP);
+    node_t* node_copy1 = node_create(node_itr, TY_COPY);
+    node_t* node_push = node_create(node_itr, TY_PUSH);
+    node_copy1->copy_src = REG0;
+    node_copy1->copy_dst = REG1;
+    *token_itr += 1;
+    parse_exprlist(token_itr, node_itr, node_parent);
+    node_addchild(node_parent, node_pop1);
+    node_addchild(node_parent, node_copy1);
+    node_addchild(node_parent, node_pop2);
+    node_addchild(node_parent, node_op);
+    node_addchild(node_parent, node_push);
+}
+
+void parse_assignment(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_mem_save = node_create(node_itr, TY_MEM_SAVE);
+    node_t* node_pop1 = node_create(node_itr, TY_POP);
+    node_t* node_pop2 = node_create(node_itr, TY_POP);
+    node_t* node_copy1 = node_create(node_itr, TY_COPY);
+    node_t* node_copy2 = node_create(node_itr, TY_COPY);
+    node_t* node_copy3 = node_create(node_itr, TY_COPY);
+    node_copy1->copy_src = REG0;
+    node_copy1->copy_dst = REG1;
+    node_copy2->copy_src = REG0;
+    node_copy2->copy_dst = REG7;
+    node_copy3->copy_src = REG1;
+    node_copy3->copy_dst = REG0;
+    *token_itr += 1;
+    parse_exprlist(token_itr, node_itr, node_parent);
+    node_addchild(node_parent, node_pop1);
+    node_addchild(node_parent, node_copy1);
+    node_addchild(node_parent, node_pop2);
+    node_addchild(node_parent, node_copy2);
+    node_addchild(node_parent, node_copy3);
+    node_addchild(node_parent, node_mem_save);
+}
+
+void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    if (token_eqstr(*token_itr, "(")) {
+        node_t* node_block = node_create(node_itr, TY_BLOCK);
+        node_addchild(node_parent, node_block);
+        *token_itr += 1;
+        while (!token_eqstr(*token_itr, ")")) {
+            parse_exprlist(token_itr, node_itr, node_block);
+        }
+        *token_itr += 1;
+        return;
+    }
+
+    if (token_eqstr(*token_itr, "loop")) {
+        parse_loop(token_itr, node_itr, node_parent);
+        return;
+    }
+    if (token_eqstr(*token_itr, "continue")) {
+        parse_continue(token_itr, node_itr, node_parent);
+        return;
+    }
+    if (token_eqstr(*token_itr, "break")) {
+        parse_break(token_itr, node_itr, node_parent);
+        return;
+    }
+    if (token_eqstr(*token_itr, "if")) {
+        parse_if(token_itr, node_itr, node_parent);
+        return;
+    }
+
+    if (token_eqstr(*token_itr + 1, "(")) {
+        parse_function_call(token_itr, node_itr, node_parent);
+        return;
+    }
+
+    parse_primary(token_itr, node_itr, node_parent);
 
     if (token_eqstr(*token_itr, "=")) {
-        node_t* node_mem_save = node_create(node_itr, TY_MEM_SAVE);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_copy2 = node_create(node_itr, TY_COPY);
-        node_t* node_copy3 = node_create(node_itr, TY_COPY);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        node_copy2->copy_src = REG0;
-        node_copy2->copy_dst = REG7;
-        node_copy3->copy_src = REG1;
-        node_copy3->copy_dst = REG0;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_copy2);
-        node_addchild(node_parent, node_copy3);
-        node_addchild(node_parent, node_mem_save);
+        parse_assignment(token_itr, node_itr, node_parent);
         return;
     }
     if (token_eqstr(*token_itr, "+")) {
-        node_t* node_add = node_create(node_itr, TY_ADD);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_add);
-        node_addchild(node_parent, node_push);
+        parse_binary_op(token_itr, node_itr, node_parent, TY_ADD);
         return;
     }
     if (token_eqstr(*token_itr, "-")) {
-        node_t* node_sub = node_create(node_itr, TY_SUB);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_sub);
-        node_addchild(node_parent, node_push);
+        parse_binary_op(token_itr, node_itr, node_parent, TY_SUB);
         return;
     }
     if (token_eqstr(*token_itr, "==")) {
-        node_t* node_eq = node_create(node_itr, TY_EQ);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_eq);
-        node_addchild(node_parent, node_push);
+        parse_binary_op(token_itr, node_itr, node_parent, TY_EQ);
         return;
     }
     if (token_eqstr(*token_itr, "!=")) {
-        node_t* node_neq = node_create(node_itr, TY_NEQ);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_neq);
-        node_addchild(node_parent, node_push);
+        parse_binary_op(token_itr, node_itr, node_parent, TY_NEQ);
         return;
     }
     if (token_eqstr(*token_itr, "<")) {
-        node_t* node_lt = node_create(node_itr, TY_LT);
-        node_t* node_pop1 = node_create(node_itr, TY_POP);
-        node_t* node_pop2 = node_create(node_itr, TY_POP);
-        node_t* node_copy1 = node_create(node_itr, TY_COPY);
-        node_t* node_push = node_create(node_itr, TY_PUSH);
-        node_copy1->copy_src = REG0;
-        node_copy1->copy_dst = REG1;
-        *token_itr += 1;
-        parse_exprlist(token_itr, node_itr, node_parent);
-        node_addchild(node_parent, node_pop1);
-        node_addchild(node_parent, node_copy1);
-        node_addchild(node_parent, node_pop2);
-        node_addchild(node_parent, node_lt);
-        node_addchild(node_parent, node_push);
+        parse_binary_op(token_itr, node_itr, node_parent, TY_LT);
         return;
     }
 }
