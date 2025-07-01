@@ -85,7 +85,6 @@ typedef struct node_t {
     int copy_src;
     int copy_dst;
     int immidiate_value;
-    int optimize_isreduce;
 } node_t;
 
 int token_eq(token_t* token1, token_t* token2) {
@@ -597,19 +596,18 @@ void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* co
 }
 
 void optimize_node(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
-    if (node->optimize_isreduce) {
-        return;
-    }
     switch (node->type) {
         case TY_BLOCK: {
             for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
                 optimize_node(child, nodelist_data, nodelist_size, reglist_data);
             }
         } break;
+        case TY_NOP: {
+        } break;
         case TY_PUSH: {
             if (node->node_next && node->node_next->type == TY_POP) {
-                node->optimize_isreduce = 1;
-                node->node_next->optimize_isreduce = 1;
+                node->type = TY_NOP;
+                node->node_next->type = TY_NOP;
             } else {
                 nodelist_data[(*nodelist_size)++] = node;
             }
@@ -658,10 +656,6 @@ void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_
         node->code_index = *code2_size;
         return;
     }
-    if (node->optimize_isreduce) {
-        node->code_index = *code2_size;
-        return;
-    }
     if (node->type == TY_IMMEDIATE) {
         if (node->immidiate_value < 64) {
             code2_data[*code2_size] = node->immidiate_value;
@@ -695,8 +689,6 @@ void codelink(node_t* node, char* code_data) {
         for (node_t* child = node->node_child; child != NULL; child = child->node_next) {
             codelink(child, code_data);
         }
-    } else if (node->optimize_isreduce) {
-        return;
     } else if (node->type == TY_IMMEDIATE_LABEL) {
         int target_index = node->node_child->code_index;
         codegen_immediate(code_data, node->code_index, target_index);
