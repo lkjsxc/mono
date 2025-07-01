@@ -662,7 +662,17 @@ void optimize2(node_t* node, char* code1_data, char* code2_data, int* code2_size
         node->code_index = *code2_size;
         return;
     }
-    if ((node->type == TY_IMMEDIATE || node->type == TY_IMMEDIATE_LABEL)) {
+    if (node->type == TY_IMMEDIATE) {
+        if (node->immidiate_value < 64) {
+            code2_data[*code2_size] = node->immidiate_value;
+            node->code_index = *code2_size;
+            *code2_size += 1;
+        } else {
+            memcpy(code2_data + *code2_size, code1_data + node->code_index, 7);
+            node->code_index = *code2_size;
+            *code2_size += 7;
+        }
+    } else if (node->type == TY_IMMEDIATE_LABEL) {
         memcpy(code2_data + *code2_size, code1_data + node->code_index, 7);
         node->code_index = *code2_size;
         *code2_size += 7;
