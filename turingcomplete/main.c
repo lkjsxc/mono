@@ -43,6 +43,7 @@ typedef enum type_t {
     TY_NULL,
     TY_NOP,
     TY_BLOCK,
+    TY_DECL,
     TY_IMMEDIATE,
     TY_IMMEDIATE_LABEL,
     TY_COPY,
@@ -85,7 +86,43 @@ typedef struct node_t {
     int copy_src;
     int copy_dst;
     int immidiate_value;
+    struct node_t* optimize_last;
 } node_t;
+
+typedef struct typetable_t {
+    type_t type;
+    int inst_size;
+    int opcode;
+} typetable_t;
+
+typetable_t type_table[] = {
+    {TY_NOP, 0, 0},
+    {TY_BLOCK, 0, 0},
+    {TY_DECL, 0, 0},
+    {TY_IMMEDIATE, 7, OP_IMMEDIATE},
+    {TY_IMMEDIATE_LABEL, 7, OP_IMMEDIATE},
+    {TY_COPY, 1, OP_COPY},
+    {TY_OR, 1, OP_CALCULATE | CALC_OR},
+    {TY_NAND, 1, OP_CALCULATE | CALC_NAND},
+    {TY_NOR, 1, OP_CALCULATE | CALC_NOR},
+    {TY_AND, 1, OP_CALCULATE | CALC_AND},
+    {TY_ADD, 1, OP_CALCULATE | CALC_ADD},
+    {TY_SUB, 1, OP_CALCULATE | CALC_SUB},
+    {TY_SHL, 1, OP_CALCULATE | CALC_SHL},
+    {TY_SHR, 1, OP_CALCULATE | CALC_SHR},
+    {TY_XOR, 1, OP_CALCULATE | CALC_XOR},
+    {TY_EQ, 1, OP_CALCULATE | CALC_EQ},
+    {TY_NEQ, 1, OP_CALCULATE | CALC_NEQ},
+    {TY_LT, 1, OP_CALCULATE | CALC_LT},
+    {TY_INPUT, 1, OP_SYSTEM | SYS_INPUT},
+    {TY_OUTPUT, 1, OP_SYSTEM | SYS_OUTPUT},
+    {TY_MEM_LOAD, 1, OP_SYSTEM | SYS_MEM_LOAD},
+    {TY_MEM_SAVE, 1, OP_SYSTEM | SYS_MEM_SAVE},
+    {TY_JMP, 1, OP_SYSTEM | SYS_JMP},
+    {TY_JZE, 1, OP_SYSTEM | SYS_JZE},
+    {TY_PUSH, 1, OP_SYSTEM | SYS_PUSH},
+    {TY_POP, 1, OP_SYSTEM | SYS_POP},
+    {TY_NULL, 0, 0}};
 
 void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent);
 
@@ -133,6 +170,22 @@ node_t* node_create(node_t** node_itr, type_t type) {
         .node_continue = NULL,
     };
     return node;
+}
+
+node_t* node_find_decl(node_t* node) {
+    node_t* itr = node;
+    node_t* parent = itr->parent;
+    while (parent != NULL) {
+        itr = parent->child;
+        while (itr != NULL) {
+            if (itr->type == TY_DECL && token_eq(itr->token, node->token)) {
+                return itr;
+            }
+            itr = itr->next;
+        }
+        parent = parent->parent;
+    }
+    return NULL;
 }
 
 void node_addchild(node_t* parent, node_t* node) {
@@ -286,6 +339,14 @@ void parse_if(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     node_addchild(node_block, node_label_ifend);
 }
 
+void parse_decl(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
+    node_t* node_decl = node_create(node_itr, TY_DECL);
+    *token_itr += 1;
+    node_decl->token = *token_itr;
+    *token_itr += 1;
+    // node_addchild(node_parent, node_decl);
+}
+
 void parse_function_call(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     if (token_eqstr(*token_itr, "input")) {
         node_t* node_input = node_create(node_itr, TY_INPUT);
@@ -315,6 +376,13 @@ void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) 
         *token_itr += 1;
         node_addchild(node_parent, node_primary);
         node_addchild(node_parent, node_push);
+        // node_t* node_decl = node_find_decl(node_primary);
+        // if (node_decl == NULL) {
+        //     fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
+        //     exit(EXIT_FAILURE);
+        // }
+        // node_primary->child = node_decl;
+        // node_decl->optimize_last = node_primary;
     } else if (token_isdigit(*token_itr)) {
         node_t* node_primary = node_create(node_itr, TY_IMMEDIATE);
         node_t* node_push = node_create(node_itr, TY_PUSH);
@@ -337,6 +405,13 @@ void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) 
         node_addchild(node_parent, node_mem_load);
         node_addchild(node_parent, node_optimize);
         node_addchild(node_parent, node_push);
+        // node_t* node_decl = node_find_decl(node_primary);
+        // if (node_decl == NULL) {
+        //     fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
+        //     exit(EXIT_FAILURE);
+        // }
+        // node_primary->child = node_decl;
+        // node_decl->optimize_last = node_primary;
     }
 }
 
@@ -406,6 +481,10 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
     }
     if (token_eqstr(*token_itr, "if")) {
         parse_if(token_itr, node_itr, node_parent);
+        return;
+    }
+    if (token_eqstr(*token_itr, "var")) {
+        parse_decl(token_itr, node_itr, node_parent);
         return;
     }
 
@@ -502,75 +581,29 @@ void codegen_base(node_t* node, char* code_data, int* code_size, node_t** nodeli
             node->immidiate_value = value;
             *code_size = codegen_immediate(code_data, *code_size, value);
         } break;
-        case TY_COPY: {
-            *code_size = codegen_copy(code_data, *code_size, node->copy_dst, node->copy_src);
-        } break;
-        case TY_OR: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_OR;
-        } break;
-        case TY_NAND: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_NAND;
-        } break;
-        case TY_NOR: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_NOR;
-        } break;
-        case TY_AND: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_AND;
-        } break;
-        case TY_ADD: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_ADD;
-        } break;
-        case TY_SUB: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_SUB;
-        } break;
-        case TY_SHL: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_SHL;
-        } break;
-        case TY_SHR: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_SHR;
-        } break;
-        case TY_XOR: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_XOR;
-        } break;
-        case TY_EQ: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_EQ;
-        } break;
-        case TY_NEQ: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_NEQ;
-        } break;
-        case TY_LT: {
-            code_data[(*code_size)++] = OP_CALCULATE | CALC_LT;
-        } break;
-        case TY_INPUT: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_INPUT;
-        } break;
-        case TY_OUTPUT: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_OUTPUT;
-        } break;
-        case TY_MEM_LOAD: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_MEM_LOAD;
-        } break;
-        case TY_MEM_SAVE: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_MEM_SAVE;
-        } break;
-        case TY_JMP: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_JMP;
-        } break;
-        case TY_JZE: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_JZE;
-        } break;
-        case TY_PUSH: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_PUSH;
-        } break;
-        case TY_POP: {
-            code_data[(*code_size)++] = OP_SYSTEM | SYS_POP;
-        } break;
         case TY_IMMEDIATE_LABEL: {
             *code_size = codegen_immediate(code_data, *code_size, 0);
         } break;
-        default:
-            fprintf(stderr, "Unknown node type: %d\n", node->type);
-            exit(EXIT_FAILURE);
+        case TY_COPY: {
+            *code_size = codegen_copy(code_data, *code_size, node->copy_dst, node->copy_src);
+        } break;
+        default: {
+            int typetable_index = -1;
+            for (int i = 0; type_table[i].type != TY_NULL; i++) {
+                if (type_table[i].type == node->type) {
+                    typetable_index = i;
+                    break;
+                }
+            }
+            if (typetable_index == -1) {
+                fprintf(stderr, "Unknown node type: %d\n", node->type);
+                exit(EXIT_FAILURE);
+            }
+            if (type_table[typetable_index].inst_size > 0) {
+                code_data[*code_size] = type_table[typetable_index].opcode;
+                *code_size += type_table[typetable_index].inst_size;
+            }
+        } break;
     }
 }
 
@@ -624,29 +657,18 @@ void optimize_code(node_t* node, char* code1_data, char* code2_data, int* code2_
         }
         return;
     }
-    if (node->type == TY_NOP) {
-        node->code_index = *code2_size;
-        return;
-    }
-    if (node->type == TY_IMMEDIATE) {
-        if (node->immidiate_value < 64) {
-            code2_data[*code2_size] = node->immidiate_value;
-            node->code_index = *code2_size;
-            *code2_size += 1;
-        } else {
-            memcpy(code2_data + *code2_size, code1_data + node->code_index, 7);
-            node->code_index = *code2_size;
-            *code2_size += 7;
+    int typetable_index = -1;
+    for (int i = 0; type_table[i].type != TY_NULL; i++) {
+        if (type_table[i].type == node->type) {
+            typetable_index = i;
+            break;
         }
-    } else if (node->type == TY_IMMEDIATE_LABEL) {
-        memcpy(code2_data + *code2_size, code1_data + node->code_index, 7);
-        node->code_index = *code2_size;
-        *code2_size += 7;
-    } else {
-        code2_data[*code2_size] = code1_data[node->code_index];
-        node->code_index = *code2_size;
-        *code2_size += 1;
     }
+    if(type_table[typetable_index].inst_size > 0) {
+        memcpy(&code2_data[*code2_size], &code1_data[node->code_index], type_table[typetable_index].inst_size);
+    }
+    node->code_index = *code2_size;
+    *code2_size += type_table[typetable_index].inst_size;
 }
 
 void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char* code2_data, int* code2_size) {
