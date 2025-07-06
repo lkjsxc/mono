@@ -344,7 +344,7 @@ void parse_decl(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
     *token_itr += 1;
     node_decl->token = *token_itr;
     *token_itr += 1;
-    // node_addchild(node_parent, node_decl);
+    node_addchild(node_parent, node_decl);
 }
 
 void parse_function_call(token_t** token_itr, node_t** node_itr, node_t* node_parent) {
@@ -376,13 +376,13 @@ void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) 
         *token_itr += 1;
         node_addchild(node_parent, node_primary);
         node_addchild(node_parent, node_push);
-        // node_t* node_decl = node_find_decl(node_primary);
-        // if (node_decl == NULL) {
-        //     fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
-        //     exit(EXIT_FAILURE);
-        // }
-        // node_primary->child = node_decl;
-        // node_decl->optimize_last = node_primary;
+        node_t* node_decl = node_find_decl(node_primary);
+        if (node_decl == NULL) {
+            fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
+            exit(EXIT_FAILURE);
+        }
+        node_primary->child = node_decl;
+        node_decl->optimize_last = node_primary;
     } else if (token_isdigit(*token_itr)) {
         node_t* node_primary = node_create(node_itr, TY_IMMEDIATE);
         node_t* node_push = node_create(node_itr, TY_PUSH);
@@ -405,13 +405,13 @@ void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) 
         node_addchild(node_parent, node_mem_load);
         node_addchild(node_parent, node_optimize);
         node_addchild(node_parent, node_push);
-        // node_t* node_decl = node_find_decl(node_primary);
-        // if (node_decl == NULL) {
-        //     fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
-        //     exit(EXIT_FAILURE);
-        // }
-        // node_primary->child = node_decl;
-        // node_decl->optimize_last = node_primary;
+        node_t* node_decl = node_find_decl(node_primary);
+        if (node_decl == NULL) {
+            fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
+            exit(EXIT_FAILURE);
+        }
+        node_primary->child = node_decl;
+        node_decl->optimize_last = node_primary;
     }
 }
 

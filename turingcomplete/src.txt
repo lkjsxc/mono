@@ -1,4 +1,8 @@
 (
+    var a
+    var i
+    var in
+
     &in = input()
     &a = 0
 
