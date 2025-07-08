@@ -407,7 +407,7 @@ void parse_primary(token_t** token_itr, node_t** node_itr, node_t* node_parent) 
         node_addchild(node_parent, node_push);
         node_t* node_decl = node_find_decl(node_primary);
         if (node_decl == NULL) {
-            fprintf(stderr, "Error: Variable '%.*s' not declared.\n", (*token_itr)->size, (*token_itr)->data);
+            fprintf(stderr, "Error: Variable '%.*s' not declared.\n", node_primary->token->size, node_primary->token->data);
             exit(EXIT_FAILURE);
         }
         node_primary->child = node_decl;
@@ -488,7 +488,7 @@ void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent)
         return;
     }
 
-    if (token_eqstr(*token_itr + 1, "(")) {
+    if ((token_eqstr(*token_itr, "input") || token_eqstr(*token_itr, "output")) && token_eqstr(*token_itr + 1, "(")) {
         parse_function_call(token_itr, node_itr, node_parent);
         return;
     }
