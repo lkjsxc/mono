@@ -8,27 +8,27 @@
 #define OP_COPY 0b10000000
 #define OP_SYSTEM 0b11000000
 
-#define CALC_OR 0b00000000
-#define CALC_AND 0b00000001
-#define CALC_XOR 0b00000010
-#define CALC_NOT 0b00000011
-#define CALC_ADD 0b00000100
-#define CALC_SUB 0b00000101
-#define CALC_SHL 0b00000110
-#define CALC_SHR 0b00000111
-#define CALC_NOP 0b00001000
-#define CALC_EQ 0b00001001
-#define CALC_NEQ 0b00001010
-#define CALC_LT 0b00001011
+#define CALC_OR 0b01000000
+#define CALC_AND 0b01000001
+#define CALC_XOR 0b01000010
+#define CALC_NOT 0b01000011
+#define CALC_ADD 0b01000100
+#define CALC_SUB 0b01000101
+#define CALC_SHL 0b01000110
+#define CALC_SHR 0b01000111
+#define CALC_NOP 0b01001000
+#define CALC_EQ 0b01001001
+#define CALC_NEQ 0b01001010
+#define CALC_LT 0b01001011
 
-#define SYS_INPUT 0b00000000
-#define SYS_OUTPUT 0b00000001
-#define SYS_MEM_LOAD 0b00000010
-#define SYS_MEM_SAVE 0b00000011
-#define SYS_JMP 0b00000100
-#define SYS_JZE 0b00000101
-#define SYS_PUSH 0b00000110
-#define SYS_POP 0b00000111
+#define SYS_INPUT 0b11000000
+#define SYS_OUTPUT 0b11000001
+#define SYS_MEM_LOAD 0b11000010
+#define SYS_MEM_SAVE 0b11000011
+#define SYS_JMP 0b11000100
+#define SYS_JZE 0b11000101
+#define SYS_PUSH 0b11000110
+#define SYS_POP 0b11000111
 
 #define REG0 0
 #define REG1 1
@@ -102,26 +102,26 @@ typetable_t type_table[] = {
     {TY_IMMEDIATE, 7, OP_IMMEDIATE},
     {TY_IMMEDIATE_LABEL, 7, OP_IMMEDIATE},
     {TY_COPY, 1, OP_COPY},
-    {TY_OR, 1, OP_CALCULATE | CALC_OR},
-    {TY_NAND, 1, OP_CALCULATE | CALC_AND},
-    {TY_NOR, 1, OP_CALCULATE | CALC_XOR},
-    {TY_AND, 1, OP_CALCULATE | CALC_NOT},
-    {TY_ADD, 1, OP_CALCULATE | CALC_ADD},
-    {TY_SUB, 1, OP_CALCULATE | CALC_SUB},
-    {TY_SHL, 1, OP_CALCULATE | CALC_SHL},
-    {TY_SHR, 1, OP_CALCULATE | CALC_SHR},
-    {TY_XOR, 1, OP_CALCULATE | CALC_XOR},
-    {TY_EQ, 1, OP_CALCULATE | CALC_EQ},
-    {TY_NEQ, 1, OP_CALCULATE | CALC_NEQ},
-    {TY_LT, 1, OP_CALCULATE | CALC_LT},
-    {TY_INPUT, 1, OP_SYSTEM | SYS_INPUT},
-    {TY_OUTPUT, 1, OP_SYSTEM | SYS_OUTPUT},
-    {TY_MEM_LOAD, 1, OP_SYSTEM | SYS_MEM_LOAD},
-    {TY_MEM_SAVE, 1, OP_SYSTEM | SYS_MEM_SAVE},
-    {TY_JMP, 1, OP_SYSTEM | SYS_JMP},
-    {TY_JZE, 1, OP_SYSTEM | SYS_JZE},
-    {TY_PUSH, 1, OP_SYSTEM | SYS_PUSH},
-    {TY_POP, 1, OP_SYSTEM | SYS_POP},
+    {TY_OR, 1, CALC_OR},
+    {TY_NAND, 1, CALC_AND},
+    {TY_NOR, 1, CALC_XOR},
+    {TY_AND, 1, CALC_NOT},
+    {TY_ADD, 1, CALC_ADD},
+    {TY_SUB, 1, CALC_SUB},
+    {TY_SHL, 1, CALC_SHL},
+    {TY_SHR, 1, CALC_SHR},
+    {TY_XOR, 1, CALC_XOR},
+    {TY_EQ, 1, CALC_EQ},
+    {TY_NEQ, 1, CALC_NEQ},
+    {TY_LT, 1, CALC_LT},
+    {TY_INPUT, 1, SYS_INPUT},
+    {TY_OUTPUT, 1, SYS_OUTPUT},
+    {TY_MEM_LOAD, 1, SYS_MEM_LOAD},
+    {TY_MEM_SAVE, 1, SYS_MEM_SAVE},
+    {TY_JMP, 1, SYS_JMP},
+    {TY_JZE, 1, SYS_JZE},
+    {TY_PUSH, 1, SYS_PUSH},
+    {TY_POP, 1, SYS_POP},
     {TY_NULL, 0, 0}};
 
 void parse_exprlist(token_t** token_itr, node_t** node_itr, node_t* node_parent);
@@ -552,10 +552,10 @@ int codegen_immediate(char* code_data, int code_index, unsigned char value) {
     code_data[code_index++] = OP_IMMEDIATE | 4;
     code_index = codegen_copy(code_data, code_index, REG1, REG0);
     code_data[code_index++] = OP_IMMEDIATE | (value >> 4);
-    code_data[code_index++] = OP_CALCULATE | CALC_SHL;
+    code_data[code_index++] = CALC_SHL;
     code_index = codegen_copy(code_data, code_index, REG1, REG0);
     code_data[code_index++] = OP_IMMEDIATE | (value & 0b00001111);
-    code_data[code_index++] = OP_CALCULATE | CALC_OR;
+    code_data[code_index++] = CALC_OR;
     return code_index;
 }
 

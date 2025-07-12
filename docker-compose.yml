@@ -2,3 +2,8 @@ services:
   lkjsxccom:
     build: "./lkjsxccom"
     container_name: "lkjsxccom"
+  turingcomplete:
+    build: "./turingcomplete"
+    container_name: "turingcomplete"
+    volumes:
+      - ./turingcomplete/code.txt:/app/code.txt
