@@ -612,37 +612,24 @@ void codegen(node_t* node_data, char* code_data, node_t** nodelist_data, int* co
     codegen_base(node_data, code_data, code_size, nodelist_data, &nodelist_size);
 }
 
-void optimize_node1(node_t* node, node_t** nodelist_data, int* nodelist_size) {
+void optimize_analyze(node_t* node, node_t** nodelist_data, int* nodelist_size) {
     switch (node->type) {
         case TY_BLOCK: {
             for (node_t* child = node->child; child != NULL; child = child->next) {
-                optimize_node1(child, nodelist_data, nodelist_size);
+                optimize_analyze(child, nodelist_data, nodelist_size);
             }
-        } break;
-        case TY_PUSH: {
-            if (node->next && node->next->type == TY_POP) {
-                node->type = TY_NOP;
-                node->next->type = TY_NOP;
-            } else {
-                nodelist_data[(*nodelist_size)++] = node;
-            }
-        } break;
-        case TY_POP: {
-            node_t* last_push = nodelist_data[--(*nodelist_size)];
         } break;
         default: {
         } break;
     }
 }
 
-void optimize_node2(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
+void optimize_transform(node_t* node, node_t** nodelist_data, int* nodelist_size, node_t** reglist_data) {
     switch (node->type) {
         case TY_BLOCK: {
             for (node_t* child = node->child; child != NULL; child = child->next) {
-                optimize_node2(child, nodelist_data, nodelist_size, reglist_data);
+                optimize_transform(child, nodelist_data, nodelist_size, reglist_data);
             }
-        } break;
-        case TY_MEM_LOAD: {
         } break;
         default: {
         } break;
@@ -675,8 +662,8 @@ void optimize(node_t* node_data, node_t** nodelist_data, char* code1_data, char*
     node_t* reglist_data[8] = {NULL};
     int nodelist_size1 = 0;
     int nodelist_size2 = 0;
-    optimize_node1(node_data, nodelist_data, &nodelist_size1);
-    optimize_node2(node_data, nodelist_data, &nodelist_size2, reglist_data);
+    optimize_analyze(node_data, nodelist_data, &nodelist_size1);
+    optimize_transform(node_data, nodelist_data, &nodelist_size2, reglist_data);
     optimize_code(node_data, code1_data, code2_data, code2_size);
 }
 
