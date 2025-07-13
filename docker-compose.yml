@@ -1,0 +1,5 @@
+services:
+  turingcomplete:
+    build: ./turingcomplete
+    volumes:
+      - ./turingcomplete/output:/app/output
