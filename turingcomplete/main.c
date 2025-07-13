@@ -174,13 +174,13 @@ int node_provide_var(node_t** nodelist_data, int* nodelist_size, node_t* node) {
     return (*nodelist_size) - 1;
 }
 
-void input(const char* filename, char* dst) {
+void input(const char* filename, char* dst, int dst_size) {
     FILE* file = fopen(filename, "r");
     if (!file) {
         perror("Failed to open file");
         exit(EXIT_FAILURE);
     }
-    size_t n = fread(dst, 1, dst_size - 1, file);
+    int n = fread(dst, 1, dst_size - 1, file);
     dst[n] = '\0';
     fclose(file);
 }
@@ -225,9 +225,7 @@ void tokenize(const char* src, token_t* token_data) {
     token_itr->size = 0;
 }
 
-void parse(token_t* token_data, node_t* node_data) {
-    token_t* token_itr = token_data;
-    node_t* node_itr = node_data;
+void parse() {
 }
 
 void optimize() {
@@ -239,7 +237,16 @@ void codegen() {
 void codelink() {
 }
 
-void output() {
+void output(const char* filename, char* code_data, int code_size) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        perror("Failed to open output file");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < code_size; i++) {
+        fprintf(file, "%u\n", code_data[i]);
+    }
+    fclose(file);
 }
 
 int main() {
@@ -248,7 +255,9 @@ int main() {
     static token_t token_data[65536];
     static node_t node_data[65536];
 
-    input("./src.txt", src_data);
+    int code_size = 100;
+
+    input("./src.txt", src_data, sizeof(src_data));
 
     tokenize(src_data, token_data);
 
@@ -260,7 +269,7 @@ int main() {
 
     codelink();
 
-    output("./output/code.txt");
+    output("./output/code.txt", code_data, code_size);
 
     return 0;
 }
