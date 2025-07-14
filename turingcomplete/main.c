@@ -81,13 +81,12 @@ typedef struct node_t {
     struct node_t* child;
     struct node_t* lhs;
     struct node_t* rhs;
-    struct node_t* optimize_last;
     int optimize_refcnt;
 } node_t;
 
 typedef struct stat_t {
-    token_t* token;
-    node_t* node;
+    token_t* token_itr;
+    node_t* node_itr;
     node_t* node_root;
     node_t* node_pre;
     node_t* node_post;
@@ -255,8 +254,6 @@ int main() {
     static token_t token_data[65536];
     static node_t node_data[65536];
 
-    int code_size = 100;
-
     input("./src.txt", src_data, sizeof(src_data));
 
     tokenize(src_data, token_data);
@@ -269,7 +266,7 @@ int main() {
 
     codelink();
 
-    output("./output/code.txt", code_data, code_size);
+    output("./output/code.txt", code_data, 0);
 
     return 0;
 }
