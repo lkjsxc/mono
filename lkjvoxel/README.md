@@ -37,8 +37,6 @@ The source code is divided by functionality as shown below.
 ├── build/          # Directory for build artifacts
 ├── cmake/          # CMake-related scripts
 │   └── toolchains/   # Toolchain files for cross-compilation
-├── docker/         # Docker-related files
-│   └── Dockerfile    # Dockerfile defining the build environment
 ├── src/            # Source code
 │   ├── core/         # Core engine features (main loop, time management, etc.)
 │   ├── graphics/     # Graphics-related code (Vulkan init, pipelines, rendering)
@@ -54,6 +52,7 @@ The source code is divided by functionality as shown below.
 │   └── vulkan-headers/
 ├── .gitignore
 ├── CMakeLists.txt  # Main CMakeLists.txt
+├── Dockerfile
 └── README.md
 ```
 
@@ -89,22 +88,6 @@ docker build -t lkjvoxel:latest -f docker/Dockerfile .
 ### 3\. Build the Game
 
 Use the created Docker image to build the binaries for each platform. The build artifacts will be output to the `build/` directory in the project root.
-
-#### Build for Ubuntu
-
-```bash
-docker run --rm -v "$(pwd)":/usr/src/app lkjvoxel:latest \
-  sh -c "mkdir -p build/ubuntu && cd build/ubuntu && cmake ../.. && make"
-```
-
-#### Build for Windows (Cross-compilation)
-
-```bash
-docker run --rm -v "$(pwd)":/usr/src/app lkjvoxel:latest \
-  sh -c "mkdir -p build/windows && cd build/windows && \
-         cmake -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchains/mingw-w64-x86_64.cmake ../.. && \
-         make"
-```
 
 ## How to Run
 
