@@ -148,9 +148,9 @@ __attribute__((warn_unused_result)) result_t token_substring(const token_t* toke
 __attribute__((warn_unused_result)) result_t token_trim(token_t* token);
 
 // HTTP utility functions
-__attribute__((warn_unused_result)) result_t http_request(token_t* method, token_t* url, token_t* body, token_t* response);
+__attribute__((warn_unused_result)) result_t http_request(token_t* method, token_t* url, const token_t* body, token_t* response);
 __attribute__((warn_unused_result)) result_t http_get(token_t* url, token_t* response);
-__attribute__((warn_unused_result)) result_t http_post(token_t* url, token_t* body, token_t* response);
+__attribute__((warn_unused_result)) result_t http_post(token_t* url, const token_t* body, token_t* response);
 
 // JSON utility functions
 __attribute__((warn_unused_result)) result_t json_validate(const token_t* json_token);

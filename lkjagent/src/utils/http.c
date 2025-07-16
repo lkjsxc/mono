@@ -329,7 +329,7 @@ static result_t receive_http_response(int sockfd, token_t* response) {
     return RESULT_OK;
 }
 
-__attribute__((warn_unused_result)) result_t http_request(token_t* method, token_t* url, token_t* body, token_t* response) {
+__attribute__((warn_unused_result)) result_t http_request(token_t* method, token_t* url, const token_t* body, token_t* response) {
     // Validate required parameters
     if (token_validate(method) != RESULT_OK ||
         token_validate(url) != RESULT_OK ||
@@ -391,7 +391,7 @@ __attribute__((warn_unused_result)) result_t http_get(token_t* url, token_t* res
     return http_request(&method, url, NULL, response);
 }
 
-__attribute__((warn_unused_result)) result_t http_post(token_t* url, token_t* body, token_t* response) {
+__attribute__((warn_unused_result)) result_t http_post(token_t* url, const token_t* body, token_t* response) {
     char method_buffer[16];
     token_t method;
 
