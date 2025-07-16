@@ -1,12 +1,230 @@
-Of course. Here is the English translation:
+# lkjagent - Lightweight HTTP Client Library
 
-# lkjagent - An Autonomous AI Agent in C
+A minimal, zero-dependency HTTP client library written in C. This library provides robust token-based string handling and HTTP request capabilities with a focus on safety, simplicity, and performance.
 
-A minimal, autonomous AI agent implemented using only the C11 standard library, featuring persistent memory management and capable of executing complex tasks through integration with the LMStudio API.
+## Features
 
-## Overview
+### Token Management System
+- **Safe string handling**: All string operations use bounded buffers to prevent buffer overflows
+- **Memory-efficient**: Uses user-provided static buffers, no dynamic allocation
+- **Comprehensive validation**: All functions validate input parameters and token state
+- **Rich string operations**: Set, append, copy, find, substring, trim, and comparison functions
 
-lkjagent is a functional programming-based AI agent focused on enhancing disk storage capabilities to achieve complex tasks. The agent manages both volatile (RAM) and persistent (disk) memory through a single JSON file architecture and operates without a user interface.
+### HTTP Client
+- **HTTP/1.1 support**: Full support for GET, POST, and other HTTP methods
+- **Automatic connection management**: Handles socket creation, connection, and cleanup
+- **Robust error handling**: Comprehensive error checking and proper resource cleanup
+- **Configurable timeouts**: Network operation timeouts to prevent hanging
+- **Token-based interface**: All HTTP data handled through safe token system
+
+## Building
+
+### Using Makefile
+```bash
+# Build the main binary
+make
+
+# Build and run tests
+make test
+
+# Clean build artifacts
+make clean
+
+# Show help
+make help
+```
+
+### Manual compilation
+```bash
+gcc -Wall -Wextra -std=c99 -O2 -o lkjagent src/main.c
+```
+
+## API Reference
+
+### Token Functions
+
+#### Core Operations
+```c
+result_t token_init(token_t* token, char* buffer, size_t capacity);
+result_t token_clear(token_t* token);
+result_t token_set(token_t* token, const char* str);
+result_t token_append(token_t* token, const char* str);
+result_t token_copy(token_t* dest, const token_t* src);
+```
+
+#### String Manipulation
+```c
+result_t token_find(const token_t* token, const char* needle, size_t* position);
+result_t token_substring(const token_t* token, size_t start, size_t length, token_t* dest);
+result_t token_trim(token_t* token);
+```
+
+#### Comparison and Validation
+```c
+int token_equals(const token_t* token1, const token_t* token2);
+int token_equals_str(const token_t* token, const char* str);
+int token_is_empty(const token_t* token);
+int token_available_space(const token_t* token);
+result_t token_validate(const token_t* token);
+```
+
+### HTTP Functions
+
+#### Core HTTP Operations
+```c
+result_t http_request(token_t* method, token_t* url, token_t* body, token_t* response);
+```
+
+#### Convenience Functions
+```c
+result_t http_get(token_t* url, token_t* response);
+result_t http_post(token_t* url, token_t* body, token_t* response);
+```
+
+## Usage Examples
+
+### Basic HTTP GET Request
+```c
+#include "lkjagent.h"
+
+int main() {
+    char url_data[256];
+    char response_data[4096];
+    
+    token_t url, response;
+    
+    // Initialize tokens
+    token_init(&url, url_data, sizeof(url_data));
+    token_init(&response, response_data, sizeof(response_data));
+    
+    // Set URL and make request
+    token_set(&url, "http://httpbin.org/get");
+    
+    if (http_get(&url, &response) == RESULT_OK) {
+        printf("Response: %s\n", response.data);
+    }
+    
+    return 0;
+}
+```
+
+### HTTP POST Request with JSON Body
+```c
+#include "lkjagent.h"
+
+int main() {
+    char url_data[256];
+    char body_data[1024];
+    char response_data[4096];
+    
+    token_t url, body, response;
+    
+    // Initialize tokens
+    token_init(&url, url_data, sizeof(url_data));
+    token_init(&body, body_data, sizeof(body_data));
+    token_init(&response, response_data, sizeof(response_data));
+    
+    // Set URL and body
+    token_set(&url, "http://httpbin.org/post");
+    token_set(&body, "{\"name\":\"lkjagent\",\"version\":\"1.0\"}");
+    
+    if (http_post(&url, &body, &response) == RESULT_OK) {
+        printf("Response: %s\n", response.data);
+    }
+    
+    return 0;
+}
+```
+
+### String Manipulation with Tokens
+```c
+#include "lkjagent.h"
+
+int main() {
+    char buffer1[100], buffer2[100];
+    token_t token1, token2;
+    
+    token_init(&token1, buffer1, sizeof(buffer1));
+    token_init(&token2, buffer2, sizeof(buffer2));
+    
+    // Build a string
+    token_set(&token1, "Hello");
+    token_append(&token1, " World");
+    
+    // Find substring
+    size_t position;
+    if (token_find(&token1, "World", &position) == RESULT_OK) {
+        printf("Found 'World' at position: %zu\n", position);
+    }
+    
+    // Extract substring
+    token_substring(&token1, 0, 5, &token2);
+    printf("First 5 characters: %s\n", token2.data);
+    
+    return 0;
+}
+```
+
+## Design Principles
+
+### Memory Safety
+- All string operations use bounded buffers
+- No dynamic memory allocation
+- Comprehensive bounds checking
+- Buffer overflow protection
+
+### Error Handling
+- All functions return explicit error codes
+- Consistent error handling patterns
+- Input validation on all public APIs
+- Graceful degradation on errors
+
+### Performance
+- Zero-copy string operations where possible
+- Minimal system calls
+- Efficient network operations
+- Stack-based memory management
+
+### Portability
+- Standard C99 compliance
+- POSIX socket API
+- No external dependencies
+- Tested on Linux platforms
+
+## Configuration
+
+### HTTP Settings
+- Default timeout: 30 seconds
+- Default ports: HTTP (80), HTTPS (443 - not implemented)
+- User agent: "lkjagent/1.0"
+- Maximum URL length: 256 characters
+- Maximum request size: 8192 bytes
+- Response chunk size: 4096 bytes
+
+### Compilation Options
+- Standard: `-std=c99`
+- Warnings: `-Wall -Wextra`
+- Optimization: `-O2` (recommended for production)
+
+## Limitations
+
+- HTTPS is not currently supported (HTTP only)
+- No support for HTTP/2 or HTTP/3
+- No built-in JSON parsing
+- No authentication mechanisms
+- IPv4 only (no IPv6 support)
+
+## License
+
+See LICENSE file for details.
+
+## Contributing
+
+1. Follow the existing code style
+2. Add tests for new features
+3. Ensure all functions handle errors gracefully
+4. Update documentation for API changes
+5. Test on multiple platforms
 
 ## Key Features
 

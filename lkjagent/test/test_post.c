@@ -1,6 +1,6 @@
-#include "lkjagent.h"
-#include "token.c"
-#include "http.c"
+#include "../src/lkjagent.h"
+#include "../src/token.c"
+#include "../src/http.c"
 
 int main() {
     static char method_data[16];
@@ -8,10 +8,7 @@ int main() {
     static char body_data[1024];
     static char response_data[4096];
 
-    token_t method;
-    token_t url;
-    token_t body;
-    token_t response;
+    token_t method, url, body, response;
 
     // Initialize tokens with their respective buffers
     if (token_init(&method, method_data, sizeof(method_data)) != RESULT_OK ||
@@ -22,14 +19,20 @@ int main() {
         return 1;
     }
 
-    // Set method and URL using the new token functions
-    if (token_set(&method, "GET") != RESULT_OK) {
+    // Test POST request with JSON body
+    if (token_set(&method, "POST") != RESULT_OK) {
         printf("Failed to set method\n");
         return 1;
     }
 
-    if (token_set(&url, "http://httpbin.org/get") != RESULT_OK) {
+    if (token_set(&url, "http://httpbin.org/post") != RESULT_OK) {
         printf("Failed to set URL\n");
+        return 1;
+    }
+
+    // Set JSON body
+    if (token_set(&body, "{\"name\":\"lkjagent\",\"version\":\"1.0\"}") != RESULT_OK) {
+        printf("Failed to set body\n");
         return 1;
     }
 
@@ -41,7 +44,7 @@ int main() {
     }
 
     // Print response
-    printf("Response received (%zu bytes):\n", response.size);
+    printf("POST Response received (%zu bytes):\n", response.size);
     for (size_t i = 0; i < response.size; i++) {
         printf("%c", response.data[i]);
     }
