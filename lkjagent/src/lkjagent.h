@@ -1,6 +1,7 @@
 #ifndef _LKJAGENT_H
 #define _LKJAGENT_H
 
+#define _GNU_SOURCE  // For usleep
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -158,9 +159,13 @@ __attribute__((warn_unused_result)) result_t json_get_number(const token_t* json
 __attribute__((warn_unused_result)) result_t json_create_object(token_t* result, const char* keys[], const char* values[], size_t count);
 __attribute__((warn_unused_result)) result_t json_format(const token_t* input, token_t* output);
 
-// Agent management functions
+// Agent lifecycle functions
+__attribute__((warn_unused_result)) agent_t* agent_create(const char* config_file);
+void agent_destroy(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_init(agent_t* agent, const char* config_file);
 __attribute__((warn_unused_result)) result_t agent_set_task(agent_t* agent, const char* task);
+
+// Agent execution functions
 __attribute__((warn_unused_result)) result_t agent_step(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_step_intelligent(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_step_ai_driven(agent_t* agent);
@@ -198,5 +203,22 @@ int agent_is_task_complete(const agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_run_autonomous(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_decide_new_task(agent_t* agent, token_t* new_task);
 int agent_should_continue_thinking(const agent_t* agent);
+
+// State-specific function declarations
+__attribute__((warn_unused_result)) result_t state_thinking_init(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_thinking_execute(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_thinking_next(agent_t* agent, agent_state_t* next_state);
+
+__attribute__((warn_unused_result)) result_t state_executing_init(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_executing_execute(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_executing_next(agent_t* agent, agent_state_t* next_state);
+
+__attribute__((warn_unused_result)) result_t state_evaluating_init(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_evaluating_execute(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_evaluating_next(agent_t* agent, agent_state_t* next_state);
+
+__attribute__((warn_unused_result)) result_t state_paging_init(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_paging_execute(agent_t* agent);
+__attribute__((warn_unused_result)) result_t state_paging_next(agent_t* agent, agent_state_t* next_state);
 
 #endif
