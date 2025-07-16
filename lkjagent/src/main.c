@@ -1,6 +1,7 @@
+#include "file.c"
+#include "http.c"
 #include "lkjagent.h"
 #include "token.c"
-#include "http.c"
 
 int main() {
     static char method_data[16];
@@ -22,30 +23,36 @@ int main() {
         return 1;
     }
 
-    // Set method and URL using the new token functions
-    if (token_set(&method, "GET") != RESULT_OK) {
+    // Set method and URL for LMStudio
+    if (token_set(&method, "POST") != RESULT_OK) {
         printf("Failed to set method\n");
         return 1;
     }
 
-    if (token_set(&url, "http://httpbin.org/get") != RESULT_OK) {
+    if (token_set(&url, "http://host.docker.internal:1234/v1/chat/completions") != RESULT_OK) {
         printf("Failed to set URL\n");
         return 1;
     }
 
-    // Make HTTP request
-    result_t result = http_request(&method, &url, &body, &response);
-    if (result != RESULT_OK) {
+    if (file_read("./data/system.txt", &body) != RESULT_OK) {
+        printf("Failed to read body from file\n");
+        return 1;
+    }
+
+    // Make HTTP request to LMStudio
+    if (http_request(&method, &url, &body, &response) != RESULT_OK) {
         printf("HTTP request failed\n");
+        printf("\nTroubleshooting:\n");
+        printf("1. Make sure LMStudio is running\n");
+        printf("2. Load a model in LMStudio\n");
+        printf("3. Start the local server (usually on port 1234)\n");
+        printf("4. Check that the server is accessible at http://127.0.0.1:1234\n");
         return 1;
     }
 
     // Print response
-    printf("Response received (%zu bytes):\n", response.size);
-    for (size_t i = 0; i < response.size; i++) {
-        printf("%c", response.data[i]);
-    }
-    printf("\n");
+    printf("LMStudio Response received (%zu bytes):\n", response.size);
+    printf("%s\n", response.data);
 
     return 0;
 }

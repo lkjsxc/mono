@@ -28,6 +28,9 @@ typedef struct {
     token_t model;
 } config_t;
 
+// File management functions
+__attribute__((warn_unused_result)) result_t file_read(const char* path, token_t* content);
+__attribute__((warn_unused_result)) result_t file_write(const char* path, const token_t* content);
 
 // Token management functions
 __attribute__((warn_unused_result)) result_t token_init(token_t* token, char* buffer, size_t capacity);
