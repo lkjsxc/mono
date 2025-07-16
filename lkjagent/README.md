@@ -1,8 +1,15 @@
-# lkjagent - Lightweight HTTP Client Library
+# lkjagent - Autonomous AI Agent with HTTP Client Library
 
-A minimal, zero-dependency HTTP client library written in C. This library provides robust token-based string handling and HTTP request capabilities with a focus on safety, simplicity, and performance.
+A minimal, autonomous AI agent written in C with zero-dependency HTTP client capabilities. This agent provides persistent memory management, LMStudio API integration for complex task execution, and robust token-based string handling with a focus on safety, simplicity, and performance.
 
 ## Features
+
+### Autonomous Agent System
+- **State-based execution**: Four operational states (thinking, executing, evaluating, paging)
+- **Persistent memory**: JSON-based disk storage for long-term knowledge retention
+- **LMStudio integration**: Direct API communication for AI inference
+- **Tool system**: Built-in tools for search, retrieve, write, execute_code, and forget operations
+- **Memory management**: Dual-memory system with volatile RAM and persistent disk storage
 
 ### Token Management System
 - **Safe string handling**: All string operations use bounded buffers to prevent buffer overflows
@@ -12,7 +19,7 @@ A minimal, zero-dependency HTTP client library written in C. This library provid
 
 ### HTTP Client
 - **HTTP/1.1 support**: Full support for GET, POST, and other HTTP methods
-- **Automatic connection management**: Handles socket creation, connection, and cleanup
+- **Socket-based implementation**: Raw socket connections without external dependencies
 - **Robust error handling**: Comprehensive error checking and proper resource cleanup
 - **Configurable timeouts**: Network operation timeouts to prevent hanging
 - **Token-based interface**: All HTTP data handled through safe token system
@@ -27,8 +34,14 @@ make
 # Build and run tests
 make test
 
+# Build and run JSON tests specifically
+make test-json
+
 # Clean build artifacts
 make clean
+
+# Install to system
+make install
 
 # Show help
 make help
@@ -36,7 +49,7 @@ make help
 
 ### Manual compilation
 ```bash
-gcc -Wall -Wextra -std=c99 -O2 -o lkjagent src/main.c
+gcc -Wall -Wextra -std=c11 -O2 -o lkjagent src/main.c
 ```
 
 ## API Reference
@@ -186,7 +199,7 @@ int main() {
 - Stack-based memory management
 
 ### Portability
-- Standard C99 compliance
+- Standard C11 compliance
 - POSIX socket API
 - No external dependencies
 - Tested on Linux platforms
@@ -202,7 +215,7 @@ int main() {
 - Response chunk size: 4096 bytes
 
 ### Compilation Options
-- Standard: `-std=c99`
+- Standard: `-std=c11`
 - Warnings: `-Wall -Wextra`
 - Optimization: `-O2` (recommended for production)
 
@@ -226,61 +239,46 @@ See LICENSE file for details.
 4. Update documentation for API changes
 5. Test on multiple platforms
 
-## Key Features
-
-  - **C11 Standard**: Pure C implementation using only standard library functions.
-  - **Zero Dynamic Allocation**: Uses only static memory allocation (no malloc/free).
-  - **Functional Programming**: Employs immutable data structures and pure functions.
-  - **LMStudio Integration**: Direct API communication for AI inference.
-  - **Persistent Memory**: JSON-based disk storage for long-term knowledge retention.
-  - **Stateful Execution**: Multi-state agent lifecycle with clear state transitions.
-
------
-
-## Architecture
-
-### Memory Management
-
-The agent operates with a dual-memory system:
-
-#### Working_memory (Volatile Memory)
-
-Provides context to the AI model through a structured prompt:
-
-  - **`system_prompt`**: Fixed behavioral guidelines and agent definition.
-  - **`current_state`**: The agent's current operational state.
-  - **`task_goal`**: The final objective to be achieved.
-  - **`plan`**: A step-by-step execution strategy.
-  - **`scratchpad`**: Temporary notes and tool execution results.
-  - **`recent_history`**: A log of recent agent activities.
-  - **`retrieved_from_disk`**: Relevant knowledge fetched from persistent storage.
-
-#### Disk (Persistent Memory)
-
-A key-value store with an optional tagging system:
-
-  - **`working_memory`**: Task-specific information and context.
-  - **`knowledge_base`**: Accumulated learning and insights.
-  - **`log`**: A complete execution history and audit trail.
-  - **`file`**: Generated artifacts (code, documents, data).
-  - **`Arbitrary tags`**: Tags with no special meaning.
+## Agent Features
 
 ### Agent States
 
 The agent operates in four distinct states:
 
-1.  **`thinking`**: Receives a request and formulates an execution plan.
-2.  **`executing`**: Performs actions based on the current plan.
-3.  **`evaluating`**: Assesses results and determines the next step.
-4.  **`paging`**: Manages memory by moving data between working_memory and disk.
+1. **`thinking`**: Receives a request and formulates an execution plan
+2. **`executing`**: Performs actions based on the current plan
+3. **`evaluating`**: Assesses results and determines the next step
+4. **`paging`**: Manages memory by moving data between RAM and disk
 
 ### Available Tools
 
-  - **`search`**: Queries disk storage for relevant information.
-  - **`retrieve`**: Reads specific data from persistent storage.
-  - **`write`**: Saves information to disk with optional tags.
-  - **`execute_code`**: Runs code snippets and captures the results.
-  - **`forget`**: Deletes unnecessary information for memory optimization.
+- **`search`**: Queries disk storage for relevant information
+- **`retrieve`**: Reads specific data from persistent storage
+- **`write`**: Saves information to disk with optional tags
+- **`execute_code`**: Runs code snippets and captures the results
+- **`forget`**: Deletes unnecessary information for memory optimization
+
+### Memory Architecture
+
+#### RAM (Volatile Memory)
+Provides context to the AI model through a structured prompt:
+
+- **`system_prompt`**: Fixed behavioral guidelines and agent definition
+- **`current_state`**: The agent's current operational state
+- **`task_goal`**: The final objective to be achieved
+- **`plan`**: A step-by-step execution strategy
+- **`scratchpad`**: Temporary notes and tool execution results
+- **`recent_history`**: A log of recent agent activities
+- **`retrieved_from_disk`**: Relevant knowledge fetched from persistent storage
+
+#### Disk (Persistent Memory)
+A key-value store with an optional tagging system:
+
+- **`working_memory`**: Task-specific information and context
+- **`knowledge_base`**: Accumulated learning and insights
+- **`log`**: A complete execution history and audit trail
+- **`file`**: Generated artifacts (code, documents, data)
+- **`Arbitrary tags`**: Tags with no special meaning
 
 -----
 
@@ -288,30 +286,21 @@ The agent operates in four distinct states:
 
 ### Prerequisites
 
-  - A C11 compatible compiler (GCC 4.9+ or Clang 3.1+).
-  - Standard C library.
-  - curl library for HTTP requests (usually pre-installed).
+- C11 compatible compiler (GCC 4.9+ or Clang 3.1+)
+- Standard C library
+- POSIX socket support (standard on Linux platforms)
 
-### Compilation
+### Basic Compilation
 
 ```bash
-# Basic compilation
-gcc -std=c11 -Wall -Wextra -O2 -o lkjagent lkjagent/main.c
+# Basic compilation (as used in Makefile)
+gcc -std=c11 -Wall -Wextra -O2 -o lkjagent src/main.c
 
 # With debug symbols
-gcc -std=c11 -Wall -Wextra -g -DDEBUG -o lkjagent lkjagent/main.c
+gcc -std=c11 -Wall -Wextra -g -DDEBUG -o lkjagent src/main.c
 
 # Production build
-gcc -std=c11 -Wall -Wextra -O3 -DNDEBUG -o lkjagent lkjagent/main.c
-```
-
-### CMake Build (Recommended)
-
-```bash
-mkdir build
-cd build
-cmake ..
-make
+gcc -std=c11 -Wall -Wextra -O3 -DNDEBUG -o lkjagent src/main.c
 ```
 
 -----
@@ -320,32 +309,55 @@ make
 
 ### LMStudio Setup
 
-1.  Install and run LMStudio.
-2.  Load your preferred language model.
-3.  Start the local server (usually at `http://localhost:1234`).
-4.  Set the API endpoint in the agent's configuration.
+1. Install and run LMStudio
+2. Load your preferred language model
+3. Start the local server (usually at `http://localhost:1234`)
+4. The agent will attempt to connect to `http://host.docker.internal:1234/v1/chat/completions` by default
 
 ### Agent Configuration
 
-Create a `config.json` file:
+Configuration is managed through `data/config.json`. Key settings include:
+
+- **LMStudio endpoint**: `http://host.docker.internal:1234/v1/chat/completions`
+- **Model name**: `qwen/qwen3-8b` (configurable)
+- **Memory file**: `agent_memory.json` (in project root)
+- **Max iterations**: 50
+- **Memory buffers**: 2048 bytes each
+- **HTTP timeout**: 30 seconds
+- **Temperature**: 0.7 for LMStudio requests
+
+### Configuration File Format
+
+The `data/config.json` file contains all configuration settings:
 
 ```json
 {
-  "lmstudio": {
-    "endpoint": "http://localhost:1234/v1/chat/completions",
-    "model": "your-model-name",
-    "max_tokens": 2048
-  },
-  "memory": {
-    "working_memory_size": 8192,
-    "disk_file": "agent_memory.json",
-    "max_history": 100
-  },
-  "agent": {
-    "max_iterations": 50,
-    "evaluation_threshold": 0.8
-  }
+    "lmstudio": {
+        "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
+        "model": "qwen/qwen3-8b",
+        "temperature": 0.7,
+        "max_tokens": -1,
+        "stream": false
+    },
+    "agent": {
+        "max_iterations": 50,
+        "evaluation_threshold": 0.8,
+        "memory_file": "agent_memory.json",
+        "ram_size": 2048,
+        "max_history": 100
+    },
+    "http": {
+        "timeout_seconds": 30,
+        "max_request_size": 8192,
+        "max_response_size": 4096,
+        "user_agent": "lkjagent/1.0"
+    },
+    "system_prompt": {
+        "role": "system", 
+        "content": "You are an autonomous AI agent. Analyze tasks methodically and provide detailed responses."
+    }
 }
+```
 ```
 
 -----
@@ -355,9 +367,15 @@ Create a `config.json` file:
 ### Basic Execution
 
 ```bash
-# Run
-./lkjagent
+# Run the agent demo
+./build/lkjagent
 ```
+
+The agent will demonstrate:
+- Basic HTTP functionality with LMStudio
+- Agent state management and transitions  
+- Tool system functionality
+- Memory persistence operations
 
 ## Memory Architecture Details
 
@@ -399,10 +417,11 @@ Create a `config.json` file:
 ### State Transition
 
 ```
-[User Input] -> thinking -> executing -> evaluating
-      ^            |           |
-      |            +-----------+
-      +------------ paging
+[User Input] -> thinking
+thinking -> paging or executing
+executing -> paging or evaluating
+evaluating -> paging
+paging -> thinking
 ```
 
 -----
@@ -413,20 +432,19 @@ Create a `config.json` file:
 
 ```
 lkjagent/
-├── memory.json            # working_memory, disk
-├── config.json            # Configuration
+├── agent_memory.json      # Persistent memory storage
+├── data/
+│   ├── memory.json        # Additional memory data
+│   └── config.json        # configuration data
 └── src/
-    ├── main.c             # Entry point and main loop
-    ├── agent.h            # Agent core definitions
-    ├── agent.c            # Agent state management
-    ├── memory.h           # Memory management interface
-    ├── memory.c           # JSON-based memory implementation
-    ├── tools.h            # Tool definitions
-    ├── tools.c            # Tool implementations
-    ├── http.h             # HTTP client interface
-    ├── http.c             # LMStudio API communication
-    ├── utils.h            # Utility functions
-    └── utils.c
+    ├── main.c             # Entry point and demo
+    ├── lkjagent.h         # Main header with all definitions
+    ├── agent.c            # Agent state management and tools
+    ├── token.c            # Token-based string handling
+    ├── http.c             # HTTP client implementation
+    ├── json.c             # JSON parsing and utilities
+    ├── file.c             # File I/O operations
+    └── error.c            # Error handling and logging
 ```
 
 ### Coding Standards
@@ -495,14 +513,15 @@ The agent implements comprehensive error handling:
 ### Debug Mode
 
 ```bash
-./lkjagent --debug --verbose
+# Run with error logging enabled (errors are logged by default)
+./build/lkjagent
 ```
 
 Debug output includes:
 
   - State transitions.
   - Memory operations.
-  - API requests/responses.
+  - API requests/responses (when LMStudio is available).
   - Tool executions.
 
 ### Memory Inspection
@@ -542,8 +561,7 @@ MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file fo
 For issues and questions:
 
   - GitHub Issues: [Create an issue](https://github.com/lkjsxc/mono/issues)
-  - Documentation: Refer to inline code comments.
-  - Examples: Check the `examples/` directory.
+  - Documentation: Refer to inline code comments and this README.
 
 -----
 

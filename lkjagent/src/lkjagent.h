@@ -15,6 +15,7 @@
 typedef enum {
     RESULT_OK = 0,
     RESULT_ERR = 1,
+    RESULT_TASK_COMPLETE = 2,
 } result_t;
 
 // Error logging and debugging functions
@@ -31,10 +32,44 @@ typedef struct {
     size_t capacity;
 } token_t;
 
+// Configuration structures for loading from config.json
 typedef struct {
-    token_t base_url;
-    token_t model;
-} config_t;
+    char endpoint[256];
+    char model[64];
+    double temperature;
+    int max_tokens;
+    int stream;
+} lmstudio_config_t;
+
+typedef struct {
+    int max_iterations;
+    double evaluation_threshold;
+    char memory_file[256];
+    size_t ram_size;
+    size_t max_history;
+    int autonomous_mode;
+    int continuous_thinking;
+    int self_directed;
+} agent_config_detailed_t;
+
+typedef struct {
+    int timeout_seconds;
+    int max_request_size;
+    int max_response_size;
+    char user_agent[64];
+} http_config_t;
+
+typedef struct {
+    char role[16];
+    char content[512];
+} system_prompt_config_t;
+
+typedef struct {
+    lmstudio_config_t lmstudio;
+    agent_config_detailed_t agent;
+    http_config_t http;
+    system_prompt_config_t system_prompt;
+} full_config_t;
 
 // Agent states
 typedef enum {
@@ -81,7 +116,12 @@ typedef struct {
     int iteration_count;
     char lmstudio_endpoint[256];
     char model_name[64];
+    full_config_t loaded_config;
 } agent_t;
+
+// Configuration management functions
+__attribute__((warn_unused_result)) result_t config_load(const char* config_file, full_config_t* config);
+__attribute__((warn_unused_result)) result_t config_apply_to_agent(agent_t* agent, const full_config_t* config);
 
 // File management functions
 __attribute__((warn_unused_result)) result_t file_read(const char* path, token_t* content);
@@ -122,9 +162,13 @@ __attribute__((warn_unused_result)) result_t json_format(const token_t* input, t
 __attribute__((warn_unused_result)) result_t agent_init(agent_t* agent, const char* config_file);
 __attribute__((warn_unused_result)) result_t agent_set_task(agent_t* agent, const char* task);
 __attribute__((warn_unused_result)) result_t agent_step(agent_t* agent);
+__attribute__((warn_unused_result)) result_t agent_step_intelligent(agent_t* agent);
+__attribute__((warn_unused_result)) result_t agent_step_ai_driven(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_run(agent_t* agent);
 const char* agent_state_to_string(agent_state_t state);
 __attribute__((warn_unused_result)) result_t agent_transition_state(agent_t* agent, agent_state_t new_state);
+int agent_is_valid_transition(agent_state_t current_state, agent_state_t new_state);
+int agent_should_page(const agent_t* agent);
 
 // Memory management functions
 __attribute__((warn_unused_result)) result_t agent_memory_init(agent_memory_t* memory, char buffers[][2048], size_t num_buffers);
@@ -144,5 +188,15 @@ __attribute__((warn_unused_result)) result_t agent_tool_forget(agent_t* agent, c
 __attribute__((warn_unused_result)) result_t agent_call_lmstudio(agent_t* agent, const token_t* prompt, token_t* response);
 __attribute__((warn_unused_result)) result_t agent_build_prompt(const agent_t* agent, token_t* prompt);
 __attribute__((warn_unused_result)) result_t agent_parse_response(agent_t* agent, const token_t* response);
+
+// State transition helper functions
+const char* agent_get_transition_reason(agent_state_t current_state, agent_state_t new_state);
+__attribute__((warn_unused_result)) result_t agent_initialize_state(agent_t* agent, agent_state_t new_state);
+__attribute__((warn_unused_result)) result_t agent_decide_next_state(agent_t* agent, agent_state_t* next_state);
+__attribute__((warn_unused_result)) result_t agent_ai_decide_next_action(agent_t* agent, token_t* next_action);
+int agent_is_task_complete(const agent_t* agent);
+__attribute__((warn_unused_result)) result_t agent_run_autonomous(agent_t* agent);
+__attribute__((warn_unused_result)) result_t agent_decide_new_task(agent_t* agent, token_t* new_task);
+int agent_should_continue_thinking(const agent_t* agent);
 
 #endif
