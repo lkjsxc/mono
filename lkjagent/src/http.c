@@ -35,7 +35,16 @@ typedef struct {
 } url_info_t;
 
 static result_t parse_url(const token_t* url_token, url_info_t* info) {
-    if (token_validate(url_token) != RESULT_OK || !info || token_is_empty(url_token)) {
+    if (token_validate(url_token) != RESULT_OK) {
+        lkj_log_error(__func__, "invalid URL token provided");
+        return RESULT_ERR;
+    }
+    if (!info) {
+        lkj_log_error(__func__, "info parameter is NULL");
+        return RESULT_ERR;
+    }
+    if (token_is_empty(url_token)) {
+        lkj_log_error(__func__, "URL token is empty");
         return RESULT_ERR;
     }
 
@@ -56,6 +65,7 @@ static result_t parse_url(const token_t* url_token, url_info_t* info) {
         info->is_https = 0;
     } else if (strncmp(url, HTTP_PROTOCOL_HTTPS, strlen(HTTP_PROTOCOL_HTTPS)) == 0) {
         // HTTPS not supported in this basic implementation
+        lkj_log_error(__func__, "HTTPS protocol not supported in basic implementation");
         return RESULT_ERR;
     }
 
@@ -67,7 +77,12 @@ static result_t parse_url(const token_t* url_token, url_info_t* info) {
 
     // Validate and copy host
     size_t host_len = host_end - start;
-    if (host_len == 0 || host_len >= HTTP_MAX_HOST_LEN) {
+    if (host_len == 0) {
+        lkj_log_error(__func__, "empty hostname in URL");
+        return RESULT_ERR;
+    }
+    if (host_len >= HTTP_MAX_HOST_LEN) {
+        lkj_log_error(__func__, "hostname too long");
         return RESULT_ERR;
     }
 
@@ -81,6 +96,7 @@ static result_t parse_url(const token_t* url_token, url_info_t* info) {
         long port = strtol(host_end, &end_ptr, 10);
 
         if (port <= 0 || port > 65535 || end_ptr == host_end) {
+            lkj_log_error(__func__, "invalid port number in URL");
             return RESULT_ERR;  // Invalid port
         }
 
@@ -92,6 +108,7 @@ static result_t parse_url(const token_t* url_token, url_info_t* info) {
     if (*host_end == '/') {
         size_t path_len = strlen(host_end);
         if (path_len >= sizeof(info->path)) {
+            lkj_log_error(__func__, "URL path too long");
             return RESULT_ERR;  // Path too long
         }
         strncpy(info->path, host_end, sizeof(info->path) - 1);
@@ -119,7 +136,12 @@ static result_t set_socket_timeout(int sockfd, int timeout_seconds) {
 }
 
 static int connect_to_host(const char* host, int port) {
-    if (!host || port <= 0 || port > 65535) {
+    if (!host) {
+        lkj_log_error(__func__, "host parameter is NULL");
+        return -1;
+    }
+    if (port <= 0 || port > 65535) {
+        lkj_log_error(__func__, "invalid port number");
         return -1;
     }
 
@@ -130,6 +152,7 @@ static int connect_to_host(const char* host, int port) {
     // Create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
+        lkj_log_errno(__func__, "failed to create socket");
         return -1;
     }
 
@@ -141,6 +164,7 @@ static int connect_to_host(const char* host, int port) {
     // Get server info
     server = gethostbyname(host);
     if (server == NULL) {
+        lkj_log_error(__func__, "failed to resolve hostname");
         close(sockfd);
         return -1;
     }
@@ -153,6 +177,7 @@ static int connect_to_host(const char* host, int port) {
 
     // Connect
     if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        lkj_log_errno(__func__, "failed to connect to host");
         close(sockfd);
         return -1;
     }

@@ -8,7 +8,16 @@
  * @return RESULT_OK on success, RESULT_ERR on failure
  */
 __attribute__((warn_unused_result)) result_t token_init(token_t* token, char* buffer, size_t capacity) {
-    if (!token || !buffer || capacity < 2) {  // Need at least 2 bytes for content + null terminator
+    if (!token) {
+        lkj_log_error(__func__, "token parameter is NULL");
+        return RESULT_ERR;
+    }
+    if (!buffer) {
+        lkj_log_error(__func__, "buffer parameter is NULL");
+        return RESULT_ERR;
+    }
+    if (capacity < 2) {  // Need at least 2 bytes for content + null terminator
+        lkj_log_error(__func__, "capacity too small (minimum 2 bytes required)");
         return RESULT_ERR;
     }
     
@@ -29,6 +38,7 @@ __attribute__((warn_unused_result)) result_t token_init(token_t* token, char* bu
  */
 __attribute__((warn_unused_result)) result_t token_clear(token_t* token) {
     if (token_validate(token) != RESULT_OK) {
+        lkj_log_error(__func__, "invalid token provided");
         return RESULT_ERR;
     }
     
@@ -45,7 +55,12 @@ __attribute__((warn_unused_result)) result_t token_clear(token_t* token) {
  * @return RESULT_OK on success, RESULT_ERR on failure
  */
 __attribute__((warn_unused_result)) result_t token_set(token_t* token, const char* str) {
-    if (token_validate(token) != RESULT_OK || !str) {
+    if (token_validate(token) != RESULT_OK) {
+        lkj_log_error(__func__, "invalid token provided");
+        return RESULT_ERR;
+    }
+    if (!str) {
+        lkj_log_error(__func__, "string parameter is NULL");
         return RESULT_ERR;
     }
     
@@ -61,11 +76,17 @@ __attribute__((warn_unused_result)) result_t token_set(token_t* token, const cha
  * @return RESULT_OK on success, RESULT_ERR on failure
  */
 __attribute__((warn_unused_result)) result_t token_set_length(token_t* token, const char* buffer, size_t length) {
-    if (token_validate(token) != RESULT_OK || !buffer) {
+    if (token_validate(token) != RESULT_OK) {
+        lkj_log_error(__func__, "invalid token provided");
+        return RESULT_ERR;
+    }
+    if (!buffer) {
+        lkj_log_error(__func__, "buffer parameter is NULL");
         return RESULT_ERR;
     }
     
     if (length >= token->capacity) {
+        lkj_log_error(__func__, "buffer too small for requested data");
         return RESULT_ERR; // Not enough space (need room for null terminator)
     }
     

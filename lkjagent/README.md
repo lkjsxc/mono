@@ -243,7 +243,7 @@ See LICENSE file for details.
 
 The agent operates with a dual-memory system:
 
-#### RAM (Volatile Memory)
+#### Working_memory (Volatile Memory)
 
 Provides context to the AI model through a structured prompt:
 
@@ -272,7 +272,7 @@ The agent operates in four distinct states:
 1.  **`thinking`**: Receives a request and formulates an execution plan.
 2.  **`executing`**: Performs actions based on the current plan.
 3.  **`evaluating`**: Assesses results and determines the next step.
-4.  **`paging`**: Manages memory by moving data between RAM and disk.
+4.  **`paging`**: Manages memory by moving data between working_memory and disk.
 
 ### Available Tools
 
@@ -337,7 +337,7 @@ Create a `config.json` file:
     "max_tokens": 2048
   },
   "memory": {
-    "ram_size": 8192,
+    "working_memory_size": 8192,
     "disk_file": "agent_memory.json",
     "max_history": 100
   },
@@ -413,7 +413,7 @@ Create a `config.json` file:
 
 ```
 lkjagent/
-├── data.json              # ram, disk
+├── memory.json            # working_memory, disk
 ├── config.json            # Configuration
 └── src/
     ├── main.c             # Entry point and main loop
@@ -440,7 +440,7 @@ lkjagent/
 ### Memory Constraints
 
   - **Max JSON Size**: 16MB (configurable).
-  - **RAM Buffer**: 8KB statically allocated.
+  - **Working_memory Buffer**: 8KB statically allocated.
   - **String Limit**: 2KB per string field.
   - **Array Limit**: Max 256 elements.
 

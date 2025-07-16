@@ -1,12 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -O2
+CFLAGS = -Wall -Wextra -std=c11 -O2
 SRCDIR = src
 TESTDIR = test
 BUILDDIR = build
 SOURCES = $(SRCDIR)/main.c
 TARGET = $(BUILDDIR)/lkjagent
 
-.PHONY: all clean test
+.PHONY: all clean test test-json
 
 all: $(TARGET)
 
@@ -19,11 +19,17 @@ $(BUILDDIR):
 test: $(BUILDDIR)/test_comprehensive
 	$(BUILDDIR)/test_comprehensive
 
+test-json: $(BUILDDIR)/test_json
+	$(BUILDDIR)/test_json
+
 $(BUILDDIR)/test_comprehensive: $(TESTDIR)/test_comprehensive.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/test_comprehensive $(TESTDIR)/test_comprehensive.c
 
 $(BUILDDIR)/test_post: $(TESTDIR)/test_post.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/test_post $(TESTDIR)/test_post.c
+
+$(BUILDDIR)/test_json: $(TESTDIR)/test_json.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $(BUILDDIR)/test_json $(TESTDIR)/test_json.c
 
 clean:
 	rm -rf $(BUILDDIR)
