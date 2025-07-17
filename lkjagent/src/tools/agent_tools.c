@@ -103,8 +103,8 @@ result_t agent_tool_retrieve(agent_t* agent, const char* key, token_t* result) {
         return RESULT_ERR;
     }
 
-    // Try to load from disk file
-    static char file_buffer[2048];
+    // Try to load from disk file with a larger buffer
+    static char file_buffer[4096]; // Increased buffer size
     token_t file_content;
     
     if (token_init(&file_content, file_buffer, sizeof(file_buffer)) == RESULT_OK &&
@@ -133,8 +133,8 @@ result_t agent_tool_retrieve(agent_t* agent, const char* key, token_t* result) {
             }
         }
     } else {
-        // File doesn't exist or can't be read
-        if (token_set(result, "Storage file not accessible") != RESULT_OK) {
+        // File doesn't exist, can't be read, or is too large - provide a helpful message
+        if (token_set(result, "Storage file not accessible or too large") != RESULT_OK) {
             lkj_log_error(__func__, "failed to set error message");
             return RESULT_ERR;
         }

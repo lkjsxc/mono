@@ -9,7 +9,7 @@
     "agent": {
         "max_iterations": -1,
         "evaluation_threshold": 0.8,
-        "memory_file": "agent_memory.json",
+        "memory_file": "data/memory.json",
         "ram_size": 2048,
         "max_history": 100,
         "autonomous_mode": true,

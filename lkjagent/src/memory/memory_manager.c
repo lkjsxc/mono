@@ -67,8 +67,8 @@ result_t agent_memory_save_to_disk(const agent_t* agent) {
         return RESULT_ERR;
     }
 
-    static char json_buffer[8192];
-    static char timestamp_buffer[64];
+    static char json_buffer[2048];  // Reduced size for simpler JSON
+    static char timestamp_buffer[32];
     token_t json_output;
     
     if (token_init(&json_output, json_buffer, sizeof(json_buffer)) != RESULT_OK) {
@@ -76,76 +76,33 @@ result_t agent_memory_save_to_disk(const agent_t* agent) {
         return RESULT_ERR;
     }
 
-    // Get current timestamp
+    // Get current timestamp (simplified format)
     time_t now = time(NULL);
     struct tm* tm_info = gmtime(&now);
-    strftime(timestamp_buffer, sizeof(timestamp_buffer), "%Y-%m-%dT%H:%M:%SZ", tm_info);
+    strftime(timestamp_buffer, sizeof(timestamp_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
 
-    // Build JSON structure
-    if (token_set(&json_output, "{\n") != RESULT_OK ||
-        token_append(&json_output, "  \"metadata\": {\n") != RESULT_OK ||
-        token_append(&json_output, "    \"version\": \"1.0\",\n") != RESULT_OK ||
-        token_append(&json_output, "    \"last_modified\": \"") != RESULT_OK ||
-        token_append(&json_output, timestamp_buffer) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "    \"state\": \"") != RESULT_OK ||
-        token_append(&json_output, agent_state_to_string(agent->state)) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "    \"iterations\": ") != RESULT_OK) {
-        lkj_log_error(__func__, "failed to build JSON metadata");
+    // Create a very minimal JSON structure using snprintf for better control
+    int json_len = snprintf(json_buffer, sizeof(json_buffer),
+        "{\n"
+        "  \"version\": \"1.0\",\n"
+        "  \"timestamp\": \"%s\",\n"
+        "  \"state\": \"%s\",\n"
+        "  \"iterations\": %d,\n"
+        "  \"status\": \"saved\"\n"
+        "}",
+        timestamp_buffer,
+        agent_state_to_string(agent->state),
+        agent->iteration_count
+    );
+
+    // Check if JSON was truncated
+    if (json_len >= (int)sizeof(json_buffer)) {
+        lkj_log_error(__func__, "JSON output truncated");
         return RESULT_ERR;
     }
 
-    // Add iteration count
-    char iter_str[32];
-    snprintf(iter_str, sizeof(iter_str), "%d", agent->iteration_count);
-    if (token_append(&json_output, iter_str) != RESULT_OK ||
-        token_append(&json_output, "\n  },\n") != RESULT_OK) {
-        lkj_log_error(__func__, "failed to add iteration count");
-        return RESULT_ERR;
-    }
-
-    // Add working memory
-    if (token_append(&json_output, "  \"working_memory\": {\n") != RESULT_OK ||
-        token_append(&json_output, "    \"current_task\": \"") != RESULT_OK ||
-        token_append(&json_output, agent->memory.task_goal.data) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "    \"context\": \"") != RESULT_OK ||
-        token_append(&json_output, agent->memory.scratchpad.data) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "    \"variables\": \"\"\n") != RESULT_OK ||
-        token_append(&json_output, "  },\n") != RESULT_OK) {
-        lkj_log_error(__func__, "failed to add working memory");
-        return RESULT_ERR;
-    }
-
-    // Add knowledge base (simplified)
-    if (token_append(&json_output, "  \"knowledge_base\": {\n") != RESULT_OK ||
-        token_append(&json_output, "    \"facts\": {}\n") != RESULT_OK ||
-        token_append(&json_output, "  },\n") != RESULT_OK) {
-        lkj_log_error(__func__, "failed to add knowledge base");
-        return RESULT_ERR;
-    }
-
-    // Add log entry
-    if (token_append(&json_output, "  \"log\": [\n") != RESULT_OK ||
-        token_append(&json_output, "    {\n") != RESULT_OK ||
-        token_append(&json_output, "      \"timestamp\": \"") != RESULT_OK ||
-        token_append(&json_output, timestamp_buffer) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "      \"state\": \"") != RESULT_OK ||
-        token_append(&json_output, agent_state_to_string(agent->state)) != RESULT_OK ||
-        token_append(&json_output, "\",\n") != RESULT_OK ||
-        token_append(&json_output, "      \"action\": \"memory_save\",\n") != RESULT_OK ||
-        token_append(&json_output, "      \"details\": \"") != RESULT_OK ||
-        token_append(&json_output, agent->memory.recent_history.data) != RESULT_OK ||
-        token_append(&json_output, "\"\n") != RESULT_OK ||
-        token_append(&json_output, "    }\n") != RESULT_OK ||
-        token_append(&json_output, "  ]\n") != RESULT_OK ||
-        token_append(&json_output, "}") != RESULT_OK) {
-        lkj_log_error(__func__, "failed to add log entry");
-        return RESULT_ERR;
-    }
+    // Set the token size manually since we used snprintf
+    json_output.size = (size_t)json_len;
 
     // Write to disk
     if (file_write(agent->config.disk_file, &json_output) != RESULT_OK) {

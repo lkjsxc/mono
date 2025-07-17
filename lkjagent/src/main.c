@@ -10,42 +10,39 @@
 
 /**
  * @brief Test 1: Agent initialization and basic state management
- * @param agent Pointer to store the created agent
+ * @param agent Pointer to store the initialized agent
  * @return RESULT_OK on success, RESULT_ERR on failure
  */
-static result_t test_agent_initialization(agent_t** agent) {
+static result_t test_agent_initialization(agent_t* agent) {
     printf("Test 1: Agent Initialization and State Management\n");
     
-    // Create agent using the organized architecture
-    *agent = agent_create("./data/config.json");
-    if (!*agent) {
-        printf("Failed to create agent: %s\n", lkj_get_last_error());
+    // Initialize agent using stack allocation
+    if (agent_init(agent, "./data/config.json") != RESULT_OK) {
+        printf("Failed to initialize agent: %s\n", lkj_get_last_error());
         return RESULT_ERR;
     }
 
     // Initialize agent memory with proper buffers
     static char memory_buffers[7][2048];
-    if (agent_memory_init(&(*agent)->memory, memory_buffers, 7) != RESULT_OK) {
+    if (agent_memory_init(&agent->memory, memory_buffers, 7) != RESULT_OK) {
         printf("Failed to initialize agent memory: %s\n", lkj_get_last_error());
-        agent_destroy(*agent);
-        *agent = NULL;
+        agent_cleanup(agent);
         return RESULT_ERR;
     }
     
-    printf("Agent created successfully\n");
-    printf("Initial state: %s\n", agent_state_to_string((*agent)->state));
+    printf("Agent initialized successfully\n");
+    printf("Initial state: %s\n", agent_state_to_string(agent->state));
     
     // Set a task for the agent
     const char* task = "Analyze the current system and provide a status report";
-    if (agent_set_task(*agent, task) != RESULT_OK) {
+    if (agent_set_task(agent, task) != RESULT_OK) {
         printf("Failed to set agent task: %s\n", lkj_get_last_error());
-        agent_destroy(*agent);
-        *agent = NULL;
+        agent_cleanup(agent);
         return RESULT_ERR;
     }
     
     printf("Task set: %s\n", task);
-    printf("Agent state after task setting: %s\n", agent_state_to_string((*agent)->state));
+    printf("Agent state after task setting: %s\n", agent_state_to_string(agent->state));
     
     return RESULT_OK;
 }
@@ -89,32 +86,29 @@ static result_t test_state_transitions(agent_t* agent) {
 
 /**
  * @brief Test 3: Intelligent state transition system
- * @param intelligent_agent Pointer to store the created intelligent agent
+ * @param intelligent_agent Pointer to store the initialized intelligent agent
  * @return RESULT_OK on success, RESULT_ERR on failure
  */
-static result_t test_intelligent_transitions(agent_t** intelligent_agent) {
+static result_t test_intelligent_transitions(agent_t* intelligent_agent) {
     printf("\n=====================================\n");
     printf("Test 3: Intelligent State Transition System\n");
     
-    // Create a new agent for intelligent transitions
-    *intelligent_agent = agent_create("./data/config.json");
-    if (!*intelligent_agent) {
-        printf("Failed to create intelligent agent: %s\n", lkj_get_last_error());
+    // Initialize a new agent for intelligent transitions
+    if (agent_init(intelligent_agent, "./data/config.json") != RESULT_OK) {
+        printf("Failed to initialize intelligent agent: %s\n", lkj_get_last_error());
         return RESULT_ERR;
     }
     
     static char intelligent_memory_buffers[7][2048];
-    if (agent_memory_init(&(*intelligent_agent)->memory, intelligent_memory_buffers, 7) != RESULT_OK) {
+    if (agent_memory_init(&intelligent_agent->memory, intelligent_memory_buffers, 7) != RESULT_OK) {
         printf("Failed to initialize intelligent agent memory: %s\n", lkj_get_last_error());
-        agent_destroy(*intelligent_agent);
-        *intelligent_agent = NULL;
+        agent_cleanup(intelligent_agent);
         return RESULT_ERR;
     }
     
-    if (agent_set_task(*intelligent_agent, "Perform comprehensive system analysis with intelligent decision making") != RESULT_OK) {
+    if (agent_set_task(intelligent_agent, "Perform comprehensive system analysis with intelligent decision making") != RESULT_OK) {
         printf("Failed to set intelligent agent task: %s\n", lkj_get_last_error());
-        agent_destroy(*intelligent_agent);
-        *intelligent_agent = NULL;
+        agent_cleanup(intelligent_agent);
         return RESULT_ERR;
     }
     
@@ -127,7 +121,7 @@ static result_t test_intelligent_transitions(agent_t** intelligent_agent) {
     int max_intelligent_steps = 6;
     
     for (int step = 0; step < max_intelligent_steps && intelligent_result == RESULT_OK; step++) {
-        intelligent_result = agent_step_intelligent(*intelligent_agent);
+        intelligent_result = agent_step_intelligent(intelligent_agent);
         
         if (intelligent_result == RESULT_TASK_COMPLETE) {
             printf("\n✓ Intelligent agent successfully completed the task!\n");
@@ -142,13 +136,13 @@ static result_t test_intelligent_transitions(agent_t** intelligent_agent) {
     }
     
     printf("\nIntelligent Agent Results:\n");
-    printf("  Final state: %s\n", agent_state_to_string((*intelligent_agent)->state));
-    printf("  Iterations completed: %d\n", (*intelligent_agent)->iteration_count);
+    printf("  Final state: %s\n", agent_state_to_string(intelligent_agent->state));
+    printf("  Iterations completed: %d\n", intelligent_agent->iteration_count);
     printf("  Task completion status: %s\n", 
            intelligent_result == RESULT_TASK_COMPLETE ? "COMPLETED" : "IN PROGRESS");
     
     // Save intelligent agent results
-    if (agent_memory_save_to_disk(*intelligent_agent) == RESULT_OK) {
+    if (agent_memory_save_to_disk(intelligent_agent) == RESULT_OK) {
         printf("  Intelligent agent state saved to disk\n");
     }
     
@@ -224,8 +218,8 @@ int main() {
     // Clear any previous errors
     lkj_clear_last_error();
 
-    agent_t* agent = NULL;
-    agent_t* intelligent_agent = NULL;
+    agent_t agent;
+    agent_t intelligent_agent;
     result_t test_result = RESULT_OK;
     
     // Run Test 1: Agent Initialization
@@ -235,32 +229,32 @@ int main() {
     }
     
     // Run Test 2: State Transitions
-    test_result = test_state_transitions(agent);
+    test_result = test_state_transitions(&agent);
     if (test_result != RESULT_OK) {
-        agent_destroy(agent);
+        agent_cleanup(&agent);
         return 1;
     }
     
     // Run Test 3: Intelligent Transitions
     test_result = test_intelligent_transitions(&intelligent_agent);
     if (test_result != RESULT_OK) {
-        agent_destroy(agent);
+        agent_cleanup(&agent);
         return 1;
     }
     
     // Run Test 4: Memory Management
-    test_result = test_memory_management(agent);
+    test_result = test_memory_management(&agent);
     if (test_result != RESULT_OK) {
-        agent_destroy(agent);
-        agent_destroy(intelligent_agent);
+        agent_cleanup(&agent);
+        agent_cleanup(&intelligent_agent);
         return 1;
     }
     
     // Run Test 5: Tool System
-    test_result = test_tool_system(agent);
+    test_result = test_tool_system(&agent);
     if (test_result != RESULT_OK) {
-        agent_destroy(agent);
-        agent_destroy(intelligent_agent);
+        agent_cleanup(&agent);
+        agent_cleanup(&intelligent_agent);
         return 1;
     }
     
@@ -269,8 +263,8 @@ int main() {
     printf("Architecture separation working properly.\n");
     
     // Clean up
-    agent_destroy(agent);
-    agent_destroy(intelligent_agent);
+    agent_cleanup(&agent);
+    agent_cleanup(&intelligent_agent);
     
     return 0;
 }

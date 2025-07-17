@@ -9,7 +9,46 @@
 #include "../lkjagent.h"
 
 /**
- * @brief Create and initialize a new agent
+ * @brief Initialize an agent structure with configuration
+ * @param agent Pointer to pre-allocated agent structure
+ * @param config_file Path to configuration file
+ * @return RESULT_OK on success, RESULT_ERR on failure
+ */
+result_t agent_init(agent_t* agent, const char* config_file) {
+    if (!agent) {
+        lkj_log_error(__func__, "agent parameter is NULL");
+        return RESULT_ERR;
+    }
+    if (!config_file) {
+        lkj_log_error(__func__, "config_file is NULL");
+        return RESULT_ERR;
+    }
+
+    // Initialize to zero
+    memset(agent, 0, sizeof(agent_t));
+
+    // Load configuration
+    if (config_load(config_file, &agent->loaded_config) != RESULT_OK) {
+        lkj_log_error(__func__, "failed to load configuration");
+        return RESULT_ERR;
+    }
+
+    // Apply configuration to agent
+    if (config_apply_to_agent(agent, &agent->loaded_config) != RESULT_OK) {
+        lkj_log_error(__func__, "failed to apply configuration");
+        return RESULT_ERR;
+    }
+
+    // Initialize state to thinking
+    agent->state = AGENT_STATE_THINKING;
+    agent->iteration_count = 0;
+
+    printf("Agent initialized successfully\n");
+    return RESULT_OK;
+}
+
+/**
+ * @brief Create and initialize a new agent (deprecated - use agent_init instead)
  * @param config_file Path to configuration file
  * @return Pointer to agent or NULL on failure
  */
@@ -19,40 +58,36 @@ agent_t* agent_create(const char* config_file) {
         return NULL;
     }
 
-    // Allocate agent structure
-    agent_t* agent = malloc(sizeof(agent_t));
-    if (!agent) {
-        lkj_log_error(__func__, "failed to allocate agent");
-        return NULL;
-    }
-
-    // Initialize to zero
-    memset(agent, 0, sizeof(agent_t));
-
-    // Load configuration
-    if (config_load(config_file, &agent->loaded_config) != RESULT_OK) {
-        lkj_log_error(__func__, "failed to load configuration");
-        free(agent);
-        return NULL;
-    }
-
-    // Apply configuration to agent
-    if (config_apply_to_agent(agent, &agent->loaded_config) != RESULT_OK) {
-        lkj_log_error(__func__, "failed to apply configuration");
-        free(agent);
-        return NULL;
-    }
-
-    // Initialize state to thinking
-    agent->state = AGENT_STATE_THINKING;
-    agent->iteration_count = 0;
-
-    printf("Agent created successfully\n");
-    return agent;
+    // This function is now deprecated - users should use stack allocation with agent_init
+    lkj_log_error(__func__, "agent_create is deprecated - use stack allocation with agent_init instead");
+    return NULL;
 }
 
 /**
- * @brief Destroy agent and free resources
+ * @brief Clean up agent resources
+ * @param agent Pointer to agent to clean up
+ */
+void agent_cleanup(agent_t* agent) {
+    if (!agent) {
+        return;
+    }
+
+    // Only save memory if both agent and memory are properly initialized
+    if (agent->memory.scratchpad.data && 
+        agent->config.disk_file[0] != '\0' && 
+        agent->memory.scratchpad.size > 0) {
+        // Attempt to save, but continue cleanup even if save fails
+        result_t save_result = agent_memory_save_to_disk(agent);
+        if (save_result != RESULT_OK) {
+            // Silently continue - cleanup should not fail due to save errors
+        }
+    }
+
+    printf("Agent cleaned up\n");
+}
+
+/**
+ * @brief Destroy agent and free resources (deprecated - use agent_cleanup instead)
  * @param agent Pointer to agent to destroy
  */
 void agent_destroy(agent_t* agent) {
@@ -60,14 +95,9 @@ void agent_destroy(agent_t* agent) {
         return;
     }
 
-    // Save memory to disk before destroying
-    if (agent->memory.scratchpad.data) {
-        if (agent_memory_save_to_disk(agent) != RESULT_OK) {
-            printf("Warning: Failed to save agent memory before destruction\n");
-        }
-    }
-
-    free(agent);
+    // This function is now deprecated since we no longer use malloc
+    // Just perform cleanup without freeing memory
+    agent_cleanup(agent);
     printf("Agent destroyed\n");
 }
 

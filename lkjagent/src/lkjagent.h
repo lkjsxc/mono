@@ -163,6 +163,7 @@ __attribute__((warn_unused_result)) result_t json_format(const token_t* input, t
 __attribute__((warn_unused_result)) agent_t* agent_create(const char* config_file);
 void agent_destroy(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_init(agent_t* agent, const char* config_file);
+void agent_cleanup(agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_set_task(agent_t* agent, const char* task);
 
 // Agent execution functions
