@@ -58,44 +58,83 @@ typedef struct {
 } token_t;
 
 /**
+ * @brief LMStudio configuration
+ */
+typedef struct {
+    token_t base_url;       /**< LMStudio API base URL */
+    token_t model;          /**< Model name */
+    double temperature;     /**< Temperature parameter */
+    int max_tokens;         /**< Maximum tokens */
+    int timeout_ms;         /**< Timeout in milliseconds */
+} lmstudio_config_t;
+
+/**
+ * @brief Tagged memory configuration
+ */
+typedef struct {
+    int max_entries;                /**< Maximum memory entries */
+    int max_tags_per_entry;         /**< Maximum tags per entry */
+    double auto_cleanup_threshold;  /**< Auto cleanup threshold */
+    double tag_similarity_threshold; /**< Tag similarity threshold */
+} tagged_memory_config_t;
+
+/**
+ * @brief LLM decisions configuration
+ */
+typedef struct {
+    double confidence_threshold; /**< Confidence threshold */
+    int decision_timeout_ms;     /**< Decision timeout in milliseconds */
+    int fallback_enabled;        /**< Fallback enabled flag */
+    int context_window_size;     /**< Context window size */
+} llm_decisions_config_t;
+
+/**
+ * @brief Enhanced tools configuration
+ */
+typedef struct {
+    int tool_chaining_enabled;    /**< Tool chaining enabled flag */
+    int max_tool_chain_length;    /**< Maximum tool chain length */
+    int parallel_tool_execution;  /**< Parallel tool execution flag */
+} enhanced_tools_config_t;
+
+/**
+ * @brief Agent configuration
+ */
+typedef struct {
+    int max_iterations;                     /**< Maximum iterations */
+    int self_directed;                      /**< Self-directed flag */
+    token_t system_prompt;                  /**< System prompt */
+    tagged_memory_config_t tagged_memory;   /**< Tagged memory configuration */
+    llm_decisions_config_t llm_decisions;   /**< LLM decisions configuration */
+    enhanced_tools_config_t enhanced_tools; /**< Enhanced tools configuration */
+} agent_config_t;
+
+/**
+ * @brief HTTP configuration
+ */
+typedef struct {
+    int timeout_seconds; /**< Timeout in seconds */
+    int max_redirects;   /**< Maximum redirects */
+    token_t user_agent;  /**< User agent string */
+} http_config_t;
+
+/**
+ * @brief Complete application configuration
+ */
+typedef struct {
+    lmstudio_config_t lmstudio; /**< LMStudio configuration */
+    agent_config_t agent;        /**< Agent configuration */
+    http_config_t http;          /**< HTTP configuration */
+} config_t;
+
+/**
  * @brief Main agent structure
  */
 typedef struct {
     token_t config_path; /**< Path to configuration file */
+    config_t config;     /**< Application configuration */
     // Add more fields as needed
 } lkjagent_t;
-
-// ============================================================================
-// Error Handling API
-// ============================================================================
-
-/**
- * @brief Set the last error message
- * @param error Error message string (can be NULL to clear error)
- */
-void lkj_set_error(const char* error);
-
-/**
- * @brief Get the last error message
- * @return Pointer to error message string (never NULL, may be empty)
- */
-const char* lkj_get_last_error(void);
-
-/**
- * @brief Clear the last error message
- */
-void lkj_clear_last_error(void);
-
-/**
- * @brief Check if there is a current error
- * @return 1 if there is an error, 0 if no error
- */
-int lkj_has_error(void);
-
-/**
- * @brief Print last error to stderr
- */
-void lkj_print_error(void);
 
 // ============================================================================
 // Token Management API
@@ -298,6 +337,13 @@ result_t
 json_get_number(const token_t* json_token, const char* key_path, double* result);
 
 /**
+ * @brief Extract object value from JSON
+ */
+__attribute__((warn_unused_result))
+result_t
+json_get_object(const token_t* json_token, const char* key, token_t* result);
+
+/**
  * @brief Extract boolean value from JSON
  */
 __attribute__((warn_unused_result))
@@ -324,6 +370,57 @@ json_create_array(token_t* result, const char* values[], size_t count);
 __attribute__((warn_unused_result))
 result_t
 json_escape_string(const char* input, token_t* result);
+
+// ============================================================================
+// Configuration Management API
+// ============================================================================
+
+/**
+ * @brief Initialize configuration with default values
+ */
+__attribute__((warn_unused_result))
+result_t
+config_init(config_t* config);
+
+/**
+ * @brief Load configuration from JSON file
+ */
+__attribute__((warn_unused_result))
+result_t
+config_load_from_file(config_t* config, const char* file_path);
+
+/**
+ * @brief Load configuration from JSON token
+ */
+__attribute__((warn_unused_result))
+result_t
+config_load_from_json(config_t* config, const token_t* json_token);
+
+/**
+ * @brief Save configuration to JSON file
+ */
+__attribute__((warn_unused_result))
+result_t
+config_save_to_file(const config_t* config, const char* file_path);
+
+/**
+ * @brief Convert configuration to JSON
+ */
+__attribute__((warn_unused_result))
+result_t
+config_to_json(const config_t* config, token_t* json_token);
+
+/**
+ * @brief Free configuration resources
+ */
+void config_cleanup(config_t* config);
+
+/**
+ * @brief Validate configuration values
+ */
+__attribute__((warn_unused_result))
+result_t
+config_validate(const config_t* config);
 
 // ============================================================================
 // Agent Management API

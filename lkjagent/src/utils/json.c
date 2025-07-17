@@ -10,8 +10,8 @@
  * - Zero external dependencies (manual parsing)
  * - Safe memory operations with bounded buffers
  * - Support for strings, numbers, booleans, and objects
- * - Dot-notation key path support
- * - Comprehensive error reporting
+ * - Comprehensive error handling
+ * - Input validation for all operations
  */
 
 #include "../lkjagent.h"
@@ -595,6 +595,87 @@ result_t json_escape_string(const char* input, token_t* result) {
                 break;
         }
     }
+    
+    return RESULT_OK;
+}
+
+/**
+ * @brief Extract object value from JSON
+ *
+ * @param json_token JSON token
+ * @param key Key to extract object for
+ * @param result Token to store the object JSON
+ * @return RESULT_OK if found, RESULT_ERR if not found or not an object
+ */
+__attribute__((warn_unused_result))
+result_t json_get_object(const token_t* json_token, const char* key, token_t* result) {
+    if (!json_token || !key || !result) {
+        RETURN_ERR("json_get_object: NULL parameter");
+        return RESULT_ERR;
+    }
+    
+    if (!json_token->data || !result->data) {
+        RETURN_ERR("json_get_object: Uninitialized token");
+        return RESULT_ERR;
+    }
+    
+    const char* value_start;
+    const char* value_end;
+    
+    if (json_find_key_value(json_token->data, key, &value_start, &value_end) != RESULT_OK) {
+        return RESULT_ERR; // Error already set
+    }
+    
+    // Check if value is an object
+    value_start = json_skip_whitespace(value_start);
+    if (*value_start != '{') {
+        RETURN_ERR("json_get_object: Value is not an object");
+        return RESULT_ERR;
+    }
+    
+    // Find the end of the object
+    const char* object_start = value_start;
+    const char* current = value_start + 1; // Skip opening brace
+    int brace_count = 1;
+    int in_string = 0;
+    
+    while (*current && brace_count > 0) {
+        if (!in_string) {
+            if (*current == '{') {
+                brace_count++;
+            } else if (*current == '}') {
+                brace_count--;
+            } else if (*current == '"') {
+                in_string = 1;
+            }
+        } else {
+            if (*current == '"' && (current == object_start + 1 || *(current-1) != '\\')) {
+                in_string = 0;
+            }
+        }
+        current++;
+    }
+    
+    if (brace_count != 0) {
+        RETURN_ERR("json_get_object: Malformed object");
+        return RESULT_ERR;
+    }
+    
+    // Copy the object to result token
+    size_t object_length = current - object_start;
+    if (object_length >= result->capacity) {
+        RETURN_ERR("json_get_object: Object too large for result buffer");
+        return RESULT_ERR;
+    }
+    
+    if (token_clear(result) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    // Copy the object content
+    strncpy(result->data, object_start, object_length);
+    result->data[object_length] = '\0';
+    result->size = object_length;
     
     return RESULT_OK;
 }

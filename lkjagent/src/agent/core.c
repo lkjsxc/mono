@@ -8,8 +8,6 @@
  */
 
 #include "../lkjagent.h"
-#include <stdio.h>
-#include <string.h>
 
 /**
  * @brief Initialize agent structure
@@ -22,21 +20,58 @@
  */
 __attribute__((warn_unused_result))
 result_t lkjagent_init(lkjagent_t* agent) {
+    
+    printf("Initializing LKJAgent...\n");
+    
     if (!agent) {
         RETURN_ERR("lkjagent_init: NULL agent parameter");
         return RESULT_ERR;
     }
     
-    // Clear error state
-    lkj_clear_last_error();
-    
-    printf("Initializing LKJAgent...\n");
-    
     // Initialize agent structure
     memset(agent, 0, sizeof(lkjagent_t));
     
-    // For now, just a basic stub implementation
+    // Initialize configuration path token
+    static char config_path_buffer[512];
+    if (token_init(&agent->config_path, config_path_buffer, sizeof(config_path_buffer)) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize config path token");
+        return RESULT_ERR;
+    }
+    
+    // Set default configuration path
+    if (token_set(&agent->config_path, "data/config.json") != RESULT_OK) {
+        RETURN_ERR("Failed to set default config path");
+        return RESULT_ERR;
+    }
+    
+    // Initialize configuration with defaults
+    if (config_init(&agent->config) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize configuration with defaults");
+        return RESULT_ERR;
+    }
+    
+    // Try to load configuration from file
+    if (file_exists(agent->config_path.data)) {
+        printf("Loading configuration from: %s\n", agent->config_path.data);
+        if (config_load_from_file(&agent->config, agent->config_path.data) != RESULT_OK) {
+            printf("Warning: Failed to load configuration file, using defaults\n");
+        } else {
+            printf("Configuration loaded successfully\n");
+        }
+    } else {
+        printf("Configuration file not found, using defaults\n");
+    }
+    
+    // Validate configuration
+    if (config_validate(&agent->config) != RESULT_OK) {
+        RETURN_ERR("Configuration validation failed");
+        return RESULT_ERR;
+    }
+    
     printf("Agent initialization completed.\n");
+    printf("LMStudio URL: %s\n", agent->config.lmstudio.base_url.data);
+    printf("Model: %s\n", agent->config.lmstudio.model.data);
+    printf("Max iterations: %d\n", agent->config.agent.max_iterations);
     
     return RESULT_OK;
 }
@@ -44,8 +79,8 @@ result_t lkjagent_init(lkjagent_t* agent) {
 /**
  * @brief Run agent main execution loop
  *
- * Executes the agent's main operational cycle. This is a stub
- * implementation that demonstrates the basic API.
+ * Executes the agent's main operational cycle. This demonstrates
+ * the configuration system and basic API functionality.
  *
  * @param agent Pointer to initialized agent
  * @return RESULT_OK on success, RESULT_ERR on failure
@@ -57,123 +92,60 @@ result_t lkjagent_run(lkjagent_t* agent) {
         return RESULT_ERR;
     }
     
-    printf("Starting agent execution...\n");
+    printf("\n=== LKJAgent Configuration Demo ===\n");
     
-    // Demonstrate token usage
-    char buffer1[256];
-    char buffer2[256];
-    token_t test_token;
-    token_t response_token;
+    // Display loaded configuration
+    printf("Configuration Summary:\n");
+    printf("  LMStudio:\n");
+    printf("    URL: %s\n", agent->config.lmstudio.base_url.data);
+    printf("    Model: %s\n", agent->config.lmstudio.model.data);
+    printf("    Temperature: %.1f\n", agent->config.lmstudio.temperature);
+    printf("    Max Tokens: %d\n", agent->config.lmstudio.max_tokens);
+    printf("    Timeout: %d ms\n", agent->config.lmstudio.timeout_ms);
     
-    if (token_init(&test_token, buffer1, sizeof(buffer1)) != RESULT_OK) {
-        printf("Failed to initialize test token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
+    printf("  Agent:\n");
+    printf("    Max Iterations: %d\n", agent->config.agent.max_iterations);
+    printf("    Self-directed: %s\n", agent->config.agent.self_directed ? "Yes" : "No");
+    printf("    System Prompt: %.50s...\n", agent->config.agent.system_prompt.data);
     
-    if (token_init(&response_token, buffer2, sizeof(buffer2)) != RESULT_OK) {
-        printf("Failed to initialize response token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
+    printf("  Tagged Memory:\n");
+    printf("    Max Entries: %d\n", agent->config.agent.tagged_memory.max_entries);
+    printf("    Max Tags per Entry: %d\n", agent->config.agent.tagged_memory.max_tags_per_entry);
+    printf("    Auto Cleanup Threshold: %.1f\n", agent->config.agent.tagged_memory.auto_cleanup_threshold);
+    printf("    Tag Similarity Threshold: %.1f\n", agent->config.agent.tagged_memory.tag_similarity_threshold);
     
-    // Test token operations
-    if (token_set(&test_token, "Hello, LKJAgent!") != RESULT_OK) {
-        printf("Failed to set token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
+    printf("  LLM Decisions:\n");
+    printf("    Confidence Threshold: %.1f\n", agent->config.agent.llm_decisions.confidence_threshold);
+    printf("    Decision Timeout: %d ms\n", agent->config.agent.llm_decisions.decision_timeout_ms);
+    printf("    Fallback Enabled: %s\n", agent->config.agent.llm_decisions.fallback_enabled ? "Yes" : "No");
+    printf("    Context Window Size: %d\n", agent->config.agent.llm_decisions.context_window_size);
     
-    printf("Token content: %s\n", test_token.data);
-    printf("Token size: %zu\n", test_token.size);
+    printf("  Enhanced Tools:\n");
+    printf("    Tool Chaining: %s\n", agent->config.agent.enhanced_tools.tool_chaining_enabled ? "Yes" : "No");
+    printf("    Max Chain Length: %d\n", agent->config.agent.enhanced_tools.max_tool_chain_length);
+    printf("    Parallel Execution: %s\n", agent->config.agent.enhanced_tools.parallel_tool_execution ? "Yes" : "No");
     
-    // Test token copy
-    if (token_copy(&response_token, &test_token) != RESULT_OK) {
-        printf("Failed to copy token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
+    printf("  HTTP:\n");
+    printf("    Timeout: %d seconds\n", agent->config.http.timeout_seconds);
+    printf("    Max Redirects: %d\n", agent->config.http.max_redirects);
+    printf("    User Agent: %s\n", agent->config.http.user_agent.data);
     
-    printf("Copied token content: %s\n", response_token.data);
-    
-    // Test file operations (write and read)
-    printf("Testing file operations...\n");
-    
-    char file_content_buffer[512];
-    token_t file_content;
-    if (token_init(&file_content, file_content_buffer, sizeof(file_content_buffer)) != RESULT_OK) {
-        printf("Failed to initialize file content token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    if (token_set(&file_content, "This is a test file created by LKJAgent.\nIt demonstrates file I/O operations.") != RESULT_OK) {
-        printf("Failed to set file content: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    const char* test_file_path = "./test_output.txt";
-    if (file_write(test_file_path, &file_content) != RESULT_OK) {
-        printf("Failed to write test file: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    printf("Successfully wrote test file: %s\n", test_file_path);
-    
-    // Read the file back
-    char read_buffer[512];
-    token_t read_content;
-    if (token_init(&read_content, read_buffer, sizeof(read_buffer)) != RESULT_OK) {
-        printf("Failed to initialize read content token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    if (file_read(test_file_path, &read_content) != RESULT_OK) {
-        printf("Failed to read test file: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    printf("Successfully read file content (%zu bytes):\n%s\n", read_content.size, read_content.data);
-    
-    // Test JSON operations
-    printf("Testing JSON operations...\n");
-    
-    const char* keys[] = {"name", "version", "status"};
-    const char* values[] = {"LKJAgent", "1.0", "active"};
-    
-    char json_buffer[512];
+    // Test configuration serialization
+    printf("\n=== Testing Configuration Serialization ===\n");
+    static char json_buffer[4096];
     token_t json_token;
     if (token_init(&json_token, json_buffer, sizeof(json_buffer)) != RESULT_OK) {
-        printf("Failed to initialize JSON token: %s\n", lkj_get_last_error());
+        RETURN_ERR("Failed to initialize JSON token for serialization test");
         return RESULT_ERR;
     }
     
-    if (json_create_object(&json_token, keys, values, 3) != RESULT_OK) {
-        printf("Failed to create JSON object: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
+    if (config_to_json(&agent->config, &json_token) == RESULT_OK) {
+        printf("Configuration serialized to JSON:\n%s\n", json_token.data);
+    } else {
+        printf("Failed to serialize configuration to JSON\n");
     }
     
-    printf("Created JSON: %s\n", json_token.data);
-    
-    // Validate the JSON
-    if (json_validate(&json_token) != RESULT_OK) {
-        printf("JSON validation failed: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    printf("JSON validation successful.\n");
-    
-    // Extract a value from JSON
-    char extracted_buffer[128];
-    token_t extracted_value;
-    if (token_init(&extracted_value, extracted_buffer, sizeof(extracted_buffer)) != RESULT_OK) {
-        printf("Failed to initialize extracted value token: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    if (json_get_string(&json_token, "name", &extracted_value) != RESULT_OK) {
-        printf("Failed to extract 'name' from JSON: %s\n", lkj_get_last_error());
-        return RESULT_ERR;
-    }
-    
-    printf("Extracted 'name' value: %s\n", extracted_value.data);
-    
-    printf("Agent execution completed successfully.\n");
+    printf("=== Agent Demo Complete ===\n");
     
     return RESULT_OK;
 }

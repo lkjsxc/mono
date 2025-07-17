@@ -19,7 +19,7 @@ TEST_TARGET = $(BUILDDIR)/simple_test
 # Source files organized by module
 MAIN_SOURCES = $(SRCDIR)/main.c
 AGENT_SOURCES = $(AGENTDIR)/core.c
-UTILS_SOURCES = $(UTILSDIR)/token.c $(UTILSDIR)/file.c $(UTILSDIR)/http.c $(UTILSDIR)/json.c $(UTILSDIR)/error.c
+UTILS_SOURCES = $(UTILSDIR)/token.c $(UTILSDIR)/file.c $(UTILSDIR)/http.c $(UTILSDIR)/json.c
 CONFIG_SOURCES = $(SRCDIR)/config.c
 
 # All source files

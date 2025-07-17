@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "lkjagent.h": "c",
+        "unistd.h": "c"
+    }
+}

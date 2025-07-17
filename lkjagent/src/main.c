@@ -7,14 +7,14 @@ int main() {
     lkjagent_t lkjagent;
 
     if(lkjagent_init(&lkjagent) != RESULT_OK) {
-        fprintf(stderr, "Failed to initialize agent: %s\n", lkj_get_last_error());
+        RETURN_ERR("Failed to initialize LKJAgent");
         return 1;
     }
 
     printf("Agent initialized successfully.\n");
 
     if(lkjagent_run(&lkjagent) != RESULT_OK) {
-        fprintf(stderr, "Agent execution failed: %s\n", lkj_get_last_error());
+        RETURN_ERR("Failed to run LKJAgent");  
         return 1;
     }
     

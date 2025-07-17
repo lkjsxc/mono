@@ -17,6 +17,7 @@
 #include "../lkjagent.h"
 
 // HTTP client configuration
+
 #define HTTP_DEFAULT_PORT 80
 #define HTTP_BUFFER_SIZE 4096
 #define HTTP_MAX_REDIRECTS 3
