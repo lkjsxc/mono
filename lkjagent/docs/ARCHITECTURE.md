@@ -8,7 +8,7 @@ The LKJAgent codebase has been successfully reorganized to separate files by sta
 
 ```
 src/
-├── main.c                     # Main entry point (organized architecture)
+├── main.c                    # Main entry point (organized architecture)
 ├── config.c                  # Configuration management
 ├── lkjagent.h                # Main header file with all declarations
 ├── core/                     # Core agent functionality
