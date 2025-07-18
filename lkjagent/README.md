@@ -57,7 +57,6 @@ This document provides comprehensive instructions for AI agents to regenerate th
 /workspaces/mono/lkjagent/src/utils/tag_processor.c     # Simple tag format handling
 /workspaces/mono/lkjagent/src/utils/string_utils.c      # String manipulation utilities
 /workspaces/mono/lkjagent/src/utils/time_utils.c        # Time and timestamp utilities
-/workspaces/mono/lkjagent/src/utils/error_handler.c     # Centralized error handling
 /workspaces/mono/lkjagent/src/persistence/
 /workspaces/mono/lkjagent/src/persistence/memory_persistence.c # Memory.json persistence
 /workspaces/mono/lkjagent/src/persistence/config_persistence.c # Configuration persistence
@@ -551,11 +550,6 @@ State management utilities:
 - Duration calculations
 - Time-based operations
 
-#### Error Handler (`src/utils/error_handler.c`)
-- Centralized error processing
-- Error categorization
-- Recovery strategies
-
 ### 17. Agent Memory (`src/memory.c`)
 
 High-level memory management:
@@ -854,7 +848,6 @@ Complete the agent logic:
 Finalize with:
 1. `src/utils/string_utils.c` - Advanced string operations
 2. `src/utils/time_utils.c` - Time and timestamp utilities
-3. `src/utils/error_handler.c` - Centralized error handling
 4. `src/persistence/config_persistence.c` - Configuration persistence
 5. `src/persistence/disk_operations.c` - Low-level disk operations
 6. `src/lkjagent.c` - Application entry point (renamed from main.c)
