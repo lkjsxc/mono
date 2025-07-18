@@ -19,56 +19,56 @@ This document provides comprehensive instructions for AI agents to regenerate th
 ### Project Structure
 
 ```
-lkjagent/
-├── src/
-│   ├── lkjagent.h              # Main header with all type definitions and APIs
-│   ├── lkjagent.c              # Application entry point (renamed from main.c)
-│   ├── agent/
-│   │   ├── core.c              # Agent lifecycle and state machine
-│   │   ├── execution.c         # Task execution engine
-│   │   ├── evaluation.c        # Progress assessment and metrics
-│   │   └── decision.c          # Decision making logic
-│   ├── config/
-│   │   ├── config.c            # Core configuration management
-│   │   ├── validation.c        # Configuration validation
-│   │   └── defaults.c          # Default configuration values
-│   ├── memory/
-│   │   ├── tagged_memory.c     # Tagged memory system implementation
-│   │   ├── enhanced_llm.c      # LLM integration for memory decisions
-│   │   ├── disk_storage.c      # Disk storage operations
-│   │   ├── context_manager.c   # Context width and paging management
-│   │   └── memory_optimizer.c  # Memory optimization and cleanup
-│   ├── state/
-│   │   ├── enhanced_states.c   # Enhanced state management
-│   │   ├── thinking.c          # Thinking state implementation
-│   │   ├── executing.c         # Executing state implementation
-│   │   ├── evaluating.c        # Evaluating state implementation
-│   │   └── paging.c            # LLM-controlled paging state
-│   ├── llm/
-│   │   ├── llm_client.c        # LLM client interface
-│   │   ├── prompt_manager.c    # Prompt construction and management
-│   │   ├── context_builder.c   # Context preparation for LLM calls
-│   │   └── response_parser.c   # LLM response parsing and validation
-│   ├── utils/
-│   │   ├── data.c              # Safe data token management (renamed from token.c)
-│   │   ├── file.c              # File I/O operations
-│   │   ├── http.c              # HTTP client implementation
-│   │   ├── json.c              # JSON parsing and generation
-│   │   ├── markup.c            # Simple markup format handling
-│   │   ├── string_utils.c      # String manipulation utilities
-│   │   ├── time_utils.c        # Time and timestamp utilities
-│   │   └── error_handler.c     # Centralized error handling
-│   └── persistence/
-│       ├── memory_persistence.c # Memory.json persistence
-│       ├── config_persistence.c # Configuration persistence
-│       └── disk_operations.c    # Low-level disk operations
-├── build/                      # Compiled object files and executable
-├── data/
-│   ├── config.json             # Runtime configuration with state prompts
-│   ├── memory.json             # Persistent storage for both disk and working memory
-│   └── context_keys.json       # LLM-specified context keys for disk storage
-├── docs/                       # Documentation
-└── Makefile                    # Build configuration
+/workspaces/mono/lkjagent/
+/workspaces/mono/lkjagent/src/
+/workspaces/mono/lkjagent/src/lkjagent.h              # Main header with all type definitions and APIs
+/workspaces/mono/lkjagent/src/lkjagent.c              # Application entry point (renamed from main.c)
+/workspaces/mono/lkjagent/src/agent/
+/workspaces/mono/lkjagent/src/agent/core.c              # Agent lifecycle and state machine
+/workspaces/mono/lkjagent/src/agent/execution.c         # Task execution engine
+/workspaces/mono/lkjagent/src/agent/evaluation.c        # Progress assessment and metrics
+/workspaces/mono/lkjagent/src/agent/decision.c          # Decision making logic
+/workspaces/mono/lkjagent/src/config/
+/workspaces/mono/lkjagent/src/config/config.c            # Core configuration management
+/workspaces/mono/lkjagent/src/config/validation.c        # Configuration validation
+/workspaces/mono/lkjagent/src/config/defaults.c          # Default configuration values
+/workspaces/mono/lkjagent/src/memory/
+/workspaces/mono/lkjagent/src/memory/tagged_memory.c     # Tagged memory system implementation
+/workspaces/mono/lkjagent/src/memory/enhanced_llm.c      # LLM integration for memory decisions
+/workspaces/mono/lkjagent/src/memory/disk_storage.c      # Disk storage operations
+/workspaces/mono/lkjagent/src/memory/context_manager.c   # Context width and paging management
+/workspaces/mono/lkjagent/src/memory/memory_optimizer.c  # Memory optimization and cleanup
+/workspaces/mono/lkjagent/src/state/
+/workspaces/mono/lkjagent/src/state/enhanced_states.c   # Enhanced state management
+/workspaces/mono/lkjagent/src/state/thinking.c          # Thinking state implementation
+/workspaces/mono/lkjagent/src/state/executing.c         # Executing state implementation
+/workspaces/mono/lkjagent/src/state/evaluating.c        # Evaluating state implementation
+/workspaces/mono/lkjagent/src/state/paging.c            # LLM-controlled paging state
+/workspaces/mono/lkjagent/src/llm/
+/workspaces/mono/lkjagent/src/llm/llm_client.c        # LLM client interface
+/workspaces/mono/lkjagent/src/llm/prompt_manager.c    # Prompt construction and management
+/workspaces/mono/lkjagent/src/llm/context_builder.c   # Context preparation for LLM calls
+/workspaces/mono/lkjagent/src/llm/response_parser.c   # LLM response parsing and validation
+/workspaces/mono/lkjagent/src/utils/
+/workspaces/mono/lkjagent/src/utils/data.c              # Safe data token management (renamed from token.c)
+/workspaces/mono/lkjagent/src/utils/file.c              # File I/O operations
+/workspaces/mono/lkjagent/src/utils/http.c              # HTTP client implementation
+/workspaces/mono/lkjagent/src/utils/json.c              # JSON parsing and generation
+/workspaces/mono/lkjagent/src/utils/tag_processor.c     # Simple tag format handling
+/workspaces/mono/lkjagent/src/utils/string_utils.c      # String manipulation utilities
+/workspaces/mono/lkjagent/src/utils/time_utils.c        # Time and timestamp utilities
+/workspaces/mono/lkjagent/src/utils/error_handler.c     # Centralized error handling
+/workspaces/mono/lkjagent/src/persistence/
+/workspaces/mono/lkjagent/src/persistence/memory_persistence.c # Memory.json persistence
+/workspaces/mono/lkjagent/src/persistence/config_persistence.c # Configuration persistence
+/workspaces/mono/lkjagent/src/persistence/disk_operations.c    # Low-level disk operations
+/workspaces/mono/lkjagent/build/                      # Compiled object files and executable
+/workspaces/mono/lkjagent/data/
+/workspaces/mono/lkjagent/data/config.json             # Runtime configuration with state prompts
+/workspaces/mono/lkjagent/data/memory.json             # Persistent storage for both disk and working memory
+/workspaces/mono/lkjagent/data/context_keys.json       # LLM-specified context keys for disk storage
+/workspaces/mono/lkjagent/docs/                       # Documentation
+/workspaces/mono/lkjagent/Makefile                    # Build configuration
 ```
 
 ## Agent Philosophy
@@ -98,43 +98,46 @@ Both working memory (RAM) and persistent disk memory are stored in the unified `
 
 ### LLM Output Format
 
-All LLM interactions use a standardized simple markup format to ensure consistent parsing and processing:
+**IMPORTANT**: All LLM interactions must use a simple `<tag>` and `</tag>` format only. Do NOT use XML markup, HTML markup, or any complex formatting. Use only simple opening and closing tags with plain text content.
 
-```markup
-@thinking {
-  analysis: "Current situation analysis"
-  planning: "Next steps and strategy"
-  context_keys: ["key1", "key2", "key3"]
-}
+Required format for all LLM responses:
 
-@action {
-  type: "disk_storage" | "memory_query" | "context_transfer"
-  parameters: {
-    context_key: "specific_key"
-    operation: "store" | "retrieve" | "archive"
-    data: "content to store/process"
-  }
-}
-
-@evaluation {
-  progress: "Assessment of current progress"
-  metrics: {
-    quality_score: 0.85
-    enrichment_rate: 0.92
-  }
-  recommendations: ["rec1", "rec2"]
-}
-
-@paging {
-  operation: "context_management"
-  directives: {
-    move_to_disk: ["context_key1", "context_key2"]
-    retrieve_from_disk: ["context_key3"]
-    archive_old: ["context_key4"]
-  }
-  rationale: "Explanation for paging decisions"
-}
 ```
+<thinking>
+<analysis>Current situation analysis</analysis>
+<planning>Next steps and strategy</planning>
+<context_keys>key1,key2,key3</context_keys>
+</thinking>
+
+<action>
+<type>disk_storage</type>
+<context_key>specific_key</context_key>
+<operation>store</operation>
+<data>content to store/process</data>
+</action>
+
+<evaluation>
+<progress>Assessment of current progress</progress>
+<quality_score>0.85</quality_score>
+<enrichment_rate>0.92</enrichment_rate>
+<recommendations>rec1,rec2</recommendations>
+</evaluation>
+
+<paging>
+<operation>context_management</operation>
+<move_to_disk>context_key1,context_key2</move_to_disk>
+<retrieve_from_disk>context_key3</retrieve_from_disk>
+<archive_old>context_key4</archive_old>
+<rationale>Explanation for paging decisions</rationale>
+</paging>
+```
+
+**Format Rules**:
+- Use only simple `<tag>content</tag>` pairs
+- No attributes, namespaces, or complex structures
+- Plain text content only
+- No nested complex elements
+- Consistent tag names as shown above
 
 ## Coding Style Guidelines
 
@@ -251,7 +254,7 @@ if (data_init(&data, buffer, sizeof(buffer)) != RESULT_OK) {
 
 ### LLM Output Format
 
-All LLM interactions use a standardized simple markup format to ensure consistent parsing and processing:
+All LLM interactions use a standardized simple tag format to ensure consistent parsing and processing:
 
 ### Context Width Management
 
@@ -361,15 +364,16 @@ Implements safe string handling with:
 - Comparison functions
 - Context width management utilities
 
-### 2. Simple Markup Processing (`src/utils/markup.c`)
+### 2. Simple Tag Processing (`src/utils/tag_processor.c`)
 
-Handles LLM output in simple markup format:
-- Markup validation and parsing
-- Block extraction (@thinking, @action, @evaluation, @paging)
-- Parameter parsing and validation
-- Context key extraction
-- Error handling for malformed markup
-- Conversion between markup and structured data
+Handles LLM output in simple `<tag>content</tag>` format only:
+- Simple tag validation and parsing (no complex markup)
+- Block extraction (`<thinking>`, `<action>`, `<evaluation>`, `<paging>`)
+- Parameter parsing and validation from plain text content
+- Context key extraction from tag content
+- Error handling for malformed simple tags
+- Conversion between simple tag format and structured data
+- Strict enforcement of simple tag-only format
 
 ### 3. File Operations (`src/utils/file.c`)
 
@@ -452,13 +456,13 @@ AI-driven memory decisions:
 - Context building for LLM calls
 - Semantic memory organization
 - Context width optimization
-- Markup format output processing
+- Tag format output processing
 
 ### 11. Agent Core (`src/agent/core.c`)
 
 State machine implementation:
 - Four-state execution cycle with LLM-controlled paging
-- LMStudio API integration with markup format parsing
+- LMStudio API integration with tag format parsing
 - Memory management with context key tracking
 - Task goal tracking
 - Autonomous decision making
@@ -526,11 +530,11 @@ State management utilities:
 #### Prompt Manager (`src/llm/prompt_manager.c`)
 - State-specific prompt construction
 - Context integration
-- Markup format enforcement
+- Tag format enforcement
 - Template management
 
 #### Response Parser (`src/llm/response_parser.c`)
-- Markup format validation
+- Tag format validation
 - Block extraction and parsing
 - Context key extraction
 - Error handling for malformed responses
@@ -593,34 +597,34 @@ The `data/config.json` file configures all aspects of the agent, including state
     "temperature": 0.7,
     "max_tokens": 2048,
     "timeout_ms": 30000,
-    "markup_format_enforced": true
+    "tag_format_enforced": true
   },
   "agent": {
     "max_iterations": -1,
     "self_directed": 1,
     "state_prompts": {
       "thinking": {
-        "system_prompt": "You are in THINKING state. Analyze deeply, contemplate thoroughly, and identify context keys for important insights. Always respond in simple markup format with @thinking blocks containing analysis, planning, and context_keys arrays.",
+        "system_prompt": "You are in THINKING state. Analyze deeply, contemplate thoroughly, and identify context keys for important insights. Always respond in simple tag format with <thinking> blocks containing analysis, planning, and context_keys.",
         "objectives": ["deep_analysis", "strategic_planning", "context_identification"],
-        "markup_blocks": ["@thinking"],
+        "tag_blocks": ["<thinking>"],
         "context_key_focus": true
       },
       "executing": {
-        "system_prompt": "You are in EXECUTING state. Perform actions to enrich disk storage with valuable data. Always respond in simple markup format with @action blocks specifying disk storage operations and context keys.",
+        "system_prompt": "You are in EXECUTING state. Perform actions to enrich disk storage with valuable data. Always respond in simple tag format with <action> blocks specifying disk storage operations and context keys.",
         "objectives": ["disk_enrichment", "action_execution", "data_storage"],
-        "markup_blocks": ["@action"],
+        "tag_blocks": ["<action>"],
         "context_key_focus": true
       },
       "evaluating": {
-        "system_prompt": "You are in EVALUATING state. Assess progress, measure quality, and provide metrics. Always respond in simple markup format with @evaluation blocks containing progress assessments and quality metrics.",
+        "system_prompt": "You are in EVALUATING state. Assess progress, measure quality, and provide metrics. Always respond in simple tag format with <evaluation> blocks containing progress assessments and quality metrics.",
         "objectives": ["progress_assessment", "quality_measurement", "performance_analysis"],
-        "markup_blocks": ["@evaluation"],
+        "tag_blocks": ["<evaluation>"],
         "context_key_focus": false
       },
       "paging": {
-        "system_prompt": "You are in PAGING state. Manage context and memory efficiently by specifying which context keys to move to disk storage, retrieve, or archive. Always respond in simple markup format with @paging blocks containing specific directives.",
+        "system_prompt": "You are in PAGING state. Manage context and memory efficiently by specifying which context keys to move to disk storage, retrieve, or archive. Always respond in simple tag format with <paging> blocks containing specific directives.",
         "objectives": ["context_management", "memory_optimization", "disk_organization"],
-        "markup_blocks": ["@paging"],
+        "tag_blocks": ["<paging>"],
         "context_key_focus": true,
         "paging_directives": {
           "move_to_disk": "Specify context keys to move from working memory to disk",
@@ -641,7 +645,7 @@ The `data/config.json` file configures all aspects of the agent, including state
       "decision_timeout_ms": 5000,
       "fallback_enabled": true,
       "context_window_size": 4096,
-      "markup_validation": true,
+      "tag_validation": true,
       "context_key_extraction": true
     },
     "enhanced_tools": {
@@ -657,13 +661,13 @@ The `data/config.json` file configures all aspects of the agent, including state
       "disk_storage_priority": "llm_specified"
     }
   },
-  "markup": {
+  "tag_format": {
     "validation_strict": true,
     "required_blocks": {
-      "thinking": ["@thinking"],
-      "executing": ["@action"],
-      "evaluating": ["@evaluation"],
-      "paging": ["@paging"]
+      "thinking": ["<thinking>"],
+      "executing": ["<action>"],
+      "evaluating": ["<evaluation>"],
+      "paging": ["<paging>"]
     },
     "context_key_format": {
       "max_length": 64,
@@ -810,9 +814,9 @@ The `data/context_keys.json` file maintains the directory of context keys for ef
 ### 1. Start with Core Infrastructure
 
 Begin implementation in this order:
-1. `src/lkjagent.h` - Complete type definitions and API declarations with markup and context key types
+1. `src/lkjagent.h` - Complete type definitions and API declarations with simple tag and context key types
 2. `src/utils/data.c` - Foundation for all string operations (refactored from token.c)
-3. `src/utils/markup.c` - Simple markup format processing for LLM outputs
+3. `src/utils/tag_processor.c` - Simple tag format processing for LLM outputs
 4. `src/utils/file.c` - Basic I/O capabilities with memory.json and context_keys.json support
 5. `src/utils/json.c` - Configuration and memory.json support with state prompt handling
 6. `src/config/config.c` - Configuration management with state-specific system prompts
@@ -830,8 +834,8 @@ Continue with:
 
 Build the LLM layer:
 1. `src/llm/llm_client.c` - HTTP communication with LMStudio
-2. `src/llm/prompt_manager.c` - State-specific prompt construction with markup enforcement
-3. `src/llm/response_parser.c` - Markup format validation and context key extraction
+2. `src/llm/prompt_manager.c` - State-specific prompt construction with simple tag format enforcement
+3. `src/llm/response_parser.c` - Simple tag format validation and context key extraction
 4. `src/llm/context_builder.c` - Context preparation for LLM calls
 
 ### 4. Implement State Machine and Paging
@@ -866,7 +870,7 @@ Ensure all implementations:
 - Support perpetual operation without termination
 - Manage context width during state transitions with LLM-controlled paging
 - Use unified memory.json storage with context key integration
-- Validate and process simple markup format outputs
+- Validate and process simple tag format outputs
 - Implement state-specific system prompts correctly
 - Support LLM-directed context key operations
 - Maintain context key directory integrity
@@ -912,29 +916,29 @@ The agent operates in four distinct states with perpetual cycling and integrated
 1. **THINKING**: Analysis and planning with context accumulation
    - Deep contemplative analysis using state-specific system prompt
    - Context key identification for important insights
-   - Strategic planning with markup format output (@thinking blocks)
+   - Strategic planning with simple tag format output (<thinking> blocks)
    - Automatic context key tagging and categorization
 
 2. **EXECUTING**: Action performance with disk enrichment
    - Task execution using state-specific system prompt
-   - Disk storage operations directed by LLM in markup format (@action blocks)
+   - Disk storage operations directed by LLM in simple tag format (<action> blocks)
    - Context key specification for storing execution results
    - Quality data accumulation and organization
 
 3. **EVALUATING**: Progress assessment and memory optimization
    - Performance evaluation using state-specific system prompt
-   - Quality metrics and progress analysis in markup format (@evaluation blocks)
+   - Quality metrics and progress analysis in simple tag format (<evaluation> blocks)
    - Success measurement and improvement identification
    - Context effectiveness assessment
 
 4. **PAGING**: LLM-controlled memory management
    - Context analysis using specialized paging system prompt
-   - LLM directives for context key management in markup format (@paging blocks)
+   - LLM directives for context key management in simple tag format (<paging> blocks)
    - Automatic context transfer between working memory and disk storage
    - Memory optimization and cleanup operations
    - Context key archival and retrieval operations
 
-Each state function manages context width, processes markup format outputs, and returns the next state, ensuring continuous operation without termination while maintaining efficient memory usage through LLM-directed paging.
+Each state function manages context width, processes simple tag format outputs, and returns the next state, ensuring continuous operation without termination while maintaining efficient memory usage through LLM-directed paging.
 
 ### Context Width Management Implementation with LLM Paging
 
@@ -972,7 +976,7 @@ result_t llm_request_context_paging(lkjagent_t* agent, data_t* context_buffer, c
         return RESULT_ERR;
     }
     
-    // Add context analysis request in markup format
+    // Add context analysis request in simple tag format
     if (data_append(&prompt_token, "\n\nAnalyze current context and respond with @paging block specifying:") != RESULT_OK ||
         data_append(&prompt_token, "\n- move_to_disk: context keys to move to disk storage") != RESULT_OK ||
         data_append(&prompt_token, "\n- retrieve_from_disk: context keys to retrieve from disk") != RESULT_OK ||
@@ -981,7 +985,7 @@ result_t llm_request_context_paging(lkjagent_t* agent, data_t* context_buffer, c
         return RESULT_ERR;
     }
     
-    // Send request to LLM and process markup response
+    // Send request to LLM and process simple tag response
     static char llm_response[4096];
     data_t response_token;
     if (data_init(&response_token, llm_response, sizeof(llm_response)) != RESULT_OK) {
@@ -994,8 +998,8 @@ result_t llm_request_context_paging(lkjagent_t* agent, data_t* context_buffer, c
         return RESULT_ERR;
     }
     
-    // Parse markup response and execute paging directives
-    if (markup_parse_paging_directives(&response_token, agent) != RESULT_OK) {
+    // Parse simple tag response and execute paging directives
+    if (tag_parse_paging_directives(&response_token, agent) != RESULT_OK) {
         RETURN_ERR("Failed to parse LLM paging directives");
         return RESULT_ERR;
     }
@@ -1042,10 +1046,10 @@ All generated code must:
 - Support perpetual operation without termination
 - Manage context width properly during state transitions with LLM-controlled paging
 - Utilize unified memory.json storage for both working and disk memory
-- Process simple markup format for all LLM interactions
+- Process simple tag format for all LLM interactions
 - Implement state-specific system prompts correctly
 - Support context key identification, storage, and retrieval
-- Validate markup format responses from LLM
+- Validate simple tag format responses from LLM
 - Handle context key directory operations
 - Integrate LLM-directed paging operations seamlessly
 
@@ -1063,11 +1067,11 @@ When implementing, ensure:
 - Perpetual operation mode functions indefinitely
 - Memory.json unified storage operates correctly with context key directory
 - Context width management prevents overflow during state transitions
-- Simple markup format validation works correctly for all LLM responses
+- Simple tag format validation works correctly for all LLM responses
 - State-specific system prompts are loaded and used properly
 - Context key operations (identification, storage, retrieval, archival) function correctly
 - LLM-directed paging operations execute without errors
 - Context key directory maintains integrity and consistency
-- Markup format parsing extracts context keys and directives accurately
+- Simple tag format parsing extracts context keys and directives accurately
 
-This guide provides the complete specification for regenerating the LKJAgent source code while maintaining its architectural integrity, coding standards, functional requirements, and ensuring perpetual operation with LLM-controlled context management, state-specific prompts, simple markup format processing, and unified memory storage with context key integration.
+This guide provides the complete specification for regenerating the LKJAgent source code while maintaining its architectural integrity, coding standards, functional requirements, and ensuring perpetual operation with LLM-controlled context management, state-specific prompts, simple tag format processing, and unified memory storage with context key integration.
