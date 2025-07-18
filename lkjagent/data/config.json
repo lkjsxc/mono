@@ -1,0 +1,26 @@
+{
+    "agent": {
+        "max_iterations": -1,
+        "state_timeout_seconds": 300,
+        "debug_mode": false
+    },
+    "llm": {
+        "endpoint": "http://localhost:1234/v1/chat/completions",
+        "model": "local-model",
+        "max_tokens": 2048,
+        "temperature": 0.7,
+        "timeout_seconds": 30
+    },
+    "memory": {
+        "max_entries": 1000,
+        "max_tags_per_entry": 16,
+        "max_context_keys": 128,
+        "cleanup_threshold": 0.8
+    },
+    "prompts": {
+        "thinking_state": "You are in thinking mode. Analyze the current situation and plan next steps. Use simple <thinking> tags in your response.",
+        "executing_state": "You are in executing mode. Take action based on your analysis. Use simple <action> tags in your response.",
+        "evaluating_state": "You are in evaluating mode. Assess progress and quality. Use simple <evaluation> tags in your response.",
+        "paging_state": "You are in paging mode. Manage memory and context. Use simple <paging> tags in your response."
+    }
+}

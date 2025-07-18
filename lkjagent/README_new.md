@@ -46,11 +46,6 @@ cat data/config.json
 - **[User Guide](docs/user/README.md)** - Configuration and usage
 - **[Implementation](docs/implementation/README.md)** - Detailed implementation guide
 
-## Project Status
-
-- **[Current Status](STATUS.md)** - Project progress and next steps
-- **[TODO List](TODO.md)** - Organized tasks by priority and phase
-
 ## Build Requirements
 
 - GCC or Clang compiler
