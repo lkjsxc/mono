@@ -38,9 +38,21 @@ result_t lkjagent_init(lkjagent_t* agent) {
         return RESULT_ERR;
     }
     
-    // Set default configuration path
+    // Initialize memory path token
+    static char memory_path_buffer[512];
+    if (token_init(&agent->memory_path, memory_path_buffer, sizeof(memory_path_buffer)) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize memory path token");
+        return RESULT_ERR;
+    }
+    
+    // Set default paths
     if (token_set(&agent->config_path, "data/config.json") != RESULT_OK) {
         RETURN_ERR("Failed to set default config path");
+        return RESULT_ERR;
+    }
+    
+    if (token_set(&agent->memory_path, "data/memory.json") != RESULT_OK) {
+        RETURN_ERR("Failed to set default memory path");
         return RESULT_ERR;
     }
     
@@ -65,6 +77,37 @@ result_t lkjagent_init(lkjagent_t* agent) {
     // Validate configuration
     if (config_validate(&agent->config) != RESULT_OK) {
         RETURN_ERR("Configuration validation failed");
+        return RESULT_ERR;
+    }
+    
+    // Initialize memory buffers and metadata tokens
+    static char memory_buffers[7][2048];
+    static char metadata_version_buffer[64];
+    static char metadata_created_buffer[64];
+    static char metadata_modified_buffer[64];
+    
+    if (token_init(&agent->metadata.version, metadata_version_buffer, sizeof(metadata_version_buffer)) != RESULT_OK ||
+        token_init(&agent->metadata.created, metadata_created_buffer, sizeof(metadata_created_buffer)) != RESULT_OK ||
+        token_init(&agent->metadata.last_modified, metadata_modified_buffer, sizeof(metadata_modified_buffer)) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize metadata tokens");
+        return RESULT_ERR;
+    }
+    
+    // Initialize agent working memory
+    if (agent_memory_init(&agent->memory, memory_buffers, 7) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize agent memory");
+        return RESULT_ERR;
+    }
+    
+    // Load persistent memory from file
+    printf("Loading memory from: %s\n", agent->memory_path.data);
+    if (agent_memory_load_from_file(agent, agent->memory_path.data) != RESULT_OK) {
+        printf("Warning: Failed to load memory file, using defaults\n");
+    }
+    
+    // Validate memory structure
+    if (agent_memory_validate(&agent->memory) != RESULT_OK) {
+        RETURN_ERR("Memory validation failed");
         return RESULT_ERR;
     }
     
@@ -129,6 +172,63 @@ result_t lkjagent_run(lkjagent_t* agent) {
     printf("    Timeout: %d seconds\n", agent->config.http.timeout_seconds);
     printf("    Max Redirects: %d\n", agent->config.http.max_redirects);
     printf("    User Agent: %s\n", agent->config.http.user_agent.data);
+    
+    // Test memory system functionality
+    printf("\n=== Testing Memory System ===\n");
+    
+    // Test memory statistics
+    size_t total_used, total_capacity;
+    double utilization_percent;
+    if (agent_memory_get_stats(&agent->memory, &total_used, &total_capacity, &utilization_percent) == RESULT_OK) {
+        printf("Memory Statistics:\n");
+        printf("  Total Used: %zu bytes\n", total_used);
+        printf("  Total Capacity: %zu bytes\n", total_capacity);
+        printf("  Utilization: %.1f%%\n", utilization_percent);
+    }
+    
+    // Test memory operations
+    printf("\nTesting memory operations...\n");
+    
+    // Update task goal
+    if (agent_memory_update_task_goal(&agent->memory, "Demonstrate memory system functionality") == RESULT_OK) {
+        printf("✓ Task goal updated\n");
+    }
+    
+    // Update state
+    if (agent_memory_update_state(&agent->memory, "demonstrating") == RESULT_OK) {
+        printf("✓ State updated to 'demonstrating'\n");
+    }
+    
+    // Add some scratchpad notes
+    if (agent_memory_append_scratchpad(&agent->memory, "Memory system is working correctly", "STATUS") == RESULT_OK &&
+        agent_memory_append_scratchpad(&agent->memory, "Configuration loaded successfully", "INFO") == RESULT_OK &&
+        agent_memory_append_scratchpad(&agent->memory, "JSON parsing operational", "DEBUG") == RESULT_OK) {
+        printf("✓ Scratchpad entries added\n");
+    }
+    
+    // Show current memory state
+    printf("\nCurrent Memory State:\n");
+    printf("  Task Goal: %s\n", agent->memory.task_goal.data);
+    printf("  Current State: %s\n", agent->memory.current_state.data);
+    printf("  Recent History: %s", agent->memory.recent_history.data);
+    printf("  Scratchpad:\n%s", agent->memory.scratchpad.data);
+    
+    // Save memory to disk
+    printf("\nSaving memory to disk...\n");
+    if (agent_memory_update_metadata(&agent->metadata) == RESULT_OK &&
+        agent_memory_save_to_file(agent, agent->memory_path.data) == RESULT_OK) {
+        printf("✓ Memory saved to: %s\n", agent->memory_path.data);
+    } else {
+        printf("✗ Failed to save memory\n");
+    }
+    
+    // Update memory stats after operations
+    if (agent_memory_get_stats(&agent->memory, &total_used, &total_capacity, &utilization_percent) == RESULT_OK) {
+        printf("\nUpdated Memory Statistics:\n");
+        printf("  Total Used: %zu bytes\n", total_used);
+        printf("  Total Capacity: %zu bytes\n", total_capacity);
+        printf("  Utilization: %.1f%%\n", utilization_percent);
+    }
     
     // Test configuration serialization
     printf("\n=== Testing Configuration Serialization ===\n");

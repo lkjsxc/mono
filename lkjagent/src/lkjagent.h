@@ -128,11 +128,36 @@ typedef struct {
 } config_t;
 
 /**
+ * @brief Agent working memory (RAM-based)
+ */
+typedef struct {
+    token_t system_prompt;       /**< Fixed behavioral guidelines */
+    token_t current_state;       /**< Current operational state */
+    token_t task_goal;           /**< Final objective to achieve */
+    token_t plan;                /**< Step-by-step execution strategy */
+    token_t scratchpad;          /**< Temporary notes and results */
+    token_t recent_history;      /**< Log of recent activities */
+    token_t retrieved_from_disk; /**< Knowledge fetched from persistent storage */
+} agent_memory_t;
+
+/**
+ * @brief Persistent memory metadata
+ */
+typedef struct {
+    token_t version;        /**< Memory format version */
+    token_t created;        /**< Creation timestamp */
+    token_t last_modified;  /**< Last modification timestamp */
+} memory_metadata_t;
+
+/**
  * @brief Main agent structure
  */
 typedef struct {
-    token_t config_path; /**< Path to configuration file */
-    config_t config;     /**< Application configuration */
+    token_t config_path;      /**< Path to configuration file */
+    token_t memory_path;      /**< Path to memory.json file */
+    config_t config;          /**< Application configuration */
+    agent_memory_t memory;    /**< Working memory (RAM) */
+    memory_metadata_t metadata; /**< Memory metadata */
     // Add more fields as needed
 } lkjagent_t;
 
@@ -439,5 +464,88 @@ lkjagent_init(lkjagent_t* agent);
 __attribute__((warn_unused_result))
 result_t
 lkjagent_run(lkjagent_t* agent);
+
+// ============================================================================
+// Memory Management API
+// ============================================================================
+
+/**
+ * @brief Initialize agent memory with static buffers
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_init(agent_memory_t* memory, char buffers[][2048], size_t num_buffers);
+
+/**
+ * @brief Load persistent memory from memory.json file
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_load_from_file(lkjagent_t* agent, const char* file_path);
+
+/**
+ * @brief Save current agent memory to persistent storage
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_save_to_file(const lkjagent_t* agent, const char* file_path);
+
+/**
+ * @brief Clear working memory but preserve metadata
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_clear_working(agent_memory_t* memory);
+
+/**
+ * @brief Update memory metadata with current timestamp
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_update_metadata(memory_metadata_t* metadata);
+
+/**
+ * @brief Validate memory structure and content
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_validate(const agent_memory_t* memory);
+
+/**
+ * @brief Add a log entry to memory with timestamp
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_add_log_entry(agent_memory_t* memory, const char* state, 
+                           const char* action, const char* details);
+
+/**
+ * @brief Update task goal in memory
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_update_task_goal(agent_memory_t* memory, const char* new_goal);
+
+/**
+ * @brief Update current state in memory
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_update_state(agent_memory_t* memory, const char* new_state);
+
+/**
+ * @brief Append to scratchpad with automatic formatting
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_append_scratchpad(agent_memory_t* memory, const char* content, const char* prefix);
+
+/**
+ * @brief Get memory usage statistics
+ */
+__attribute__((warn_unused_result))
+result_t
+agent_memory_get_stats(const agent_memory_t* memory, size_t* total_used, 
+                       size_t* total_capacity, double* utilization_percent);
 
 #endif
