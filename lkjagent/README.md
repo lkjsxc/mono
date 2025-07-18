@@ -1,568 +1,1073 @@
-# lkjagent - Autonomous AI Agent with HTTP Client Library
+# LKJAgent Source Code Regeneration Guide
 
-A minimal, autonomous AI agent written in C with zero-dependency HTTP client capabilities. This agent provides persistent memory management, LMStudio API integration for complex task execution, and robust token-based string handling with a focus on safety, simplicity, and performance.
+## Overview
 
-## Features
+This document provides comprehensive instructions for AI agents to regenerate the complete LKJAgent source code. LKJAgent is an autonomous AI agent system implemented in C with zero external dependencies, featuring tagged memory, state machine architecture, and LLM integration capabilities.
 
-### Autonomous Agent System
-- **State-based execution**: Four operational states (thinking, executing, evaluating, paging)
-- **Persistent memory**: JSON-based disk storage for long-term knowledge retention
-- **LMStudio integration**: Direct API communication for AI inference
-- **Tool system**: Built-in tools for search, retrieve, write, execute_code, and forget operations
-- **Memory management**: Dual-memory system with volatile RAM and persistent disk storage
+## Architecture Overview
 
-### Token Management System
-- **Safe string handling**: All string operations use bounded buffers to prevent buffer overflows
-- **Memory-efficient**: Uses user-provided static buffers, no dynamic allocation
-- **Comprehensive validation**: All functions validate input parameters and token state
-- **Rich string operations**: Set, append, copy, find, substring, trim, and comparison functions
+### Core Design Principles
 
-### HTTP Client
-- **HTTP/1.1 support**: Full support for GET, POST, and other HTTP methods
-- **Socket-based implementation**: Raw socket connections without external dependencies
-- **Robust error handling**: Comprehensive error checking and proper resource cleanup
-- **Configurable timeouts**: Network operation timeouts to prevent hanging
-- **Token-based interface**: All HTTP data handled through safe token system
+1. **Zero External Dependencies**: Pure C implementation using only standard POSIX libraries
+2. **Memory Safety**: Stack-based allocation with bounded buffers and explicit capacity management
+3. **Error Handling**: Comprehensive error propagation using `result_t` enum and concrete `RETURN_ERR` macro implementation
+4. **Modular Design**: Clean separation between core functionality, utilities, memory management, and state handling
+5. **Tagged Memory System**: Advanced memory management with multi-tag queries and LLM integration
+6. **State Machine Architecture**: Four-state autonomous execution cycle (thinking, executing, evaluating, paging)
+7. **Perpetual Operation**: The agent operates continuously without termination, perpetually enriching disk storage
 
-## Building
+### Project Structure
 
-### Using Makefile
-```bash
-# Build the main binary
-make
-
-# Build and run tests
-make test
-
-# Build and run JSON tests specifically
-make test-json
-
-# Clean build artifacts
-make clean
-
-# Install to system
-make install
-
-# Show help
-make help
+```
+lkjagent/
+├── src/
+│   ├── lkjagent.h              # Main header with all type definitions and APIs
+│   ├── lkjagent.c              # Application entry point (renamed from main.c)
+│   ├── agent/
+│   │   ├── core.c              # Agent lifecycle and state machine
+│   │   ├── execution.c         # Task execution engine
+│   │   ├── evaluation.c        # Progress assessment and metrics
+│   │   └── decision.c          # Decision making logic
+│   ├── config/
+│   │   ├── config.c            # Core configuration management
+│   │   ├── validation.c        # Configuration validation
+│   │   └── defaults.c          # Default configuration values
+│   ├── memory/
+│   │   ├── tagged_memory.c     # Tagged memory system implementation
+│   │   ├── enhanced_llm.c      # LLM integration for memory decisions
+│   │   ├── disk_storage.c      # Disk storage operations
+│   │   ├── context_manager.c   # Context width and paging management
+│   │   └── memory_optimizer.c  # Memory optimization and cleanup
+│   ├── state/
+│   │   ├── enhanced_states.c   # Enhanced state management
+│   │   ├── thinking.c          # Thinking state implementation
+│   │   ├── executing.c         # Executing state implementation
+│   │   ├── evaluating.c        # Evaluating state implementation
+│   │   └── paging.c            # LLM-controlled paging state
+│   ├── llm/
+│   │   ├── llm_client.c        # LLM client interface
+│   │   ├── prompt_manager.c    # Prompt construction and management
+│   │   ├── context_builder.c   # Context preparation for LLM calls
+│   │   └── response_parser.c   # LLM response parsing and validation
+│   ├── utils/
+│   │   ├── data.c              # Safe data token management (renamed from token.c)
+│   │   ├── file.c              # File I/O operations
+│   │   ├── http.c              # HTTP client implementation
+│   │   ├── json.c              # JSON parsing and generation
+│   │   ├── markup.c            # Simple markup format handling
+│   │   ├── string_utils.c      # String manipulation utilities
+│   │   ├── time_utils.c        # Time and timestamp utilities
+│   │   └── error_handler.c     # Centralized error handling
+│   └── persistence/
+│       ├── memory_persistence.c # Memory.json persistence
+│       ├── config_persistence.c # Configuration persistence
+│       └── disk_operations.c    # Low-level disk operations
+├── build/                      # Compiled object files and executable
+├── data/
+│   ├── config.json             # Runtime configuration with state prompts
+│   ├── memory.json             # Persistent storage for both disk and working memory
+│   └── context_keys.json       # LLM-specified context keys for disk storage
+├── docs/                       # Documentation
+└── Makefile                    # Build configuration
 ```
 
-### Manual compilation
-```bash
-gcc -Wall -Wextra -std=c11 -O2 -o lkjagent src/main.c
-```
+## Agent Philosophy
 
-## API Reference
+### Continuous Operation
 
-### Token Functions
+The LKJAgent is designed with the following operational principles:
 
-#### Core Operations
-```c
-result_t token_init(token_t* token, char* buffer, size_t capacity);
-result_t token_clear(token_t* token);
-result_t token_set(token_t* token, const char* str);
-result_t token_append(token_t* token, const char* str);
-result_t token_copy(token_t* dest, const token_t* src);
-```
-
-#### String Manipulation
-```c
-result_t token_find(const token_t* token, const char* needle, size_t* position);
-result_t token_substring(const token_t* token, size_t start, size_t length, token_t* dest);
-result_t token_trim(token_t* token);
-```
-
-#### Comparison and Validation
-```c
-int token_equals(const token_t* token1, const token_t* token2);
-int token_equals_str(const token_t* token, const char* str);
-int token_is_empty(const token_t* token);
-int token_available_space(const token_t* token);
-result_t token_validate(const token_t* token);
-```
-
-### HTTP Functions
-
-#### Core HTTP Operations
-```c
-result_t http_request(token_t* method, token_t* url, token_t* body, token_t* response);
-```
-
-#### Convenience Functions
-```c
-result_t http_get(token_t* url, token_t* response);
-result_t http_post(token_t* url, token_t* body, token_t* response);
-```
-
-## Usage Examples
-
-### Basic HTTP GET Request
-```c
-#include "lkjagent.h"
-
-int main() {
-    char url_data[256];
-    char response_data[4096];
-    
-    token_t url, response;
-    
-    // Initialize tokens
-    token_init(&url, url_data, sizeof(url_data));
-    token_init(&response, response_data, sizeof(response_data));
-    
-    // Set URL and make request
-    token_set(&url, "http://httpbin.org/get");
-    
-    if (http_get(&url, &response) == RESULT_OK) {
-        printf("Response: %s\n", response.data);
-    }
-    
-    return 0;
-}
-```
-
-### HTTP POST Request with JSON Body
-```c
-#include "lkjagent.h"
-
-int main() {
-    char url_data[256];
-    char body_data[1024];
-    char response_data[4096];
-    
-    token_t url, body, response;
-    
-    // Initialize tokens
-    token_init(&url, url_data, sizeof(url_data));
-    token_init(&body, body_data, sizeof(body_data));
-    token_init(&response, response_data, sizeof(response_data));
-    
-    // Set URL and body
-    token_set(&url, "http://httpbin.org/post");
-    token_set(&body, "{\"name\":\"lkjagent\",\"version\":\"1.0\"}");
-    
-    if (http_post(&url, &body, &response) == RESULT_OK) {
-        printf("Response: %s\n", response.data);
-    }
-    
-    return 0;
-}
-```
-
-### String Manipulation with Tokens
-```c
-#include "lkjagent.h"
-
-int main() {
-    char buffer1[100], buffer2[100];
-    token_t token1, token2;
-    
-    token_init(&token1, buffer1, sizeof(buffer1));
-    token_init(&token2, buffer2, sizeof(buffer2));
-    
-    // Build a string
-    token_set(&token1, "Hello");
-    token_append(&token1, " World");
-    
-    // Find substring
-    size_t position;
-    if (token_find(&token1, "World", &position) == RESULT_OK) {
-        printf("Found 'World' at position: %zu\n", position);
-    }
-    
-    // Extract substring
-    token_substring(&token1, 0, 5, &token2);
-    printf("First 5 characters: %s\n", token2.data);
-    
-    return 0;
-}
-```
-
-## Design Principles
-
-### Memory Safety
-- All string operations use bounded buffers
-- No dynamic memory allocation
-- Comprehensive bounds checking
-- Buffer overflow protection
-
-### Error Handling
-- All functions return explicit error codes
-- Consistent error handling patterns
-- Input validation on all public APIs
-- Graceful degradation on errors
-
-### Performance
-- Zero-copy string operations where possible
-- Minimal system calls
-- Efficient network operations
-- Stack-based memory management
-
-### Portability
-- Standard C11 compliance
-- POSIX socket API
-- No external dependencies
-- Tested on Linux platforms
-
-## Configuration
-
-### HTTP Settings
-- Default timeout: 30 seconds
-- Default ports: HTTP (80), HTTPS (443 - not implemented)
-- User agent: "lkjagent/1.0"
-- Maximum URL length: 256 characters
-- Maximum request size: 8192 bytes
-- Response chunk size: 4096 bytes
-
-### Compilation Options
-- Standard: `-std=c11`
-- Warnings: `-Wall -Wextra`
-- Optimization: `-O2` (recommended for production)
-
-## Limitations
-
-- HTTPS is not currently supported (HTTP only)
-- No support for HTTP/2 or HTTP/3
-- No built-in JSON parsing
-- No authentication mechanisms
-- IPv4 only (no IPv6 support)
-
-## License
-
-See LICENSE file for details.
-
-## Contributing
-
-1. Follow the existing code style
-2. Add tests for new features
-3. Ensure all functions handle errors gracefully
-4. Update documentation for API changes
-5. Test on multiple platforms
-
-## Agent Features
-
-### Agent States
-
-The agent operates in four distinct states:
-
-1. **`thinking`**: Receives a request and formulates an execution plan
-2. **`executing`**: Performs actions based on the current plan
-3. **`evaluating`**: Assesses results and determines the next step
-4. **`paging`**: Manages memory by moving data between RAM and disk
-
-### Available Tools
-
-- **`search`**: Queries disk storage for relevant information
-- **`retrieve`**: Reads specific data from persistent storage
-- **`write`**: Saves information to disk with optional tags
-- **`execute_code`**: Runs code snippets and captures the results
-- **`forget`**: Deletes unnecessary information for memory optimization
+- **Never-Ending Processing**: The agent never terminates its execution cycle
+- **Perpetual Enrichment**: Continuously strives to enrich disk storage with valuable data
+- **Endless Thinking Mode**: Operates in infinite iteration mode (`max_iterations: -1`)
+- **Self-Sustaining**: Maintains its own memory and context through persistent storage
 
 ### Memory Architecture
 
-#### RAM (Volatile Memory)
-Provides context to the AI model through a structured prompt:
+Both working memory (RAM) and persistent disk memory are stored in the unified `memory.json` file, with LLM-controlled paging operations managing the flow of context between memory layers:
 
-- **`system_prompt`**: Fixed behavioral guidelines and agent definition
-- **`current_state`**: The agent's current operational state
-- **`task_goal`**: The final objective to be achieved
-- **`plan`**: A step-by-step execution strategy
-- **`scratchpad`**: Temporary notes and tool execution results
-- **`recent_history`**: A log of recent agent activities
-- **`retrieved_from_disk`**: Relevant knowledge fetched from persistent storage
+- **LLM-Directed Paging**: The LLM specifies context keys to move between working and disk storage
+- **Context Key Management**: LLM identifies and tags important context elements for persistence
+- **Automatic Context Transfer**: Context elements are moved to disk based on LLM directives
+- **Seamless transitions between volatile and persistent states**
+- **Comprehensive memory history preservation**
+- **Context continuity across agent restarts**
+- **Unified memory query interface**
+- **Smart Context Paging**: LLM determines what context to preserve, archive, or retrieve
+- **Context Key Directory**: Maintained in `context_keys.json` for efficient retrieval
 
-#### Disk (Persistent Memory)
-A key-value store with an optional tagging system:
+### LLM Output Format
 
-- **`working_memory`**: Task-specific information and context
-- **`knowledge_base`**: Accumulated learning and insights
-- **`log`**: A complete execution history and audit trail
-- **`file`**: Generated artifacts (code, documents, data)
-- **`Arbitrary tags`**: Tags with no special meaning
+All LLM interactions use a standardized simple markup format to ensure consistent parsing and processing:
 
------
+```markup
+@thinking {
+  analysis: "Current situation analysis"
+  planning: "Next steps and strategy"
+  context_keys: ["key1", "key2", "key3"]
+}
 
-## Build and Compilation
+@action {
+  type: "disk_storage" | "memory_query" | "context_transfer"
+  parameters: {
+    context_key: "specific_key"
+    operation: "store" | "retrieve" | "archive"
+    data: "content to store/process"
+  }
+}
 
-### Prerequisites
+@evaluation {
+  progress: "Assessment of current progress"
+  metrics: {
+    quality_score: 0.85
+    enrichment_rate: 0.92
+  }
+  recommendations: ["rec1", "rec2"]
+}
 
-- C11 compatible compiler (GCC 4.9+ or Clang 3.1+)
-- Standard C library
-- POSIX socket support (standard on Linux platforms)
-
-### Basic Compilation
-
-```bash
-# Basic compilation (as used in Makefile)
-gcc -std=c11 -Wall -Wextra -O2 -o lkjagent src/main.c
-
-# With debug symbols
-gcc -std=c11 -Wall -Wextra -g -DDEBUG -o lkjagent src/main.c
-
-# Production build
-gcc -std=c11 -Wall -Wextra -O3 -DNDEBUG -o lkjagent src/main.c
+@paging {
+  operation: "context_management"
+  directives: {
+    move_to_disk: ["context_key1", "context_key2"]
+    retrieve_from_disk: ["context_key3"]
+    archive_old: ["context_key4"]
+  }
+  rationale: "Explanation for paging decisions"
+}
 ```
 
------
+## Coding Style Guidelines
 
-## Configuration
+### File Headers
 
-### LMStudio Setup
+Every `.c` file must start with a comprehensive Doxygen header:
 
-1. Install and run LMStudio
-2. Load your preferred language model
-3. Start the local server (usually at `http://localhost:1234`)
-4. The agent will attempt to connect to `http://host.docker.internal:1234/v1/chat/completions` by default
+```c
+/**
+ * @file filename.c
+ * @brief Brief description of the module
+ *
+ * Detailed description explaining the module's purpose, key features,
+ * and architectural role within the system.
+ *
+ * Key features:
+ * - Feature 1
+ * - Feature 2
+ * - Feature 3
+ */
+```
 
-### Agent Configuration
+### Function Documentation
 
-Configuration is managed through `data/config.json`. Key settings include:
+All functions must have complete Doxygen documentation:
 
-- **LMStudio endpoint**: `http://host.docker.internal:1234/v1/chat/completions`
-- **Model name**: `qwen/qwen3-8b` (configurable)
-- **Memory file**: `agent_memory.json` (in project root)
-- **Max iterations**: 50
-- **Memory buffers**: 2048 bytes each
-- **HTTP timeout**: 30 seconds
-- **Temperature**: 0.7 for LMStudio requests
+```c
+/**
+ * @brief Brief function description
+ *
+ * Detailed explanation of what the function does, how it works,
+ * and any important implementation details.
+ *
+ * @param param1 Description of parameter 1
+ * @param param2 Description of parameter 2
+ * @return RESULT_OK on success, RESULT_ERR on failure
+ */
+__attribute__((warn_unused_result))
+result_t function_name(type1 param1, type2 param2) {
+    // Implementation
+}
+```
 
-### Configuration File Format
+### Error Handling Pattern
 
-The `data/config.json` file contains all configuration settings:
+All functions that can fail must:
+
+1. Return `result_t` type
+2. Use `__attribute__((warn_unused_result))`
+3. Validate all input parameters
+4. Use concrete `RETURN_ERR()` macro implementation for error reporting
+5. Follow early return pattern for error conditions
+
+```c
+__attribute__((warn_unused_result))
+result_t example_function(example_t* obj, const char* input) {
+    if (!obj) {
+        RETURN_ERR("example_function: NULL obj parameter");
+        return RESULT_ERR;
+    }
+    
+    if (!input) {
+        RETURN_ERR("example_function: NULL input parameter");
+        return RESULT_ERR;
+    }
+    
+    // Main implementation
+    
+    return RESULT_OK;
+}
+```
+
+### Concrete RETURN_ERR Implementation
+
+The `RETURN_ERR` macro must be implemented with concrete logic for comprehensive error reporting:
+
+```c
+#define RETURN_ERR3(n) #n
+#define RETURN_ERR2(n) RETURN_ERR3(n)
+#define RETURN_ERR(error_message)                                                   \
+    do {                                                                            \
+        _Pragma("GCC diagnostic push")                                              \
+        _Pragma("GCC diagnostic ignored \"-Wunused-result\"")                      \
+        write(STDERR_FILENO, "{Error: { file: \"", 18);                             \
+        write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
+        write(STDERR_FILENO, "\", func: \"", 11);                                   \
+        write(STDERR_FILENO, __func__, sizeof(__func__));                           \
+        write(STDERR_FILENO, "\", line: ", 10);                                     \
+        write(STDERR_FILENO, RETURN_ERR2(__LINE__), sizeof(RETURN_ERR2(__LINE__))); \
+        write(STDERR_FILENO, "\", message: \"", 13);                                \
+        write(STDERR_FILENO, error_message, strlen(error_message));                 \
+        write(STDERR_FILENO, "\"}}\n", 5);                                          \
+        _Pragma("GCC diagnostic pop")                                               \
+    } while(0)
+```
+
+### Memory Management Rules
+
+1. **No Dynamic Allocation**: Never use `malloc()`, `calloc()`, or `free()`
+2. **Static Buffers**: All buffers are statically allocated or stack-based
+3. **Bounded Operations**: All string operations must respect buffer capacity
+4. **Data Token System**: Use `data_t` for all string handling
+5. **Buffer Initialization**: Always initialize data tokens with static buffers
+
+```c
+// Correct pattern for data token initialization
+static char buffer[512];
+data_t data;
+if (data_init(&data, buffer, sizeof(buffer)) != RESULT_OK) {
+    RETURN_ERR("Failed to initialize data token");
+    return RESULT_ERR;
+}
+```
+
+### LLM Output Format
+
+All LLM interactions use a standardized simple markup format to ensure consistent parsing and processing:
+
+### Context Width Management
+
+Proper management of context width during state transitions is crucial, with LLM-controlled paging operations:
+
+```c
+/**
+ * @brief Manage context width during state transitions with LLM-controlled paging
+ *
+ * Ensures LLM context windows are properly sized and maintained
+ * across agent state transitions to prevent context overflow.
+ * The LLM directs which context elements to move to disk storage.
+ *
+ * @param agent Agent instance
+ * @param new_state Target state for transition
+ * @param context_buffer Buffer for context management
+ * @return RESULT_OK on success, RESULT_ERR on failure
+ */
+__attribute__((warn_unused_result))
+result_t manage_context_width_transition(lkjagent_t* agent, const char* new_state, data_t* context_buffer) {
+    if (!agent || !new_state || !context_buffer) {
+        RETURN_ERR("manage_context_width_transition: NULL parameter");
+        return RESULT_ERR;
+    }
+    
+    // Calculate available context window size
+    size_t max_context = agent->config.agent.llm_decisions.context_window_size;
+    size_t current_context_size = context_buffer->size;
+    
+    // Invoke LLM paging if approaching limit (reserve 20% buffer)
+    if (current_context_size > (max_context * 0.8)) {
+        // Request LLM to specify context keys for disk storage
+        if (llm_request_context_paging(agent, context_buffer, new_state) != RESULT_OK) {
+            RETURN_ERR("Failed to execute LLM-controlled context paging");
+            return RESULT_ERR;
+        }
+    }
+    
+    // Add state transition marker
+    char transition_marker[256];
+    snprintf(transition_marker, sizeof(transition_marker), 
+             "\n--- STATE_TRANSITION: %s ---\n", new_state);
+    
+    if (data_append(context_buffer, transition_marker) != RESULT_OK) {
+        RETURN_ERR("Failed to add state transition marker");
+        return RESULT_ERR;
+    }
+    
+    return RESULT_OK;
+}
+```
+
+### Naming Conventions
+
+- **Files**: `snake_case.c` and `snake_case.h`
+- **Functions**: `module_action_object()` pattern (e.g., `data_set()`, `memory_store_entry()`)
+- **Types**: `snake_case_t` suffix (e.g., `data_t`, `memory_entry_t`)
+- **Constants**: `ALL_CAPS_SNAKE_CASE` (e.g., `MAX_MEMORY_ENTRIES`)
+- **Macros**: `ALL_CAPS_SNAKE_CASE` (e.g., `RETURN_ERR`)
+
+## Core Type System
+
+### Basic Types
+
+```c
+typedef enum {
+    RESULT_OK = 0,    /**< Operation completed successfully */
+    RESULT_ERR = 1    /**< General error */
+} result_t;
+
+typedef struct {
+    char* data;       /**< Pointer to character buffer */
+    size_t capacity;  /**< Maximum buffer size including null terminator */
+    size_t size;      /**< Current string length (excluding null terminator) */
+} data_t;
+```
+
+### Tagged Memory System
+
+The tagged memory system is a key innovation featuring:
+
+- Multi-tag entries with configurable limits
+- Complex query capabilities (AND, OR, NOT operations)
+- Automatic cleanup and defragmentation
+- LLM-guided memory organization
+- Relationship tracking between entries
+- Unified storage in memory.json for both working and disk memory
+
+### Configuration System
+
+JSON-based configuration with:
+- Type-safe loading and validation
+- Default value initialization
+- Runtime reconfiguration support
+- Hierarchical structure for different subsystems
+- Context width management parameters
+
+## Module Implementation Requirements
+
+### 1. Data Token Management (`src/utils/data.c`)
+
+Implements safe string handling with:
+- Buffer overflow prevention
+- Null termination guarantees
+- Capacity validation
+- String manipulation operations (set, append, find, substring)
+- Comparison functions
+- Context width management utilities
+
+### 2. Simple Markup Processing (`src/utils/markup.c`)
+
+Handles LLM output in simple markup format:
+- Markup validation and parsing
+- Block extraction (@thinking, @action, @evaluation, @paging)
+- Parameter parsing and validation
+- Context key extraction
+- Error handling for malformed markup
+- Conversion between markup and structured data
+
+### 3. File Operations (`src/utils/file.c`)
+
+Provides file I/O with:
+- Safe file reading into data tokens
+- Atomic write operations
+- Directory management
+- File existence checks
+- Error handling for all I/O operations
+- Memory.json unified storage support
+
+### 4. Context Management (`src/memory/context_manager.c`)
+
+Advanced context width and paging management:
+- LLM-directed context key identification
+- Context element transfer to/from disk
+- Context key directory maintenance
+- Context window optimization
+- Automatic context archival
+- Context retrieval by key
+
+### 5. LLM-Controlled Paging (`src/state/paging.c`)
+
+LLM-driven memory paging operations:
+- Context analysis and key identification
+- Disk storage directive processing
+- Context element prioritization
+- Automatic context cleanup
+- Paging decision rationale tracking
+- Integration with memory persistence layer
+
+### 6. HTTP Client (`src/utils/http.c`)
+
+Implements HTTP client without external dependencies:
+- Socket-based implementation
+- GET and POST request support
+- JSON payload handling
+- Timeout management
+- Response parsing
+- Context-aware request sizing
+
+### 7. JSON Processing (`src/utils/json.c`)
+
+Manual JSON parsing and generation:
+- Validation functions
+- Key-path extraction
+- Type-safe value retrieval
+- Object and array creation
+- String escaping
+- Memory.json format support
+
+### 8. Configuration Management (`src/config/config.c`)
+
+Configuration management with state-specific prompts:
+- Default value initialization
+- JSON file loading with state prompt support
+- Validation rules
+- Type-safe access patterns
+- Save functionality
+- Context width configuration
+- State-specific system prompt management
+
+### 9. Tagged Memory (`src/memory/tagged_memory.c`)
+
+Advanced memory system featuring:
+- Entry storage with multiple tags
+- Complex query execution
+- Memory statistics
+- Cleanup and defragmentation
+- Persistence to memory.json
+- Working and disk memory unification
+- Integration with context key system
+
+### 10. LLM Integration (`src/memory/enhanced_llm.c`)
+
+AI-driven memory decisions:
+- Memory pattern analysis
+- Tag suggestion algorithms
+- Retention strategy decisions
+- Context building for LLM calls
+- Semantic memory organization
+- Context width optimization
+- Markup format output processing
+
+### 11. Agent Core (`src/agent/core.c`)
+
+State machine implementation:
+- Four-state execution cycle with LLM-controlled paging
+- LMStudio API integration with markup format parsing
+- Memory management with context key tracking
+- Task goal tracking
+- Autonomous decision making
+- Perpetual operation mode
+- Context width management with LLM directives
+
+### 12. Enhanced States (`src/state/enhanced_states.c`)
+
+State management utilities:
+- State transition logic with context paging
+- Context preservation during transitions
+- State-specific memory handling
+- Progress tracking
+- Context width management
+- Perpetual state cycling
+- Integration with state-specific system prompts
+
+### 13. State-Specific Implementations
+
+#### Thinking State (`src/state/thinking.c`)
+- Deep analysis and contemplation
+- Context accumulation and organization
+- Problem decomposition
+- Strategic planning with context key identification
+
+#### Executing State (`src/state/executing.c`)
+- Action execution with disk enrichment
+- Task performance monitoring
+- Resource utilization tracking
+- Progress measurement
+
+#### Evaluating State (`src/state/evaluating.c`)
+- Progress assessment and metrics
+- Quality evaluation
+- Performance analysis
+- Improvement recommendations
+
+#### Paging State (`src/state/paging.c`)
+- LLM-controlled context management
+- Memory optimization
+- Context key processing
+- Disk storage operations
+
+### 14. Persistence Layer
+
+#### Memory Persistence (`src/persistence/memory_persistence.c`)
+- Memory.json operations
+- Context key directory management
+- Atomic write operations
+- Data integrity validation
+
+#### Configuration Persistence (`src/persistence/config_persistence.c`)
+- Config.json with state prompts
+- Runtime configuration updates
+- Validation and error handling
+
+### 15. LLM Client Architecture
+
+#### LLM Client (`src/llm/llm_client.c`)
+- HTTP communication with LMStudio
+- Request/response handling
+- Timeout and error management
+- Connection pooling
+
+#### Prompt Manager (`src/llm/prompt_manager.c`)
+- State-specific prompt construction
+- Context integration
+- Markup format enforcement
+- Template management
+
+#### Response Parser (`src/llm/response_parser.c`)
+- Markup format validation
+- Block extraction and parsing
+- Context key extraction
+- Error handling for malformed responses
+
+### 16. Utility Extensions
+
+#### String Utilities (`src/utils/string_utils.c`)
+- Advanced string operations
+- Pattern matching
+- Text processing utilities
+
+#### Time Utilities (`src/utils/time_utils.c`)
+- Timestamp management
+- Duration calculations
+- Time-based operations
+
+#### Error Handler (`src/utils/error_handler.c`)
+- Centralized error processing
+- Error categorization
+- Recovery strategies
+
+### 17. Agent Memory (`src/memory.c`)
+
+High-level memory management:
+- Working memory initialization
+- Persistent storage integration in memory.json
+- Memory validation
+- Statistics and utilization tracking
+- Unified memory access interface
+- Context key integration
+
+### 18. Main Application (`src/lkjagent.c`)
+
+Application entry point providing:
+- Agent initialization
+- Perpetual execution loop
+- Error handling and recovery
+- Signal handling for graceful operation
+- Context management across restarts
+
+## Build System
+
+The Makefile provides:
+- Modular compilation with proper dependencies
+- Debug symbol generation
+- Warning-as-error enforcement
+- Clean build targets
+- Test compilation support
+- Data token system compilation
+
+## Configuration Schema
+
+The `data/config.json` file configures all aspects of the agent, including state-specific system prompts:
 
 ```json
 {
-    "lmstudio": {
-        "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
-        "model": "qwen/qwen3-8b",
-        "temperature": 0.7,
-        "max_tokens": -1,
-        "stream": false
+  "lmstudio": {
+    "base_url": "http://host.docker.internal:1234/v1/chat/completions",
+    "model": "qwen/qwen3-8b",
+    "temperature": 0.7,
+    "max_tokens": 2048,
+    "timeout_ms": 30000,
+    "markup_format_enforced": true
+  },
+  "agent": {
+    "max_iterations": -1,
+    "self_directed": 1,
+    "state_prompts": {
+      "thinking": {
+        "system_prompt": "You are in THINKING state. Analyze deeply, contemplate thoroughly, and identify context keys for important insights. Always respond in simple markup format with @thinking blocks containing analysis, planning, and context_keys arrays.",
+        "objectives": ["deep_analysis", "strategic_planning", "context_identification"],
+        "markup_blocks": ["@thinking"],
+        "context_key_focus": true
+      },
+      "executing": {
+        "system_prompt": "You are in EXECUTING state. Perform actions to enrich disk storage with valuable data. Always respond in simple markup format with @action blocks specifying disk storage operations and context keys.",
+        "objectives": ["disk_enrichment", "action_execution", "data_storage"],
+        "markup_blocks": ["@action"],
+        "context_key_focus": true
+      },
+      "evaluating": {
+        "system_prompt": "You are in EVALUATING state. Assess progress, measure quality, and provide metrics. Always respond in simple markup format with @evaluation blocks containing progress assessments and quality metrics.",
+        "objectives": ["progress_assessment", "quality_measurement", "performance_analysis"],
+        "markup_blocks": ["@evaluation"],
+        "context_key_focus": false
+      },
+      "paging": {
+        "system_prompt": "You are in PAGING state. Manage context and memory efficiently by specifying which context keys to move to disk storage, retrieve, or archive. Always respond in simple markup format with @paging blocks containing specific directives.",
+        "objectives": ["context_management", "memory_optimization", "disk_organization"],
+        "markup_blocks": ["@paging"],
+        "context_key_focus": true,
+        "paging_directives": {
+          "move_to_disk": "Specify context keys to move from working memory to disk",
+          "retrieve_from_disk": "Specify context keys to retrieve from disk to working memory",
+          "archive_old": "Specify context keys to archive for long-term storage"
+        }
+      }
     },
-    "agent": {
-        "max_iterations": 50,
-        "evaluation_threshold": 0.8,
-        "memory_file": "agent_memory.json",
-        "ram_size": 2048,
-        "max_history": 100
+    "tagged_memory": {
+      "max_entries": 1000,
+      "max_tags_per_entry": 8,
+      "auto_cleanup_threshold": 0.8,
+      "tag_similarity_threshold": 0.7,
+      "context_key_integration": true
     },
-    "http": {
-        "timeout_seconds": 30,
-        "max_request_size": 8192,
-        "max_response_size": 4096,
-        "user_agent": "lkjagent/1.0"
+    "llm_decisions": {
+      "confidence_threshold": 0.8,
+      "decision_timeout_ms": 5000,
+      "fallback_enabled": true,
+      "context_window_size": 4096,
+      "markup_validation": true,
+      "context_key_extraction": true
     },
-    "system_prompt": {
-        "role": "system", 
-        "content": "You are an autonomous AI agent. Analyze tasks methodically and provide detailed responses."
+    "enhanced_tools": {
+      "tool_chaining_enabled": true,
+      "max_tool_chain_length": 5,
+      "parallel_tool_execution": false,
+      "context_key_tracking": true
+    },
+    "paging_control": {
+      "llm_controlled": true,
+      "auto_paging_threshold": 0.8,
+      "context_key_retention": 100,
+      "disk_storage_priority": "llm_specified"
     }
+  },
+  "markup": {
+    "validation_strict": true,
+    "required_blocks": {
+      "thinking": ["@thinking"],
+      "executing": ["@action"],
+      "evaluating": ["@evaluation"],
+      "paging": ["@paging"]
+    },
+    "context_key_format": {
+      "max_length": 64,
+      "allowed_chars": "alphanumeric_underscore_dash",
+      "case_sensitive": false
+    }
+  },
+  "context_management": {
+    "keys_file": "data/context_keys.json",
+    "max_working_keys": 50,
+    "disk_storage_path": "data/disk_context/",
+    "compression_enabled": false,
+    "encryption_enabled": false
+  },
+  "http": {
+    "timeout_seconds": 30,
+    "max_redirects": 3,
+    "user_agent": "LKJAgent-Enhanced/1.0"
+  }
 }
 ```
+
+## Enhanced Data Schemas
+
+### Memory.json Schema
+
+The `data/memory.json` file contains unified storage for both working and disk memory with context key integration:
+
+```json
+{
+  "metadata": {
+    "version": "2.0",
+    "created": "2025-07-18T12:00:00Z",
+    "last_modified": "2025-07-18T12:00:00Z",
+    "context_key_version": "1.0"
+  },
+  "working_memory": {
+    "current_task": "Perpetual thinking and disk enrichment",
+    "context": "Unified context spanning state transitions...",
+    "current_state": "thinking",
+    "variables": {},
+    "context_window_usage": 0.75,
+    "active_context_keys": ["analysis_2025_07_18", "strategy_planning", "disk_enrichment_metrics"]
+  },
+  "disk_memory": {
+    "tagged_entries": [],
+    "knowledge_base": {
+      "concepts": {},
+      "procedures": {},
+      "facts": {}
+    },
+    "accumulated_insights": [],
+    "enrichment_metrics": {
+      "total_entries": 0,
+      "quality_score": 0.0,
+      "enrichment_rate": 0.0
+    },
+    "context_storage": {
+      "archived_contexts": {},
+      "context_relationships": {},
+      "access_patterns": {}
+    }
+  },
+  "context_key_directory": {
+    "active_keys": {
+      "analysis_2025_07_18": {
+        "location": "working_memory",
+        "created": "2025-07-18T12:00:00Z",
+        "size_bytes": 1024,
+        "access_count": 15,
+        "tags": ["analysis", "current", "important"]
+      }
+    },
+    "archived_keys": {},
+    "disk_keys": {}
+  },
+  "unified_log": [],
+  "context_management": {
+    "window_size": 4096,
+    "current_usage": 0,
+    "trim_history": [],
+    "paging_operations": [],
+    "llm_directives": []
+  }
+}
 ```
 
------
+### Context Keys Schema
 
-## Usage
-
-### Basic Execution
-
-```bash
-# Run the agent demo
-./build/lkjagent
-```
-
-The agent will demonstrate:
-- Basic HTTP functionality with LMStudio
-- Agent state management and transitions  
-- Tool system functionality
-- Memory persistence operations
-
-## Memory Architecture Details
-
-### JSON Storage Format
+The `data/context_keys.json` file maintains the directory of context keys for efficient management:
 
 ```json
 {
   "metadata": {
     "version": "1.0",
-    "created": "2025-07-16T00:00:00Z",
-    "last_modified": "2025-07-16T12:00:00Z"
+    "last_updated": "2025-07-18T12:00:00Z",
+    "total_keys": 25
   },
-  "working_memory": {
-    "current_task": "...",
-    "context": "...",
-    "variables": {}
-  },
-  "knowledge_base": {
-    "concepts": {},
-    "procedures": {},
-    "facts": {}
-  },
-  "log": [
-    {
-      "timestamp": "2025-07-16T12:00:00Z",
-      "state": "thinking",
-      "action": "plan_task",
-      "details": "..."
+  "working_memory_keys": {
+    "current_analysis": {
+      "key": "analysis_2025_07_18",
+      "content_type": "analytical_thinking",
+      "size_bytes": 1024,
+      "created": "2025-07-18T12:00:00Z",
+      "last_accessed": "2025-07-18T12:30:00Z",
+      "access_count": 15,
+      "importance_score": 0.95,
+      "tags": ["analysis", "current", "high_priority"]
     }
-  ],
-  "file": {
-    "generated_code": {},
-    "documents": {},
-    "data": {}
+  },
+  "disk_storage_keys": {
+    "historical_insights": {
+      "key": "insights_batch_001",
+      "content_type": "accumulated_knowledge",
+      "file_path": "data/disk_context/insights_batch_001.json",
+      "size_bytes": 4096,
+      "compressed": false,
+      "created": "2025-07-17T15:00:00Z",
+      "archived": "2025-07-18T09:00:00Z",
+      "access_count": 5,
+      "importance_score": 0.88,
+      "tags": ["insights", "historical", "archived"]
+    }
+  },
+  "archived_keys": {},
+  "key_relationships": {
+    "analysis_2025_07_18": {
+      "related_keys": ["strategy_planning", "execution_results"],
+      "dependency_type": "sequential",
+      "relationship_strength": 0.9
+    }
+  },
+  "usage_statistics": {
+    "most_accessed": "analysis_2025_07_18",
+    "least_accessed": "temp_calculation_001",
+    "average_size_bytes": 2048,
+    "total_disk_usage_bytes": 102400
   }
 }
 ```
 
-### State Transition
+## Implementation Guidelines for AI Agents
 
-```
-[User Input] -> thinking
-thinking -> paging or executing
-executing -> paging or evaluating
-evaluating -> paging
-paging -> thinking
-```
+### 1. Start with Core Infrastructure
 
------
+Begin implementation in this order:
+1. `src/lkjagent.h` - Complete type definitions and API declarations with markup and context key types
+2. `src/utils/data.c` - Foundation for all string operations (refactored from token.c)
+3. `src/utils/markup.c` - Simple markup format processing for LLM outputs
+4. `src/utils/file.c` - Basic I/O capabilities with memory.json and context_keys.json support
+5. `src/utils/json.c` - Configuration and memory.json support with state prompt handling
+6. `src/config/config.c` - Configuration management with state-specific system prompts
+7. `src/persistence/memory_persistence.c` - Memory and context key persistence
 
-## Development
+### 2. Build Memory and Context Layer
 
-### Code Structure
+Continue with:
+1. `src/memory/context_manager.c` - Context key management and LLM-directed paging
+2. `src/memory/tagged_memory.c` - Core memory system with context key integration
+3. `src/memory.c` - High-level memory management with unified storage
+4. `src/utils/http.c` - Network communication with context-aware sizing
 
-```
-lkjagent/
-├── agent_memory.json      # Persistent memory storage
-├── data/
-│   ├── memory.json        # Additional memory data
-│   └── config.json        # configuration data
-└── src/
-    ├── main.c             # Entry point and demo
-    ├── lkjagent.h         # Main header with all definitions
-    ├── agent.c            # Agent state management and tools
-    ├── token.c            # Token-based string handling
-    ├── http.c             # HTTP client implementation
-    ├── json.c             # JSON parsing and utilities
-    ├── file.c             # File I/O operations
-    └── error.c            # Error handling and logging
-```
+### 3. Implement LLM Integration
 
-### Coding Standards
+Build the LLM layer:
+1. `src/llm/llm_client.c` - HTTP communication with LMStudio
+2. `src/llm/prompt_manager.c` - State-specific prompt construction with markup enforcement
+3. `src/llm/response_parser.c` - Markup format validation and context key extraction
+4. `src/llm/context_builder.c` - Context preparation for LLM calls
 
-  - **C11 Standard**: Use C11 features where beneficial.
-  - **No Dynamic Allocation**: Only static arrays and stack allocation.
-  - **Functional Style**: Prefer pure functions and immutable data.
-  - **Error Handling**: Explicit error codes for all operations.
-  - **Documentation**: Comprehensive inline documentation.
+### 4. Implement State Machine and Paging
 
-### Memory Constraints
+Complete the agent logic:
+1. `src/state/enhanced_states.c` - State management with context paging integration
+2. `src/state/thinking.c` - Thinking state with analysis and context key identification
+3. `src/state/executing.c` - Executing state with disk enrichment operations
+4. `src/state/evaluating.c` - Evaluating state with progress assessment
+5. `src/state/paging.c` - LLM-controlled paging state implementation
+6. `src/agent/core.c` - Main agent functionality with perpetual operation
+7. `src/memory/enhanced_llm.c` - LLM integration for memory decisions
 
-  - **Max JSON Size**: 16MB (configurable).
-  - **Working_memory Buffer**: 8KB statically allocated.
-  - **String Limit**: 2KB per string field.
-  - **Array Limit**: Max 256 elements.
+### 5. Complete Application and Utilities
 
------
+Finalize with:
+1. `src/utils/string_utils.c` - Advanced string operations
+2. `src/utils/time_utils.c` - Time and timestamp utilities
+3. `src/utils/error_handler.c` - Centralized error handling
+4. `src/persistence/config_persistence.c` - Configuration persistence
+5. `src/persistence/disk_operations.c` - Low-level disk operations
+6. `src/lkjagent.c` - Application entry point (renamed from main.c)
 
-## API Integration
+### 6. Validation and Testing
 
-### LMStudio Communication
+Ensure all implementations:
+- Handle edge cases and error conditions
+- Follow memory safety principles
+- Include comprehensive parameter validation
+- Maintain consistent error reporting with concrete RETURN_ERR
+- Provide complete API coverage
+- Support perpetual operation without termination
+- Manage context width during state transitions with LLM-controlled paging
+- Use unified memory.json storage with context key integration
+- Validate and process simple markup format outputs
+- Implement state-specific system prompts correctly
+- Support LLM-directed context key operations
+- Maintain context key directory integrity
 
-The agent communicates with LMStudio using HTTP POST requests:
+## Key Implementation Details
+
+### Memory Safety Patterns
 
 ```c
-// Example API call structure
-typedef struct {
-    char* model;
-    char* prompt;
-    int max_tokens;
-} api_request_t;
+// Always validate pointers
+if (!ptr) {
+    RETURN_ERR("function_name: NULL parameter");
+    return RESULT_ERR;
+}
 
-int call_lmstudio(const api_request_t* request, char* response, size_t response_size);
+// Use bounded operations
+if (length >= data->capacity) {
+    RETURN_ERR("Buffer capacity exceeded");
+    return RESULT_ERR;
+}
+
+// Ensure null termination
+data->data[data->size] = '\0';
 ```
 
-### Response Handling
+### Error Propagation with Concrete Implementation
 
-The AI response is parsed to extract:
-
-  - The next action to perform.
-  - The updated agent state.
-  - Information to be saved.
-  - Tool calls.
-
-## Error Handling
-
-The agent implements comprehensive error handling:
-
-  - **Network Errors**: Retry with exponential backoff.
-  - **JSON Parsing Errors**: Graceful degradation.
-  - **Memory Errors**: Safe failure modes.
-  - **API Errors**: Fallback strategies.
-
-## Performance Considerations
-
-  - **Memory Usage**: Fixed memory footprint.
-  - **Disk I/O**: Efficient JSON operations.
-  - **Networking**: Connection pooling and caching.
-  - **CPU**: Optimized string manipulation.
-
------
-
-## Debugging
-
-### Debug Mode
-
-```bash
-# Run with error logging enabled (errors are logged by default)
-./build/lkjagent
+```c
+result_t high_level_function() {
+    result_t result = low_level_function();
+    if (result != RESULT_OK) {
+        RETURN_ERR("high_level_function: Failed in low level operation");
+        return result;
+    }
+    return RESULT_OK;
+}
 ```
 
-Debug output includes:
+### Perpetual State Machine Pattern with LLM-Controlled Paging
 
-  - State transitions.
-  - Memory operations.
-  - API requests/responses (when LMStudio is available).
-  - Tool executions.
+The agent operates in four distinct states with perpetual cycling and integrated LLM-controlled paging:
 
-### Memory Inspection
+1. **THINKING**: Analysis and planning with context accumulation
+   - Deep contemplative analysis using state-specific system prompt
+   - Context key identification for important insights
+   - Strategic planning with markup format output (@thinking blocks)
+   - Automatic context key tagging and categorization
 
-```bash
-# Display the current memory state
-cat agent_memory.json | jq '.'
+2. **EXECUTING**: Action performance with disk enrichment
+   - Task execution using state-specific system prompt
+   - Disk storage operations directed by LLM in markup format (@action blocks)
+   - Context key specification for storing execution results
+   - Quality data accumulation and organization
 
-# Watch for memory changes
-watch -n 1 'cat agent_memory.json | jq ".metadata.last_modified"'
+3. **EVALUATING**: Progress assessment and memory optimization
+   - Performance evaluation using state-specific system prompt
+   - Quality metrics and progress analysis in markup format (@evaluation blocks)
+   - Success measurement and improvement identification
+   - Context effectiveness assessment
+
+4. **PAGING**: LLM-controlled memory management
+   - Context analysis using specialized paging system prompt
+   - LLM directives for context key management in markup format (@paging blocks)
+   - Automatic context transfer between working memory and disk storage
+   - Memory optimization and cleanup operations
+   - Context key archival and retrieval operations
+
+Each state function manages context width, processes markup format outputs, and returns the next state, ensuring continuous operation without termination while maintaining efficient memory usage through LLM-directed paging.
+
+### Context Width Management Implementation with LLM Paging
+
+```c
+/**
+ * @brief LLM-controlled context paging request
+ *
+ * Requests the LLM to analyze current context and specify which
+ * context keys should be moved to disk storage, retrieved, or archived.
+ *
+ * @param agent Agent instance
+ * @param context_buffer Current context buffer
+ * @param target_state Target state for transition
+ * @return RESULT_OK on success, RESULT_ERR on failure
+ */
+__attribute__((warn_unused_result))
+result_t llm_request_context_paging(lkjagent_t* agent, data_t* context_buffer, const char* target_state) {
+    if (!agent || !context_buffer || !target_state) {
+        RETURN_ERR("llm_request_context_paging: NULL parameter");
+        return RESULT_ERR;
+    }
+    
+    // Build paging prompt with current context analysis
+    static char paging_prompt[2048];
+    data_t prompt_token;
+    if (data_init(&prompt_token, paging_prompt, sizeof(paging_prompt)) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize paging prompt");
+        return RESULT_ERR;
+    }
+    
+    // Use state-specific paging system prompt
+    const char* paging_system_prompt = agent->config.agent.state_prompts.paging.system_prompt;
+    if (data_set(&prompt_token, paging_system_prompt) != RESULT_OK) {
+        RETURN_ERR("Failed to set paging system prompt");
+        return RESULT_ERR;
+    }
+    
+    // Add context analysis request in markup format
+    if (data_append(&prompt_token, "\n\nAnalyze current context and respond with @paging block specifying:") != RESULT_OK ||
+        data_append(&prompt_token, "\n- move_to_disk: context keys to move to disk storage") != RESULT_OK ||
+        data_append(&prompt_token, "\n- retrieve_from_disk: context keys to retrieve from disk") != RESULT_OK ||
+        data_append(&prompt_token, "\n- archive_old: context keys to archive for long-term storage") != RESULT_OK) {
+        RETURN_ERR("Failed to build paging request");
+        return RESULT_ERR;
+    }
+    
+    // Send request to LLM and process markup response
+    static char llm_response[4096];
+    data_t response_token;
+    if (data_init(&response_token, llm_response, sizeof(llm_response)) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize response token");
+        return RESULT_ERR;
+    }
+    
+    if (llm_send_request(agent, &prompt_token, &response_token) != RESULT_OK) {
+        RETURN_ERR("Failed to send LLM paging request");
+        return RESULT_ERR;
+    }
+    
+    // Parse markup response and execute paging directives
+    if (markup_parse_paging_directives(&response_token, agent) != RESULT_OK) {
+        RETURN_ERR("Failed to parse LLM paging directives");
+        return RESULT_ERR;
+    }
+    
+    return RESULT_OK;
+}
+
+/**
+ * @brief Trim context data to fit within window limits
+ */
+__attribute__((warn_unused_result))
+result_t data_trim_context(data_t* context, size_t max_size, size_t preserve_recent) {
+    if (!context) {
+        RETURN_ERR("data_trim_context: NULL context parameter");
+        return RESULT_ERR;
+    }
+    
+    if (context->size <= max_size) {
+        return RESULT_OK; // No trimming needed
+    }
+    
+    // Preserve recent data and trim older content
+    size_t trim_amount = context->size - max_size + preserve_recent;
+    
+    if (data_trim_front(context, trim_amount) != RESULT_OK) {
+        RETURN_ERR("Failed to trim context data");
+        return RESULT_ERR;
+    }
+    
+    return RESULT_OK;
+}
 ```
 
------
+## Quality Standards
 
-## Contributing
+All generated code must:
+- Compile without warnings using `-Wall -Wextra -Werror`
+- Follow the established coding style consistently
+- Include comprehensive error handling with concrete RETURN_ERR implementation
+- Provide complete Doxygen documentation
+- Maintain zero external dependencies
+- Use only stack-based memory allocation
+- Implement all declared APIs from the header file
+- Support perpetual operation without termination
+- Manage context width properly during state transitions with LLM-controlled paging
+- Utilize unified memory.json storage for both working and disk memory
+- Process simple markup format for all LLM interactions
+- Implement state-specific system prompts correctly
+- Support context key identification, storage, and retrieval
+- Validate markup format responses from LLM
+- Handle context key directory operations
+- Integrate LLM-directed paging operations seamlessly
 
-1.  Fork the repository.
-2.  Create a feature branch.
-3.  Follow the coding standards.
-4.  Add comprehensive tests.
-5.  Submit a pull request.
+## Testing Requirements
 
-## License
+When implementing, ensure:
+- All API functions are callable and functional
+- Error conditions are properly handled with concrete error reporting
+- Memory operations are bounded and safe
+- Configuration loading works correctly with state-specific system prompts
+- JSON parsing handles malformed input gracefully
+- HTTP client can communicate with LMStudio
+- Tagged memory operations perform correctly with unified storage and context key integration
+- State machine transitions work with context width management and LLM-controlled paging
+- Perpetual operation mode functions indefinitely
+- Memory.json unified storage operates correctly with context key directory
+- Context width management prevents overflow during state transitions
+- Simple markup format validation works correctly for all LLM responses
+- State-specific system prompts are loaded and used properly
+- Context key operations (identification, storage, retrieval, archival) function correctly
+- LLM-directed paging operations execute without errors
+- Context key directory maintains integrity and consistency
+- Markup format parsing extracts context keys and directives accurately
 
-MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
-
-## Roadmap
-
-  - [ ] Enhanced tool system
-  - [ ] Multi-model support
-  - [ ] Distributed memory
-  - [ ] Performance optimizations
-  - [ ] Expanded API compatibility
-
-## Support
-
-For issues and questions:
-
-  - GitHub Issues: [Create an issue](https://github.com/lkjsxc/mono/issues)
-  - Documentation: Refer to inline code comments and this README.
-
------
-
-**Note**: This agent is designed for autonomous operation. Ensure appropriate monitoring and safety measures are in place when deploying in a production environment.
+This guide provides the complete specification for regenerating the LKJAgent source code while maintaining its architectural integrity, coding standards, functional requirements, and ensuring perpetual operation with LLM-controlled context management, state-specific prompts, simple markup format processing, and unified memory storage with context key integration.
