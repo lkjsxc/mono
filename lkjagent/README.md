@@ -22,45 +22,48 @@ This document provides comprehensive instructions for AI agents to regenerate th
 /workspaces/mono/lkjagent/
 /workspaces/mono/lkjagent/src/
 /workspaces/mono/lkjagent/src/lkjagent.h              # Main header with all type definitions and APIs
-/workspaces/mono/lkjagent/src/lkjagent.c              # Application entry point (renamed from main.c)
+/workspaces/mono/lkjagent/src/lkjagent.c              # Application entry point
 /workspaces/mono/lkjagent/src/agent/
-/workspaces/mono/lkjagent/src/agent/core.c              # Agent lifecycle and state machine
-/workspaces/mono/lkjagent/src/agent/execution.c         # Task execution engine
-/workspaces/mono/lkjagent/src/agent/evaluation.c        # Progress assessment and metrics
-/workspaces/mono/lkjagent/src/agent/decision.c          # Decision making logic
+/workspaces/mono/lkjagent/src/agent/agent_core.c        # Agent lifecycle and state machine
+/workspaces/mono/lkjagent/src/agent/agent_state.c       # State transition management
+/workspaces/mono/lkjagent/src/agent/agent_executor.c    # Task execution engine
+/workspaces/mono/lkjagent/src/agent/agent_evaluator.c   # Progress assessment and metrics
+/workspaces/mono/lkjagent/src/agent/agent_planner.c     # Decision making and planning logic
 /workspaces/mono/lkjagent/src/config/
-/workspaces/mono/lkjagent/src/config/config.c            # Core configuration management
-/workspaces/mono/lkjagent/src/config/validation.c        # Configuration validation
-/workspaces/mono/lkjagent/src/config/defaults.c          # Default configuration values
+/workspaces/mono/lkjagent/src/config/config_loader.c    # Core configuration management
+/workspaces/mono/lkjagent/src/config/config_validator.c # Configuration validation
+/workspaces/mono/lkjagent/src/config/config_defaults.c  # Default configuration values
 /workspaces/mono/lkjagent/src/memory/
-/workspaces/mono/lkjagent/src/memory/tagged_memory.c     # Tagged memory system implementation
-/workspaces/mono/lkjagent/src/memory/enhanced_llm.c      # LLM integration for memory decisions
-/workspaces/mono/lkjagent/src/memory/disk_storage.c      # Disk storage operations
-/workspaces/mono/lkjagent/src/memory/context_manager.c   # Context width and paging management
-/workspaces/mono/lkjagent/src/memory/memory_optimizer.c  # Memory optimization and cleanup
+/workspaces/mono/lkjagent/src/memory/tagged_memory.c    # Tagged memory system implementation
+/workspaces/mono/lkjagent/src/memory/memory_queries.c   # Complex query engine for tagged memory
+/workspaces/mono/lkjagent/src/memory/memory_llm.c       # LLM integration for memory decisions
+/workspaces/mono/lkjagent/src/memory/memory_disk.c      # Disk storage operations
+/workspaces/mono/lkjagent/src/memory/memory_context.c   # Context width and paging management
+/workspaces/mono/lkjagent/src/memory/memory_cleanup.c   # Memory optimization and cleanup
 /workspaces/mono/lkjagent/src/state/
-/workspaces/mono/lkjagent/src/state/enhanced_states.c   # Enhanced state management
-/workspaces/mono/lkjagent/src/state/thinking.c          # Thinking state implementation
-/workspaces/mono/lkjagent/src/state/executing.c         # Executing state implementation
-/workspaces/mono/lkjagent/src/state/evaluating.c        # Evaluating state implementation
-/workspaces/mono/lkjagent/src/state/paging.c            # LLM-controlled paging state
+/workspaces/mono/lkjagent/src/state/state_manager.c     # Enhanced state management
+/workspaces/mono/lkjagent/src/state/state_thinking.c    # Thinking state implementation
+/workspaces/mono/lkjagent/src/state/state_executing.c   # Executing state implementation
+/workspaces/mono/lkjagent/src/state/state_evaluating.c  # Evaluating state implementation
+/workspaces/mono/lkjagent/src/state/state_paging.c      # LLM-controlled paging state
 /workspaces/mono/lkjagent/src/llm/
-/workspaces/mono/lkjagent/src/llm/llm_client.c        # LLM client interface
-/workspaces/mono/lkjagent/src/llm/prompt_manager.c    # Prompt construction and management
-/workspaces/mono/lkjagent/src/llm/context_builder.c   # Context preparation for LLM calls
-/workspaces/mono/lkjagent/src/llm/response_parser.c   # LLM response parsing and validation
+/workspaces/mono/lkjagent/src/llm/llm_client.c          # LLM client interface
+/workspaces/mono/lkjagent/src/llm/llm_prompt.c          # Prompt construction and management
+/workspaces/mono/lkjagent/src/llm/llm_context.c         # Context preparation for LLM calls
+/workspaces/mono/lkjagent/src/llm/llm_parser.c          # LLM response parsing and validation
 /workspaces/mono/lkjagent/src/utils/
-/workspaces/mono/lkjagent/src/utils/data.c              # Safe data token management (renamed from token.c)
-/workspaces/mono/lkjagent/src/utils/file.c              # File I/O operations
-/workspaces/mono/lkjagent/src/utils/http.c              # HTTP client implementation
-/workspaces/mono/lkjagent/src/utils/json.c              # JSON parsing and generation
-/workspaces/mono/lkjagent/src/utils/tag_processor.c     # Simple tag format handling
+/workspaces/mono/lkjagent/src/utils/data.c              # Safe data token management
+/workspaces/mono/lkjagent/src/utils/file_io.c           # File I/O operations
+/workspaces/mono/lkjagent/src/utils/http_client.c       # HTTP client implementation
+/workspaces/mono/lkjagent/src/utils/json_parser.c       # JSON parsing
+/workspaces/mono/lkjagent/src/utils/json_builder.c      # JSON generation
+/workspaces/mono/lkjagent/src/utils/tag_parser.c        # Simple tag format handling
 /workspaces/mono/lkjagent/src/utils/string_utils.c      # String manipulation utilities
 /workspaces/mono/lkjagent/src/utils/time_utils.c        # Time and timestamp utilities
 /workspaces/mono/lkjagent/src/persistence/
-/workspaces/mono/lkjagent/src/persistence/memory_persistence.c # Memory.json persistence
-/workspaces/mono/lkjagent/src/persistence/config_persistence.c # Configuration persistence
-/workspaces/mono/lkjagent/src/persistence/disk_operations.c    # Low-level disk operations
+/workspaces/mono/lkjagent/src/persistence/persist_memory.c  # Memory.json persistence
+/workspaces/mono/lkjagent/src/persistence/persist_config.c  # Configuration persistence
+/workspaces/mono/lkjagent/src/persistence/persist_disk.c    # Low-level disk operations
 /workspaces/mono/lkjagent/build/                      # Compiled object files and executable
 /workspaces/mono/lkjagent/data/
 /workspaces/mono/lkjagent/data/config.json             # Runtime configuration with state prompts
@@ -364,7 +367,7 @@ Implements safe string handling with:
 - Comparison functions
 - Context width management utilities
 
-### 2. Simple Tag Processing (`src/utils/tag_processor.c`)
+### 2. Simple Tag Processing (`src/utils/tag_parser.c`)
 
 Handles LLM output in simple `<tag>content</tag>` format only:
 - Simple tag validation and parsing (no complex markup)
@@ -375,7 +378,7 @@ Handles LLM output in simple `<tag>content</tag>` format only:
 - Conversion between simple tag format and structured data
 - Strict enforcement of simple tag-only format
 
-### 3. File Operations (`src/utils/file.c`)
+### 3. File Operations (`src/utils/file_io.c`)
 
 Provides file I/O with:
 - Safe file reading into data tokens
@@ -385,7 +388,7 @@ Provides file I/O with:
 - Error handling for all I/O operations
 - Memory.json unified storage support
 
-### 4. Context Management (`src/memory/context_manager.c`)
+### 4. Context Management (`src/memory/memory_context.c`)
 
 Advanced context width and paging management:
 - LLM-directed context key identification
@@ -395,7 +398,7 @@ Advanced context width and paging management:
 - Automatic context archival
 - Context retrieval by key
 
-### 5. LLM-Controlled Paging (`src/state/paging.c`)
+### 5. LLM-Controlled Paging (`src/state/state_paging.c`)
 
 LLM-driven memory paging operations:
 - Context analysis and key identification
@@ -405,7 +408,7 @@ LLM-driven memory paging operations:
 - Paging decision rationale tracking
 - Integration with memory persistence layer
 
-### 6. HTTP Client (`src/utils/http.c`)
+### 6. HTTP Client (`src/utils/http_client.c`)
 
 Implements HTTP client without external dependencies:
 - Socket-based implementation
@@ -415,7 +418,7 @@ Implements HTTP client without external dependencies:
 - Response parsing
 - Context-aware request sizing
 
-### 7. JSON Processing (`src/utils/json.c`)
+### 7. JSON Processing (`src/utils/json_parser.c` and `src/utils/json_builder.c`)
 
 Manual JSON parsing and generation:
 - Validation functions
@@ -425,7 +428,7 @@ Manual JSON parsing and generation:
 - String escaping
 - Memory.json format support
 
-### 8. Configuration Management (`src/config/config.c`)
+### 8. Configuration Management (`src/config/config_loader.c`)
 
 Configuration management with state-specific prompts:
 - Default value initialization
@@ -447,7 +450,7 @@ Advanced memory system featuring:
 - Working and disk memory unification
 - Integration with context key system
 
-### 10. LLM Integration (`src/memory/enhanced_llm.c`)
+### 10. LLM Integration (`src/memory/memory_llm.c`)
 
 AI-driven memory decisions:
 - Memory pattern analysis
@@ -458,7 +461,7 @@ AI-driven memory decisions:
 - Context width optimization
 - Tag format output processing
 
-### 11. Agent Core (`src/agent/core.c`)
+### 11. Agent Core (`src/agent/agent_core.c`)
 
 State machine implementation:
 - Four-state execution cycle with LLM-controlled paging
@@ -469,7 +472,7 @@ State machine implementation:
 - Perpetual operation mode
 - Context width management with LLM directives
 
-### 12. Enhanced States (`src/state/enhanced_states.c`)
+### 12. Enhanced States (`src/state/state_manager.c`)
 
 State management utilities:
 - State transition logic with context paging
@@ -482,25 +485,25 @@ State management utilities:
 
 ### 13. State-Specific Implementations
 
-#### Thinking State (`src/state/thinking.c`)
+#### Thinking State (`src/state/state_thinking.c`)
 - Deep analysis and contemplation
 - Context accumulation and organization
 - Problem decomposition
 - Strategic planning with context key identification
 
-#### Executing State (`src/state/executing.c`)
+#### Executing State (`src/state/state_executing.c`)
 - Action execution with disk enrichment
 - Task performance monitoring
 - Resource utilization tracking
 - Progress measurement
 
-#### Evaluating State (`src/state/evaluating.c`)
+#### Evaluating State (`src/state/state_evaluating.c`)
 - Progress assessment and metrics
 - Quality evaluation
 - Performance analysis
 - Improvement recommendations
 
-#### Paging State (`src/state/paging.c`)
+#### Paging State (`src/state/state_paging.c`)
 - LLM-controlled context management
 - Memory optimization
 - Context key processing
@@ -508,13 +511,13 @@ State management utilities:
 
 ### 14. Persistence Layer
 
-#### Memory Persistence (`src/persistence/memory_persistence.c`)
+#### Memory Persistence (`src/persistence/persist_memory.c`)
 - Memory.json operations
 - Context key directory management
 - Atomic write operations
 - Data integrity validation
 
-#### Configuration Persistence (`src/persistence/config_persistence.c`)
+#### Configuration Persistence (`src/persistence/persist_config.c`)
 - Config.json with state prompts
 - Runtime configuration updates
 - Validation and error handling
@@ -527,13 +530,13 @@ State management utilities:
 - Timeout and error management
 - Connection pooling
 
-#### Prompt Manager (`src/llm/prompt_manager.c`)
+#### Prompt Manager (`src/llm/llm_prompt.c`)
 - State-specific prompt construction
 - Context integration
 - Tag format enforcement
 - Template management
 
-#### Response Parser (`src/llm/response_parser.c`)
+#### Response Parser (`src/llm/llm_parser.c`)
 - Tag format validation
 - Block extraction and parsing
 - Context key extraction
@@ -551,17 +554,7 @@ State management utilities:
 - Duration calculations
 - Time-based operations
 
-### 17. Agent Memory (`src/memory.c`)
-
-High-level memory management:
-- Working memory initialization
-- Persistent storage integration in memory.json
-- Memory validation
-- Statistics and utilization tracking
-- Unified memory access interface
-- Context key integration
-
-### 18. Main Application (`src/lkjagent.c`)
+### 17. Main Application (`src/lkjagent.c`)
 
 Application entry point providing:
 - Agent initialization
@@ -810,48 +803,47 @@ The `data/context_keys.json` file maintains the directory of context keys for ef
 
 Begin implementation in this order:
 1. `src/lkjagent.h` - Complete type definitions and API declarations with simple tag and context key types
-2. `src/utils/data.c` - Foundation for all string operations (refactored from token.c)
-3. `src/utils/tag_processor.c` - Simple tag format processing for LLM outputs
-4. `src/utils/file.c` - Basic I/O capabilities with memory.json and context_keys.json support
-5. `src/utils/json.c` - Configuration and memory.json support with state prompt handling
-6. `src/config/config.c` - Configuration management with state-specific system prompts
-7. `src/persistence/memory_persistence.c` - Memory and context key persistence
+2. `src/utils/data.c` - Foundation for all string operations
+3. `src/utils/tag_parser.c` - Simple tag format processing for LLM outputs
+4. `src/utils/file_io.c` - Basic I/O capabilities with memory.json and context_keys.json support
+5. `src/utils/json_parser.c` and `src/utils/json_builder.c` - Configuration and memory.json support with state prompt handling
+6. `src/config/config_loader.c` - Configuration management with state-specific system prompts
+7. `src/persistence/persist_memory.c` - Memory and context key persistence
 
 ### 2. Build Memory and Context Layer
 
 Continue with:
-1. `src/memory/context_manager.c` - Context key management and LLM-directed paging
+1. `src/memory/memory_context.c` - Context key management and LLM-directed paging
 2. `src/memory/tagged_memory.c` - Core memory system with context key integration
-3. `src/memory.c` - High-level memory management with unified storage
-4. `src/utils/http.c` - Network communication with context-aware sizing
+3. `src/utils/http_client.c` - Network communication with context-aware sizing
 
 ### 3. Implement LLM Integration
 
 Build the LLM layer:
 1. `src/llm/llm_client.c` - HTTP communication with LMStudio
-2. `src/llm/prompt_manager.c` - State-specific prompt construction with simple tag format enforcement
-3. `src/llm/response_parser.c` - Simple tag format validation and context key extraction
-4. `src/llm/context_builder.c` - Context preparation for LLM calls
+2. `src/llm/llm_prompt.c` - State-specific prompt construction with simple tag format enforcement
+3. `src/llm/llm_parser.c` - Simple tag format validation and context key extraction
+4. `src/llm/llm_context.c` - Context preparation for LLM calls
 
 ### 4. Implement State Machine and Paging
 
 Complete the agent logic:
-1. `src/state/enhanced_states.c` - State management with context paging integration
-2. `src/state/thinking.c` - Thinking state with analysis and context key identification
-3. `src/state/executing.c` - Executing state with disk enrichment operations
-4. `src/state/evaluating.c` - Evaluating state with progress assessment
-5. `src/state/paging.c` - LLM-controlled paging state implementation
-6. `src/agent/core.c` - Main agent functionality with perpetual operation
-7. `src/memory/enhanced_llm.c` - LLM integration for memory decisions
+1. `src/state/state_manager.c` - State management with context paging integration
+2. `src/state/state_thinking.c` - Thinking state with analysis and context key identification
+3. `src/state/state_executing.c` - Executing state with disk enrichment operations
+4. `src/state/state_evaluating.c` - Evaluating state with progress assessment
+5. `src/state/state_paging.c` - LLM-controlled paging state implementation
+6. `src/agent/agent_core.c` - Main agent functionality with perpetual operation
+7. `src/memory/memory_llm.c` - LLM integration for memory decisions
 
 ### 5. Complete Application and Utilities
 
 Finalize with:
 1. `src/utils/string_utils.c` - Advanced string operations
 2. `src/utils/time_utils.c` - Time and timestamp utilities
-4. `src/persistence/config_persistence.c` - Configuration persistence
-5. `src/persistence/disk_operations.c` - Low-level disk operations
-6. `src/lkjagent.c` - Application entry point (renamed from main.c)
+4. `src/persistence/persist_config.c` - Configuration persistence
+5. `src/persistence/persist_disk.c` - Low-level disk operations
+6. `src/lkjagent.c` - Application entry point
 
 ### 6. Validation and Testing
 
