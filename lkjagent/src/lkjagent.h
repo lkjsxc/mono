@@ -196,8 +196,36 @@ struct tagged_memory {
     /** Memory access statistics */
     uint64_t access_count;
     
+    /** Memory store operations count */
+    uint64_t store_count;
+    
+    /** Memory delete operations count */
+    uint64_t delete_count;
+    
+    /** Average access time in microseconds */
+    uint64_t avg_access_time;
+    
     /** Memory size statistics */
     size_t total_size;
+    
+    /** Working memory layer size */
+    size_t working_size;
+    
+    /** Disk memory layer size */
+    size_t disk_size;
+    
+    /** Archived memory size */
+    size_t archived_size;
+    
+    /** Maximum working memory size */
+    size_t max_working_size;
+    
+    /** Maximum disk memory size */
+    size_t max_disk_size;
+    
+    /** Memory files paths */
+    char memory_file[MAX_FILENAME_SIZE];
+    char context_keys_file[MAX_FILENAME_SIZE];
 };
 
 /**

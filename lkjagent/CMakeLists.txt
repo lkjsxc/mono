@@ -24,8 +24,21 @@ set(CORE_SOURCES
     src/persistence/persist_memory.c
 )
 
+# Memory system sources
+set(MEMORY_SOURCES
+    src/memory/tagged_memory.c
+    src/memory/memory_queries.c
+    src/memory/memory_llm.c
+    src/memory/context_window.c
+    src/memory/memory_cleanup.c
+    src/memory/memory_disk.c
+)
+
+# All sources combined
+set(ALL_SOURCES ${CORE_SOURCES} ${MEMORY_SOURCES})
+
 # Create static library
-add_library(lkjagent_core STATIC ${CORE_SOURCES})
+add_library(lkjagent_core STATIC ${ALL_SOURCES})
 
 # Test executable
 add_executable(test_core_infrastructure

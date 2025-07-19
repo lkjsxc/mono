@@ -17,6 +17,7 @@
 #include "types.h"
 #include "data.h"
 #include <sys/stat.h>
+#include <sys/types.h>
 
 /**
  * @defgroup File_IO File I/O Operations
