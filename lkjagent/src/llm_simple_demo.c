@@ -9,7 +9,7 @@
  * @version 1.0.0
  */
 
-#include "src/lkjagent.h"
+#include "lkjagent.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

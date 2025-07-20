@@ -3,9 +3,9 @@
  * @brief Simple test for the memory system
  */
 
-#include "src/include/memory_context.h"
-#include "src/include/data.h"
-#include "src/lkjagent.h"
+#include "include/memory_context.h"
+#include "include/data.h"
+#include "lkjagent.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

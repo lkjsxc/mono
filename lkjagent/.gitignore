@@ -1,2 +1,25 @@
+# Build directories
 build/
+
+# Object files and executables
 *.o
+*.so
+*.a
+*.exe
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Core dumps
+core.*
