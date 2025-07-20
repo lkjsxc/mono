@@ -1,5 +1,5 @@
-#ifndef LKJAGENT_STRING_H
-#define LKJAGENT_STRING_H
+#ifndef LKJAGENT_LKJSTRING_H
+#define LKJAGENT_LKJSTRING_H
 
 #include "std.h"
 #include "types.h"

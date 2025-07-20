@@ -1,11 +1,13 @@
-#include "string.h"
+#include "lkjstring.h"
+#include "macro.h"
+#include "types.h"
 
 result_t string_init(string_t* string, char* data) {
     string->data = data;
     string->size = 0;
     string->capacity = 0;
     string->data[0] = '\0';
-    
+
     return RESULT_OK;
 }
 
@@ -14,10 +16,10 @@ result_t string_assign(string_t* string, const char* str) {
     if (str_len >= string->capacity) {
         return RESULT_ERR;
     }
-    
+
     strcpy(string->data, str);
     string->size = str_len;
-    
+
     return RESULT_OK;
 }
 
@@ -25,10 +27,10 @@ result_t string_copy(string_t* dest, const string_t* src) {
     if (src->size >= dest->capacity) {
         return RESULT_ERR;
     }
-    
+
     strcpy(dest->data, src->data);
     dest->size = src->size;
-    
+
     return RESULT_OK;
 }
 
@@ -44,10 +46,10 @@ result_t string_append(string_t* string, const char* str) {
     if (string->size + str_len >= string->capacity) {
         return RESULT_ERR;
     }
-    
+
     strcat(string->data, str);
     string->size += str_len;
-    
+
     return RESULT_OK;
 }
 
@@ -55,11 +57,11 @@ result_t string_append_data(string_t* string, const char* data, uint64_t size) {
     if (string->size + size >= string->capacity) {
         return RESULT_ERR;
     }
-    
+
     memcpy(string->data + string->size, data, size);
     string->size += size;
     string->data[string->size] = '\0';
-    
+
     return RESULT_OK;
 }
 
@@ -67,11 +69,11 @@ result_t string_append_char(string_t* string, char c) {
     if (string->size + 1 >= string->capacity) {
         return RESULT_ERR;
     }
-    
+
     string->data[string->size] = c;
     string->size++;
     string->data[string->size] = '\0';
-    
+
     return RESULT_OK;
 }
 
@@ -79,7 +81,7 @@ int string_equal(const string_t* string1, const string_t* string2) {
     if (string1->size != string2->size) {
         return 0;
     }
-    
+
     return strcmp(string1->data, string2->data) == 0;
 }
 
@@ -92,7 +94,7 @@ int64_t string_find(const string_t* string, const char* substr) {
     if (found == NULL) {
         return -1;
     }
-    
+
     return found - string->data;
 }
 
@@ -101,7 +103,7 @@ int64_t string_find_char(const string_t* string, char c) {
     if (found == NULL) {
         return -1;
     }
-    
+
     return found - string->data;
 }
 
@@ -109,12 +111,12 @@ int64_t string_find_from(const string_t* string, const char* substr, uint64_t po
     if (pos >= string->size) {
         return -1;
     }
-    
+
     char* found = strstr(string->data + pos, substr);
     if (found == NULL) {
         return -1;
     }
-    
+
     return found - string->data;
 }
 
@@ -122,11 +124,11 @@ int64_t string_find_char_from(const string_t* string, char c, uint64_t pos) {
     if (pos >= string->size) {
         return -1;
     }
-    
+
     char* found = strchr(string->data + pos, c);
     if (found == NULL) {
         return -1;
     }
-    
+
     return found - string->data;
 }

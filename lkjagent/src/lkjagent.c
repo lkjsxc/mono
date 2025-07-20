@@ -1,9 +1,6 @@
 #include "lkjagent.h"
 
 result_t lkjagent_init(lkjagent_t* lkjagent) {
-    if (lkjagent == NULL) {
-        RETURN_ERR("lkjagent is NULL");
-    }
     
     // Initialize lkjagent structure
     // TODO: Add initialization logic here
@@ -11,21 +8,7 @@ result_t lkjagent_init(lkjagent_t* lkjagent) {
     return RESULT_OK;
 }
 
-result_t lkjagent_loadconfig(lkjagent_t* lkjagent) {
-    if (lkjagent == NULL) {
-        RETURN_ERR("lkjagent is NULL");
-    }
-    
-    // Load configuration
-    // TODO: Add configuration loading logic here
-    
-    return RESULT_OK;
-}
-
 result_t lkjagent_run(lkjagent_t* lkjagent) {
-    if (lkjagent == NULL) {
-        RETURN_ERR("lkjagent is NULL");
-    }
     
     // Main run loop
     // TODO: Add main application logic here
