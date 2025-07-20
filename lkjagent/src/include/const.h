@@ -1,0 +1,9 @@
+#ifndef LKJAGENT_CONST_H
+#define LKJAGENT_CONST_H
+
+#define DATA_CAPACITY (1024 * 1024 * 16)
+#define STRING_COUNT 1024
+#define STRING_CAPACITY 256
+#define TREE_COUNT 1024
+
+#endif
