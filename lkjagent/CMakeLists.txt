@@ -20,6 +20,7 @@ set(CORE_SOURCES
     src/utils/file_io.c
     src/utils/json_parser.c
     src/utils/json_builder.c
+    src/utils/http_client.c
     src/config/config_loader.c
     src/persistence/persist_memory.c
 )
@@ -34,8 +35,16 @@ set(MEMORY_SOURCES
     src/memory/memory_disk.c
 )
 
+# LLM integration sources
+set(LLM_SOURCES
+    src/llm/llm_client.c
+    src/llm/llm_parser.c
+    src/llm/llm_context.c
+    src/llm/llm_prompt.c
+)
+
 # All sources combined
-set(ALL_SOURCES ${CORE_SOURCES} ${MEMORY_SOURCES})
+set(ALL_SOURCES ${CORE_SOURCES} ${MEMORY_SOURCES} ${LLM_SOURCES})
 
 # Create static library
 add_library(lkjagent_core STATIC ${ALL_SOURCES})

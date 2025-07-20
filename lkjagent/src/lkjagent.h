@@ -38,6 +38,13 @@
 #include "include/config_loader.h"
 #include "include/persist_memory.h"
 
+/* HTTP and LLM integration headers */
+#include "include/http_client.h"
+#include "include/llm/llm_client.h"
+#include "include/llm/llm_parser.h"
+#include "include/llm/llm_context.h"
+#include "include/llm/llm_prompt.h"
+
 /**
  * @defgroup Constants Core System Constants
  * @{
