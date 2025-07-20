@@ -5,6 +5,7 @@
 #include "types.h"
 #include "macro.h"
 #include "lkjstring.h"
+#include "fileio.h"
 
 __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent);
 __attribute__((warn_unused_result)) result_t lkjagent_loadconfig(lkjagent_t* lkjagent);

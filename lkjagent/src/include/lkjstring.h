@@ -1,10 +1,11 @@
 #ifndef LKJAGENT_LKJSTRING_H
 #define LKJAGENT_LKJSTRING_H
 
+#include "macro.h"
 #include "std.h"
 #include "types.h"
 
-__attribute__((warn_unused_result)) result_t string_init(string_t* string, char* data);
+__attribute__((warn_unused_result)) result_t string_init(string_t* string, char* data, uint64_t capacity);
 __attribute__((warn_unused_result)) result_t string_assign(string_t* string, const char* str);
 __attribute__((warn_unused_result)) result_t string_copy(string_t* dst, const string_t* src);
 void string_clear(string_t* string);

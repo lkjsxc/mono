@@ -1,0 +1,11 @@
+{
+  "application": {
+    "name": "lkjagent",
+    "version": "1.0.0",
+    "debug": true
+  },
+  "network": {
+    "port": 8080,
+    "timeout": 30
+  }
+}

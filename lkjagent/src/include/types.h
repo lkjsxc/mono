@@ -2,6 +2,7 @@
 #define LKJAGENT_TYPES_H
 
 #include "std.h"
+#include "const.h"
 
 typedef enum {
     RESULT_OK = 0,
@@ -15,9 +16,8 @@ typedef struct {
 } string_t;
 
 typedef struct {
-} config_t;
-
-typedef struct {
+    char io_buf_data[IO_BUF_CAPACITY];
+    string_t io_buf;
 } lkjagent_t;
 
 #endif

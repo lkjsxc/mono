@@ -3,6 +3,7 @@
 
 #include "std.h"
 
+#define IO_BUF_CAPACITY 4096
 #define DATA_CAPACITY (1024 * 1024 * 16)
 #define TOKEN_COUNT 1024
 #define TOKEN_CAPACITY 256
