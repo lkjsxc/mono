@@ -3,13 +3,10 @@
 
 #include "const.h"
 #include "fileio.h"
+#include "json.h"
 #include "lkjstring.h"
 #include "macro.h"
 #include "pool.h"
 #include "types.h"
-
-__attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent);
-__attribute__((warn_unused_result)) result_t lkjagent_loadconfig(lkjagent_t* lkjagent);
-__attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent);
 
 #endif

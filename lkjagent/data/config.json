@@ -1,11 +1,10 @@
 {
-  "application": {
-    "name": "lkjagent",
-    "version": "1.0.0",
-    "debug": true
+  "version": "1.0.0",
+  "lmstudio": {
+    "endpoint": "http://host.docker.internal:1234"
   },
-  "network": {
-    "port": 8080,
-    "timeout": 30
+  "agent": {
+    "soft_limit": 2048,
+    "hard_limit": 4096
   }
 }
