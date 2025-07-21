@@ -1,8 +1,8 @@
 #ifndef LKJAGENT_TYPES_H
 #define LKJAGENT_TYPES_H
 
-#include "std.h"
 #include "const.h"
+#include "std.h"
 
 typedef enum {
     RESULT_OK = 0,
@@ -16,8 +16,14 @@ typedef struct {
 } string_t;
 
 typedef struct {
-    char io_buf_data[IO_BUF_CAPACITY];
-    string_t io_buf;
+    char pool_string256_data[POOL_STRING256_MAXCOUNT][256];
+    string_t pool_string256[POOL_STRING256_MAXCOUNT];
+    string_t* pool_string256_freelist_data[POOL_STRING256_MAXCOUNT];
+    uint64_t pool_string256_freelist_count;
+    char pool_string4096_data[POOL_STRING4096_MAXCOUNT][4096];
+    string_t pool_string4096[POOL_STRING4096_MAXCOUNT];
+    string_t* pool_string4096_freelist_data[POOL_STRING4096_MAXCOUNT];
+    uint64_t pool_string4096_freelist_count;
 } lkjagent_t;
 
 #endif

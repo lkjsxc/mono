@@ -3,6 +3,8 @@
 
 #include "std.h"
 
+#define COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
+
 #define RETURN_ERR3(n) #n
 #define RETURN_ERR2(n) RETURN_ERR3(n)
 #define RETURN_ERR(error_message)                                                   \

@@ -3,11 +3,8 @@
 
 #include "std.h"
 
-#define IO_BUF_CAPACITY 4096
-#define DATA_CAPACITY (1024 * 1024 * 16)
-#define TOKEN_COUNT 1024
-#define TOKEN_CAPACITY 256
 #define BUF_CAPACITY (1024 * 1024 * 4)
-#define TREE_COUNT 1024
+#define POOL_STRING256_MAXCOUNT 1024
+#define POOL_STRING4096_MAXCOUNT 256
 
 #endif
