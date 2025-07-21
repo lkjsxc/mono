@@ -44,4 +44,20 @@ __attribute__((warn_unused_result)) result_t pool_string4096_alloc(pool_t* pool,
  */
 __attribute__((warn_unused_result)) result_t pool_string4096_free(pool_t* pool, string_t* string);
 
+/**
+ * Allocate a string from the 1048576-byte pool
+ * @param pool The pool structure containing the pools
+ * @param string Pointer to store the allocated string
+ * @return RESULT_OK on success, RESULT_ERR if pool is exhausted
+ */
+__attribute__((warn_unused_result)) result_t pool_string1048576_alloc(pool_t* pool, string_t** string);
+
+/**
+ * Free a string back to the 1048576-byte pool
+ * @param pool The pool structure containing the pools
+ * @param string The string to return to the pool
+ * @return RESULT_OK on success, RESULT_ERR on error
+ */
+__attribute__((warn_unused_result)) result_t pool_string1048576_free(pool_t* pool, string_t* string);
+
 #endif
