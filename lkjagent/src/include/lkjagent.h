@@ -5,6 +5,7 @@
 #include "fileio.h"
 #include "lkjstring.h"
 #include "macro.h"
+#include "pool.h"
 #include "types.h"
 
 __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent);

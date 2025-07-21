@@ -24,6 +24,10 @@ typedef struct {
     string_t pool_string4096[POOL_STRING4096_MAXCOUNT];
     string_t* pool_string4096_freelist_data[POOL_STRING4096_MAXCOUNT];
     uint64_t pool_string4096_freelist_count;
+} pool_t;
+
+typedef struct {
+    pool_t pool;
 } lkjagent_t;
 
 #endif
