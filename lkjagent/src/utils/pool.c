@@ -374,7 +374,7 @@ result_t pool_string_alloc(pool_t* pool, uint64_t size, string_t** string) {
     } else if (size <= 1048576) {
         return pool_string1048576_alloc(pool, string);
     } else {
-        return RESULT_ERR;  // Size too large for any pool
+        RETURN_ERR("Size too large for any pool");
     }
 }
 
@@ -389,6 +389,6 @@ result_t pool_string_free(pool_t* pool, string_t* string) {
     } else if (string->capacity == 1048576) {
         return pool_string1048576_free(pool, string);
     } else {
-        return RESULT_ERR;  // String doesn't belong to any known pool
+        RETURN_ERR("String does not belong to any known pool");
     }
 }
