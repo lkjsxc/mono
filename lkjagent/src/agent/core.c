@@ -19,19 +19,27 @@ result_t agent_run(pool_t* pool, config_t* config, agent_t* agent) {
     if (string_copy(request_body, config->version) != RESULT_OK) {
         RETURN_ERR("Failed to assign version to request body");
     }
-
-    if (agent->status == AGENT_STATUS_THINKING) {
-        printf("Thinking...\n");
-        // Simulate thinking process
-        // Here you would implement the logic for the agent's thinking process
-    } else if (agent->status == AGENT_STATUS_PAGING) {
-        printf("Paging...\n");
-        // Simulate paging process
-        // Here you would implement the logic for the agent's paging process
-    } else if (agent->status == AGENT_STATUS_EVALUATING) {
-        printf("Evaluating...\n");
-        // Simulate evaluating process
-        // Here you would implement the logic for the agent's evaluating process
+    for (uint64_t i = 0; i < config->agent_max_iterate; i++) {
+        printf("--- Iteration %lu ---\n", i);
+        if (agent->status == AGENT_STATUS_THINKING) {
+            printf("Thinking...\n");
+            // Simulate thinking process
+            // Here you would implement the logic for the agent's thinking process
+        } else if (agent->status == AGENT_STATUS_PAGING) {
+            printf("Paging...\n");
+            // Simulate paging process
+            // Here you would implement the logic for the agent's paging process
+        } else if (agent->status == AGENT_STATUS_EVALUATING) {
+            printf("Evaluating...\n");
+            // Simulate evaluating process
+            // Here you would implement the logic for the agent's evaluating process
+        } else if (agent->status == AGENT_STATUS_EXECUTING) {
+            printf("Executing...\n");
+            // Simulate executing process
+            // Here you would implement the logic for the agent's executing process
+        } else {
+            RETURN_ERR("Unknown agent status");
+        }
     }
 
     printf("Agent run completed\n");

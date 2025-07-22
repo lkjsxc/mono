@@ -65,6 +65,12 @@ result_t config_load_agent(config_t* config, json_value_t* agent_obj) {
     }
     config->agent_hard_limit = agent_hard_limit_value->u.number_value;
 
+    json_value_t* agent_max_iterate_value = json_object_get(agent_obj, "max_iterate");
+    if (agent_max_iterate_value && agent_max_iterate_value->type != JSON_TYPE_NUMBER) {
+        RETURN_ERR("Agent max iterate must be a number");
+    }
+    config->agent_max_iterate = agent_max_iterate_value->u.number_value;
+
     json_value_t* agent_default_status_value = json_object_get(agent_obj, "default_status");
     if (agent_default_status_value && agent_default_status_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent default status must be a string");

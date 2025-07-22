@@ -110,6 +110,7 @@ typedef struct {
 
     uint64_t agent_soft_limit;
     uint64_t agent_hard_limit;
+    uint64_t agent_max_iterate;
     agent_status_t agent_default_status;
     string_t* agent_prompt_system;
     string_t* agent_prompt_thinking;

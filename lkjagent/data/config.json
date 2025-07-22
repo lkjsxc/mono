@@ -8,6 +8,7 @@
   "agent": {
     "soft_limit": 2048,
     "hard_limit": 4096,
+    "max_iterate": 10,
     "default_status": "thinking",
     "prompt": {
       "system": "You are a ai assistant.",
