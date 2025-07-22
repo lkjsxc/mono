@@ -1,5 +1,5 @@
 #define _GNU_SOURCE
-#include "utils/http.h"
+#include "utils/lkjhttp.h"
 
 // Helper function to find case-insensitive substring
 static const char* find_header(const char* haystack, const char* needle) {
@@ -26,11 +26,11 @@ static const char* http_method_strings[] = {
 
 result_t http_parse_url(pool_t* pool, const char* url_str, http_url_t* url) {
     // Allocate strings
-    if (pool_string4096_alloc(pool, &url->url) != RESULT_OK ||
-        pool_string256_alloc(pool, &url->host) != RESULT_OK ||
-        pool_string256_alloc(pool, &url->port) != RESULT_OK ||
-        pool_string4096_alloc(pool, &url->path) != RESULT_OK ||
-        pool_string4096_alloc(pool, &url->query) != RESULT_OK) {
+    if (pool_string_alloc(pool, &url->url, 4096) != RESULT_OK ||
+        pool_string_alloc(pool, &url->host, 256) != RESULT_OK ||
+        pool_string_alloc(pool, &url->port, 256) != RESULT_OK ||
+        pool_string_alloc(pool, &url->path, 4096) != RESULT_OK ||
+        pool_string_alloc(pool, &url->query, 4096) != RESULT_OK) {
         RETURN_ERR("Failed to allocate memory for URL components");
     }
 
@@ -157,8 +157,8 @@ result_t http_request_add_header(pool_t* pool, http_request_t* request, const ch
 
     http_header_t* header = &request->headers[request->header_count];
 
-    if (pool_string256_alloc(pool, &header->name) != RESULT_OK ||
-        pool_string4096_alloc(pool, &header->value) != RESULT_OK) {
+    if (pool_string_alloc(pool, &header->name, 256) != RESULT_OK ||
+        pool_string_alloc(pool, &header->value, 4096) != RESULT_OK) {
         RETURN_ERR("Failed to allocate memory for header");
     }
 
@@ -175,7 +175,7 @@ result_t http_request_add_header(pool_t* pool, http_request_t* request, const ch
 }
 
 result_t http_request_set_body(pool_t* pool, http_request_t* request, const char* body) {
-    if (pool_string1048576_alloc(pool, &request->body) != RESULT_OK) {
+    if (pool_string_alloc(pool, &request->body, 1048576) != RESULT_OK) {
         RETURN_ERR("Failed to allocate memory for request body");
     }
 
@@ -187,8 +187,8 @@ result_t http_response_init(pool_t* pool, http_response_t* response) {
     response->header_count = 0;
     response->headers = NULL;
 
-    if (pool_string256_alloc(pool, &response->status_message) != RESULT_OK ||
-        pool_string1048576_alloc(pool, &response->body) != RESULT_OK) {
+    if (pool_string_alloc(pool, &response->status_message, 256) != RESULT_OK ||
+        pool_string_alloc(pool, &response->body, 1048576) != RESULT_OK) {
         RETURN_ERR("Failed to allocate memory for response");
     }
 
@@ -360,7 +360,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
 
     // Build HTTP request
     string_t* request_str;
-    if (pool_string1048576_alloc(pool, &request_str) != RESULT_OK) {
+    if (pool_string_alloc(pool, &request_str, 1048576) != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to allocate memory for request string");
     }
@@ -450,7 +450,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
 
     // Receive response
     string_t* response_buffer;
-    if (pool_string1048576_alloc(pool, &response_buffer) != RESULT_OK) {
+    if (pool_string_alloc(pool, &response_buffer, 1048576) != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to allocate memory for response buffer");
     }

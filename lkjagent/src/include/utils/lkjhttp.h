@@ -1,11 +1,11 @@
-#ifndef LKJAGENT_HTTP_H
-#define LKJAGENT_HTTP_H
+#ifndef LKJAGENT_LKJHTTP_H
+#define LKJAGENT_LKJHTTP_H
 
 #include "macro.h"
 #include "std.h"
 #include "types.h"
 #include "utils/lkjstring.h"
-#include "utils/pool.h"
+#include "utils/lkjpool.h"
 
 #define HTTP_DEFAULT_PORT 80
 #define HTTP_DEFAULT_PORT_STR "80"

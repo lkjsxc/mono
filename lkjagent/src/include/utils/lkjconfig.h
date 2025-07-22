@@ -1,13 +1,13 @@
-#ifndef LKJAGENT_CONFIG_H
-#define LKJAGENT_CONFIG_H
+#ifndef LKJAGENT_LKJCONFIG_H
+#define LKJAGENT_LKJCONFIG_H
 
 #include "macro.h"
 #include "std.h"
 #include "types.h"
-#include "utils/fileio.h"
-#include "utils/json.h"
+#include "utils/lkjfileio.h"
+#include "utils/lkjjson.h"
 #include "utils/lkjstring.h"
-#include "utils/pool.h"
+#include "utils/lkjpool.h"
 
 /**
  * Initialize a configuration structure

@@ -1,4 +1,4 @@
-#include "utils/config.h"
+#include "utils/lkjconfig.h"
 
 result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char* config_path) {
     if (file_read(config_path, buf) != RESULT_OK) {
@@ -28,14 +28,14 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
                 RETURN_ERR("Failed to assign llm endpoint string");
             }
         }
-        
+
         json_value_t* model_value = json_object_get(llm_obj, "model");
         if (model_value && model_value->type == JSON_TYPE_STRING) {
             if (string_assign(config->llm_model, model_value->u.string_value->data) != RESULT_OK) {
                 RETURN_ERR("Failed to assign llm model string");
             }
         }
-        
+
         json_value_t* temperature_value = json_object_get(llm_obj, "temperature");
         if (temperature_value && temperature_value->type == JSON_TYPE_NUMBER) {
             config->llm_temperature = temperature_value->u.number_value;
@@ -53,17 +53,30 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
         if (hard_limit_value && hard_limit_value->type == JSON_TYPE_NUMBER) {
             config->agent_hard_limit = (uint64_t)hard_limit_value->u.number_value;
         }
+        json_value_t* status_value = json_object_get(agent_obj, "default_status");
+        if (status_value && status_value->type == JSON_TYPE_STRING) {
+            const char* status_str = status_value->u.string_value->data;
+            if (strcmp(status_str, "thinking") == 0) {
+                config->agent_default_status = AGENT_STATUS_THINKING;
+            } else if (strcmp(status_str, "paging") == 0) {
+                config->agent_default_status = AGENT_STATUS_PAGING;
+            } else if (strcmp(status_str, "evaluating") == 0) {
+                config->agent_default_status = AGENT_STATUS_EVALUATING;
+            } else {
+                RETURN_ERR("Unknown agent default status");
+            }
+        }
     }
     return RESULT_OK;
 }
 
 result_t config_load(pool_t* pool, config_t* config, const char* config_path) {
     string_t* buf;
-    if (pool_string1048576_alloc(pool, &buf) != RESULT_OK) {
+    if (pool_string_alloc(pool, &buf, 1048576) != RESULT_OK) {
         RETURN_ERR("Failed to allocate buffer string");
     }
     result_t result = config_load2(pool, config, buf, config_path);
-    if (pool_string1048576_free(pool, buf) != RESULT_OK) {
+    if (pool_string_free(pool, buf) != RESULT_OK) {
         RETURN_ERR("Failed to free buffer string");
     }
     if (result != RESULT_OK) {
@@ -73,23 +86,24 @@ result_t config_load(pool_t* pool, config_t* config, const char* config_path) {
 }
 
 result_t config_init(pool_t* pool, config_t* config) {
-    if (pool_string256_alloc(pool, &config->version) != RESULT_OK) {
+    if (pool_string_alloc(pool, &config->version, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate version string");
     }
-    if (pool_string256_alloc(pool, &config->data_path) != RESULT_OK) {
+    if (pool_string_alloc(pool, &config->data_path, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate data path string");
     }
-    if (pool_string256_alloc(pool, &config->llm_endpoint) != RESULT_OK) {
+    if (pool_string_alloc(pool, &config->llm_endpoint, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate llm endpoint string");
     }
-    if (pool_string256_alloc(pool, &config->llm_model) != RESULT_OK) {
+    if (pool_string_alloc(pool, &config->llm_model, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate llm model string");
     }
     // Initialize default values
     config->agent_soft_limit = 2048;
     config->agent_hard_limit = 4096;
     config->llm_temperature = 0.7;
-    if(string_assign(config->version, "1.0.0") != RESULT_OK) {
+    config->agent_default_status = AGENT_STATUS_THINKING;
+    if (string_assign(config->version, "1.0.0") != RESULT_OK) {
         RETURN_ERR("Failed to set default version");
     }
     if (string_assign(config->data_path, "data/") != RESULT_OK) {

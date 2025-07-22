@@ -9,15 +9,22 @@ result_t lkjagent_init(lkjagent_t* lkjagent) {
         RETURN_ERR("Failed to load configuration");
     }
 
-    if(config_load(&lkjagent->pool, &lkjagent->config, CONFIG_PATH) != RESULT_OK) {
+    if (config_load(&lkjagent->pool, &lkjagent->config, CONFIG_PATH) != RESULT_OK) {
         RETURN_ERR("Failed to load configuration from file");
+    }
+
+    if (agent_init(&lkjagent->config, &lkjagent->agent) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize agent");
     }
 
     return RESULT_OK;
 }
 
 result_t lkjagent_run(lkjagent_t* lkjagent) {
-    printf("version: %s\n", lkjagent->config.version->data);
+    if (agent_run(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
+        RETURN_ERR("Failed to run agent");
+    }
+
     return RESULT_OK;
 }
 

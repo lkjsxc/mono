@@ -24,6 +24,12 @@ typedef enum {
     JSON_TYPE_OBJECT
 } json_type_t;
 
+typedef enum {
+    AGENT_STATUS_THINKING,
+    AGENT_STATUS_PAGING,
+    AGENT_STATUS_EVALUATING,
+} agent_status_t;
+
 typedef struct json_value_s json_value_t;
 typedef struct json_object_s json_object_t;
 typedef struct json_array_s json_array_t;
@@ -104,10 +110,12 @@ typedef struct {
 
     uint64_t agent_soft_limit;
     uint64_t agent_hard_limit;
+    agent_status_t agent_default_status;
 } config_t;
 
 typedef struct {
     json_value_t* json;
+    agent_status_t status;
 } agent_t;
 
 typedef struct {

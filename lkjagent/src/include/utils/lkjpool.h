@@ -1,5 +1,5 @@
-#ifndef LKJAGENT_POOL_H
-#define LKJAGENT_POOL_H
+#ifndef LKJAGENT_LKJPOOL_H
+#define LKJAGENT_LKJPOOL_H
 
 #include "macro.h"
 #include "std.h"
@@ -16,11 +16,11 @@ __attribute__((warn_unused_result)) result_t pool_init(pool_t* pool);
 /**
  * Allocate a string from the appropriate pool based on size
  * @param pool The pool structure containing the pools
- * @param size The required string capacity (will select the smallest suitable pool)
  * @param string Pointer to store the allocated string
+ * @param size The required string capacity (will select the smallest suitable pool)
  * @return RESULT_OK on success, RESULT_ERR if pool is exhausted or size too large
  */
-__attribute__((warn_unused_result)) result_t pool_string_alloc(pool_t* pool, uint64_t size, string_t** string);
+__attribute__((warn_unused_result)) result_t pool_string_alloc(pool_t* pool, string_t** string, uint64_t size);
 
 /**
  * Free a string back to the appropriate pool

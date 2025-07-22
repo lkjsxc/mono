@@ -1,5 +1,5 @@
-#ifndef LKJAGENT_FILEIO_H
-#define LKJAGENT_FILEIO_H
+#ifndef LKJAGENT_LKJFILEIO_H
+#define LKJAGENT_LKJFILEIO_H
 
 #include "macro.h"
 #include "std.h"

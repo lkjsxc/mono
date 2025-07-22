@@ -1,4 +1,4 @@
-#include "utils/pool.h"
+#include "utils/lkjpool.h"
 
 result_t pool_init(pool_t* pool) {
     // Initialize all strings in the 256-byte pool
@@ -215,10 +215,10 @@ result_t pool_json_value_alloc(pool_t* pool, json_value_t** value) {
 
     pool->pool_json_value_freelist_count--;
     *value = pool->pool_json_value_freelist_data[pool->pool_json_value_freelist_count];
-    
+
     // Clear the value
     memset(*value, 0, sizeof(json_value_t));
-    
+
     return RESULT_OK;
 }
 
@@ -245,11 +245,11 @@ result_t pool_json_object_alloc(pool_t* pool, json_object_t** object) {
 
     pool->pool_json_object_freelist_count--;
     *object = pool->pool_json_object_freelist_data[pool->pool_json_object_freelist_count];
-    
+
     // Clear the object
     (*object)->head = NULL;
     (*object)->length = 0;
-    
+
     return RESULT_OK;
 }
 
@@ -276,11 +276,11 @@ result_t pool_json_array_alloc(pool_t* pool, json_array_t** array) {
 
     pool->pool_json_array_freelist_count--;
     *array = pool->pool_json_array_freelist_data[pool->pool_json_array_freelist_count];
-    
+
     // Clear the array
     (*array)->head = NULL;
     (*array)->length = 0;
-    
+
     return RESULT_OK;
 }
 
@@ -307,12 +307,12 @@ result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** el
 
     pool->pool_json_object_element_freelist_count--;
     *element = pool->pool_json_object_element_freelist_data[pool->pool_json_object_element_freelist_count];
-    
+
     // Clear the element
     (*element)->key = NULL;
     (*element)->value = NULL;
     (*element)->next = NULL;
-    
+
     return RESULT_OK;
 }
 
@@ -339,11 +339,11 @@ result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** elem
 
     pool->pool_json_array_element_freelist_count--;
     *element = pool->pool_json_array_element_freelist_data[pool->pool_json_array_element_freelist_count];
-    
+
     // Clear the element
     (*element)->value = NULL;
     (*element)->next = NULL;
-    
+
     return RESULT_OK;
 }
 
@@ -363,7 +363,7 @@ result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* elemen
     return RESULT_OK;
 }
 
-result_t pool_string_alloc(pool_t* pool, uint64_t size, string_t** string) {
+result_t pool_string_alloc(pool_t* pool, string_t** string, uint64_t size) {
     // Select the smallest pool that can accommodate the requested size
     if (size <= 256) {
         return pool_string256_alloc(pool, string);
