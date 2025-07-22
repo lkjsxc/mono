@@ -91,7 +91,16 @@ typedef struct {
 } pool_t;
 
 typedef struct {
+    string_t* version;
+    string_t* data_path;
+    string_t* lmstudio_endpoint;
+    uint64_t agent_soft_limit;
+    uint64_t agent_hard_limit;
+} config_t;
+
+typedef struct {
     pool_t pool;
+    config_t config;
 } lkjagent_t;
 
 #endif
