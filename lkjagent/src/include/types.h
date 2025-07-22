@@ -69,6 +69,10 @@ typedef struct {
     string_t pool_string4096[POOL_STRING4096_MAXCOUNT];
     string_t* pool_string4096_freelist_data[POOL_STRING4096_MAXCOUNT];
     uint64_t pool_string4096_freelist_count;
+    char pool_string65536_data[POOL_STRING65536_MAXCOUNT][65536];
+    string_t pool_string65536[POOL_STRING65536_MAXCOUNT];
+    string_t* pool_string65536_freelist_data[POOL_STRING65536_MAXCOUNT];
+    uint64_t pool_string65536_freelist_count;
     char pool_string1048576_data[POOL_STRING1048576_MAXCOUNT][1048576];
     string_t pool_string1048576[POOL_STRING1048576_MAXCOUNT];
     string_t* pool_string1048576_freelist_data[POOL_STRING1048576_MAXCOUNT];
