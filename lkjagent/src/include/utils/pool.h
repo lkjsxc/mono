@@ -14,52 +14,21 @@
 __attribute__((warn_unused_result)) result_t pool_init(pool_t* pool);
 
 /**
- * Allocate a string from the 256-byte pool
+ * Allocate a string from the appropriate pool based on size
  * @param pool The pool structure containing the pools
+ * @param size The required string capacity (will select the smallest suitable pool)
  * @param string Pointer to store the allocated string
- * @return RESULT_OK on success, RESULT_ERR if pool is exhausted
+ * @return RESULT_OK on success, RESULT_ERR if pool is exhausted or size too large
  */
-__attribute__((warn_unused_result)) result_t pool_string256_alloc(pool_t* pool, string_t** string);
+__attribute__((warn_unused_result)) result_t pool_string_alloc(pool_t* pool, uint64_t size, string_t** string);
 
 /**
- * Free a string back to the 256-byte pool
+ * Free a string back to the appropriate pool
  * @param pool The pool structure containing the pools
  * @param string The string to return to the pool
  * @return RESULT_OK on success, RESULT_ERR on error
  */
-__attribute__((warn_unused_result)) result_t pool_string256_free(pool_t* pool, string_t* string);
-
-/**
- * Allocate a string from the 4096-byte pool
- * @param pool The pool structure containing the pools
- * @param string Pointer to store the allocated string
- * @return RESULT_OK on success, RESULT_ERR if pool is exhausted
- */
-__attribute__((warn_unused_result)) result_t pool_string4096_alloc(pool_t* pool, string_t** string);
-
-/**
- * Free a string back to the 4096-byte pool
- * @param pool The pool structure containing the pools
- * @param string The string to return to the pool
- * @return RESULT_OK on success, RESULT_ERR on error
- */
-__attribute__((warn_unused_result)) result_t pool_string4096_free(pool_t* pool, string_t* string);
-
-/**
- * Allocate a string from the 1048576-byte pool
- * @param pool The pool structure containing the pools
- * @param string Pointer to store the allocated string
- * @return RESULT_OK on success, RESULT_ERR if pool is exhausted
- */
-__attribute__((warn_unused_result)) result_t pool_string1048576_alloc(pool_t* pool, string_t** string);
-
-/**
- * Free a string back to the 1048576-byte pool
- * @param pool The pool structure containing the pools
- * @param string The string to return to the pool
- * @return RESULT_OK on success, RESULT_ERR on error
- */
-__attribute__((warn_unused_result)) result_t pool_string1048576_free(pool_t* pool, string_t* string);
+__attribute__((warn_unused_result)) result_t pool_string_free(pool_t* pool, string_t* string);
 
 /**
  * Allocate a JSON value from the pool

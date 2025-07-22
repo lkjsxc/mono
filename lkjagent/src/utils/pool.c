@@ -319,3 +319,29 @@ result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* elemen
 
     return RESULT_OK;
 }
+
+result_t pool_string_alloc(pool_t* pool, uint64_t size, string_t** string) {
+    // Select the smallest pool that can accommodate the requested size
+    if (size <= 256) {
+        return pool_string256_alloc(pool, string);
+    } else if (size <= 4096) {
+        return pool_string4096_alloc(pool, string);
+    } else if (size <= 1048576) {
+        return pool_string1048576_alloc(pool, string);
+    } else {
+        return RESULT_ERR;  // Size too large for any pool
+    }
+}
+
+result_t pool_string_free(pool_t* pool, string_t* string) {
+    // Determine which pool this string belongs to based on its capacity
+    if (string->capacity == 256) {
+        return pool_string256_free(pool, string);
+    } else if (string->capacity == 4096) {
+        return pool_string4096_free(pool, string);
+    } else if (string->capacity == 1048576) {
+        return pool_string1048576_free(pool, string);
+    } else {
+        return RESULT_ERR;  // String doesn't belong to any known pool
+    }
+}
