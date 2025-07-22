@@ -8,6 +8,13 @@
   "agent": {
     "soft_limit": 2048,
     "hard_limit": 4096,
-    "default_status": "thinking"
+    "default_status": "thinking",
+    "prompt": {
+      "system": "You are a ai assistant.",
+      "thinking": "You are thinking about the next steps.",
+      "paging": "You are paging through the data.",
+      "evaluating": "You are evaluating the current state.",
+      "executing": "You are executing the plan."
+    }
   }
 }

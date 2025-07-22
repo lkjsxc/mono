@@ -28,6 +28,7 @@ typedef enum {
     AGENT_STATUS_THINKING,
     AGENT_STATUS_PAGING,
     AGENT_STATUS_EVALUATING,
+    AGENT_STATUS_EXECUTING,
 } agent_status_t;
 
 typedef struct json_value_s json_value_t;
@@ -102,7 +103,6 @@ typedef struct {
 
 typedef struct {
     string_t* version;
-    string_t* data_path;
 
     string_t* llm_endpoint;
     string_t* llm_model;
@@ -111,6 +111,11 @@ typedef struct {
     uint64_t agent_soft_limit;
     uint64_t agent_hard_limit;
     agent_status_t agent_default_status;
+    string_t* agent_prompt_system;
+    string_t* agent_prompt_thinking;
+    string_t* agent_prompt_paging;
+    string_t* agent_prompt_evaluating;
+    string_t* agent_prompt_executing;
 } config_t;
 
 typedef struct {

@@ -20,6 +20,3 @@ build/
 
 # Log files
 *.log
-
-# Core dumps
-core.*
