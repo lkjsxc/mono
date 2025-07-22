@@ -1,14 +1,15 @@
 #ifndef LKJAGENT_H
 #define LKJAGENT_H
 
-#include "config.h"
 #include "const.h"
-#include "fileio.h"
-#include "json.h"
-#include "lkjstring.h"
 #include "macro.h"
-#include "pool.h"
 #include "types.h"
+#include "utils/config.h"
+#include "utils/fileio.h"
+#include "utils/http.h"
+#include "utils/json.h"
+#include "utils/lkjstring.h"
+#include "utils/pool.h"
 
 /**
  * Initialize the lkjagent structure

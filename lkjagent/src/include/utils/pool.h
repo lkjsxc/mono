@@ -4,6 +4,7 @@
 #include "macro.h"
 #include "std.h"
 #include "types.h"
+#include "utils/lkjstring.h"
 
 /**
  * Initialize the pool system

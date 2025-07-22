@@ -1,11 +1,11 @@
 #ifndef LKJAGENT_JSON_H
 #define LKJAGENT_JSON_H
 
-#include "lkjstring.h"
 #include "macro.h"
-#include "pool.h"
 #include "std.h"
 #include "types.h"
+#include "utils/lkjstring.h"
+#include "utils/pool.h"
 
 /**
  * Parse JSON from a string

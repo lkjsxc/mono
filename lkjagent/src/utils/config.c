@@ -1,8 +1,4 @@
-#include "config.h"
-#include "fileio.h"
-#include "json.h"
-#include "lkjstring.h"
-#include "pool.h"
+#include "utils/config.h"
 
 result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char* config_path) {
     if (file_read(config_path, buf) != RESULT_OK) {
@@ -23,14 +19,26 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
             RETURN_ERR("Failed to assign version string");
         }
     }
-    // Extract lmstudio endpoint
-    json_value_t* lmstudio_obj = json_object_get(json_value, "lmstudio");
-    if (lmstudio_obj && lmstudio_obj->type == JSON_TYPE_OBJECT) {
-        json_value_t* endpoint_value = json_object_get(lmstudio_obj, "endpoint");
+    // Extract llm endpoint
+    json_value_t* llm_obj = json_object_get(json_value, "llm");
+    if (llm_obj && llm_obj->type == JSON_TYPE_OBJECT) {
+        json_value_t* endpoint_value = json_object_get(llm_obj, "endpoint");
         if (endpoint_value && endpoint_value->type == JSON_TYPE_STRING) {
-            if (string_assign(config->lmstudio_endpoint, endpoint_value->u.string_value->data) != RESULT_OK) {
-                RETURN_ERR("Failed to assign lmstudio endpoint string");
+            if (string_assign(config->llm_endpoint, endpoint_value->u.string_value->data) != RESULT_OK) {
+                RETURN_ERR("Failed to assign llm endpoint string");
             }
+        }
+        
+        json_value_t* model_value = json_object_get(llm_obj, "model");
+        if (model_value && model_value->type == JSON_TYPE_STRING) {
+            if (string_assign(config->llm_model, model_value->u.string_value->data) != RESULT_OK) {
+                RETURN_ERR("Failed to assign llm model string");
+            }
+        }
+        
+        json_value_t* temperature_value = json_object_get(llm_obj, "temperature");
+        if (temperature_value && temperature_value->type == JSON_TYPE_NUMBER) {
+            config->llm_temperature = temperature_value->u.number_value;
         }
     }
     // Extract agent limits
@@ -71,15 +79,27 @@ result_t config_init(pool_t* pool, config_t* config) {
     if (pool_string256_alloc(pool, &config->data_path) != RESULT_OK) {
         RETURN_ERR("Failed to allocate data path string");
     }
-    if (pool_string256_alloc(pool, &config->lmstudio_endpoint) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate lmstudio endpoint string");
+    if (pool_string256_alloc(pool, &config->llm_endpoint) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate llm endpoint string");
+    }
+    if (pool_string256_alloc(pool, &config->llm_model) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate llm model string");
     }
     // Initialize default values
     config->agent_soft_limit = 2048;
     config->agent_hard_limit = 4096;
-    // Set default data path
+    config->llm_temperature = 0.7;
+    if(string_assign(config->version, "1.0.0") != RESULT_OK) {
+        RETURN_ERR("Failed to set default version");
+    }
     if (string_assign(config->data_path, "data/") != RESULT_OK) {
         RETURN_ERR("Failed to set default data path");
+    }
+    if (string_assign(config->llm_endpoint, "http://host.docker.internal:1234/v1/chat/completions") != RESULT_OK) {
+        RETURN_ERR("Failed to set default llm endpoint");
+    }
+    if (string_assign(config->llm_model, "qwen/qwen3-8b") != RESULT_OK) {
+        RETURN_ERR("Failed to set default llm model");
     }
     return RESULT_OK;
 }

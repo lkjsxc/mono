@@ -93,14 +93,23 @@ typedef struct {
 typedef struct {
     string_t* version;
     string_t* data_path;
-    string_t* lmstudio_endpoint;
+
+    string_t* llm_endpoint;
+    string_t* llm_model;
+    double llm_temperature;
+
     uint64_t agent_soft_limit;
     uint64_t agent_hard_limit;
 } config_t;
 
 typedef struct {
+    json_value_t* json;
+} agent_t;
+
+typedef struct {
     pool_t pool;
     config_t config;
+    agent_t agent;
 } lkjagent_t;
 
 #endif

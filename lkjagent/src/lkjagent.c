@@ -17,10 +17,7 @@ result_t lkjagent_init(lkjagent_t* lkjagent) {
 }
 
 result_t lkjagent_run(lkjagent_t* lkjagent) {
-    printf("config version: %s\n", lkjagent->config.version->data);
-    printf("lmstudio endpoint: %s\n", lkjagent->config.lmstudio_endpoint->data);
-    printf("agent soft limit: %lu\n", lkjagent->config.agent_soft_limit);
-    printf("agent hard limit: %lu\n", lkjagent->config.agent_hard_limit);
+    printf("version: %s\n", lkjagent->config.version->data);
     return RESULT_OK;
 }
 

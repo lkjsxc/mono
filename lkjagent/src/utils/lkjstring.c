@@ -1,4 +1,4 @@
-#include "lkjstring.h"
+#include "utils/lkjstring.h"
 
 result_t string_init(string_t* string, char* data, uint64_t capacity) {
     string->data = data;

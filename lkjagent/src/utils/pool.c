@@ -1,5 +1,4 @@
-#include "pool.h"
-#include "lkjstring.h"
+#include "utils/pool.h"
 
 result_t pool_init(pool_t* pool) {
     // Initialize all strings in the 256-byte pool

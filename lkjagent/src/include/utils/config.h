@@ -2,9 +2,12 @@
 #define LKJAGENT_CONFIG_H
 
 #include "macro.h"
-#include "pool.h"
 #include "std.h"
 #include "types.h"
+#include "utils/fileio.h"
+#include "utils/json.h"
+#include "utils/lkjstring.h"
+#include "utils/pool.h"
 
 /**
  * Initialize a configuration structure

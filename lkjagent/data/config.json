@@ -1,7 +1,9 @@
 {
   "version": "1.0.0",
-  "lmstudio": {
-    "endpoint": "http://host.docker.internal:1234"
+  "llm": {
+    "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
+    "model": "qwen/qwen3-8b",
+    "temperature": 0.7
   },
   "agent": {
     "soft_limit": 2048,
