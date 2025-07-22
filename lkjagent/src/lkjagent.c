@@ -79,15 +79,12 @@ int main() {
     }
 
     if (lkjagent_init(lkjagent) != RESULT_OK) {
-        free(lkjagent);
         RETURN_ERR("Failed to initialize lkjagent");
     }
 
     if (lkjagent_run(lkjagent) != RESULT_OK) {
-        free(lkjagent);
         RETURN_ERR("Failed to run lkjagent");
     }
 
-    free(lkjagent);
     return 0;
 }
