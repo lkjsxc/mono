@@ -1,6 +1,6 @@
 #include "utils/lkjconfig.h"
 
-result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
+result_t config_load_agent_prompt(pool_t* pool, config_t* config, json_value_t* prompt_obj) {
     if (prompt_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("Agent prompts must be an object");
     }
@@ -9,7 +9,7 @@ result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
     if (system_prompt_value && system_prompt_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent system prompt must be a string");
     }
-    if (string_assign(config->agent_prompt_system, system_prompt_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->agent_prompt_system, system_prompt_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign agent system prompt string");
     }
 
@@ -17,7 +17,7 @@ result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
     if (thinking_prompt_value && thinking_prompt_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent thinking prompt must be a string");
     }
-    if (string_assign(config->agent_prompt_thinking, thinking_prompt_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->agent_prompt_thinking, thinking_prompt_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign agent thinking prompt string");
     }
 
@@ -25,7 +25,7 @@ result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
     if (paging_prompt_value && paging_prompt_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent paging prompt must be a string");
     }
-    if (string_assign(config->agent_prompt_paging, paging_prompt_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->agent_prompt_paging, paging_prompt_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign agent paging prompt string");
     }
 
@@ -33,7 +33,7 @@ result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
     if (evaluating_prompt_value && evaluating_prompt_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent evaluating prompt must be a string");
     }
-    if (string_assign(config->agent_prompt_evaluating, evaluating_prompt_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->agent_prompt_evaluating, evaluating_prompt_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign agent evaluating prompt string");
     }
 
@@ -41,14 +41,14 @@ result_t config_load_agent_prompt(config_t* config, json_value_t* prompt_obj) {
     if (executing_prompt_value && executing_prompt_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Agent executing prompt must be a string");
     }
-    if (string_assign(config->agent_prompt_executing, executing_prompt_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->agent_prompt_executing, executing_prompt_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign agent executing prompt string");
     }
 
     return RESULT_OK;
 }
 
-result_t config_load_agent(config_t* config, json_value_t* agent_obj) {
+result_t config_load_agent(pool_t* pool, config_t* config, json_value_t* agent_obj) {
     if (agent_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("Agent configuration must be an object");
     }
@@ -93,14 +93,14 @@ result_t config_load_agent(config_t* config, json_value_t* agent_obj) {
     if (prompt_obj && prompt_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("Agent prompts must be an object");
     }
-    if (config_load_agent_prompt(config, prompt_obj) != RESULT_OK) {
+    if (config_load_agent_prompt(pool, config, prompt_obj) != RESULT_OK) {
         RETURN_ERR("Failed to load agent prompts");
     }
 
     return RESULT_OK;
 }
 
-result_t config_load_llm(config_t* config, json_value_t* llm_obj) {
+result_t config_load_llm(pool_t* pool, config_t* config, json_value_t* llm_obj) {
     if (llm_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("LLM configuration must be an object");
     }
@@ -109,7 +109,7 @@ result_t config_load_llm(config_t* config, json_value_t* llm_obj) {
     if (llm_endpoint_value && llm_endpoint_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("LLM endpoint must be a string");
     }
-    if (string_assign(config->llm_endpoint, llm_endpoint_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->llm_endpoint, llm_endpoint_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign LLM endpoint string");
     }
 
@@ -117,7 +117,7 @@ result_t config_load_llm(config_t* config, json_value_t* llm_obj) {
     if (llm_model_value && llm_model_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("LLM model must be a string");
     }
-    if (string_assign(config->llm_model, llm_model_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->llm_model, llm_model_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign LLM model string");
     }
 
@@ -150,7 +150,7 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
     if (version_value && version_value->type != JSON_TYPE_STRING) {
         RETURN_ERR("Version must be a string");
     }
-    if (string_assign(config->version, version_value->u.string_value->data) != RESULT_OK) {
+    if (string_assign(pool, &config->version, version_value->u.string_value->data) != RESULT_OK) {
         RETURN_ERR("Failed to assign version string");
     }
 
@@ -159,7 +159,7 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
     if (llm_obj && llm_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("LLM configuration must be an object");
     }
-    if (config_load_llm(config, llm_obj) != RESULT_OK) {
+    if (config_load_llm(pool, config, llm_obj) != RESULT_OK) {
         RETURN_ERR("Failed to load LLM configuration");
     }
 
@@ -168,7 +168,7 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
     if (agent_obj && agent_obj->type != JSON_TYPE_OBJECT) {
         RETURN_ERR("Agent configuration must be an object");
     }
-    if (config_load_agent(config, agent_obj) != RESULT_OK) {
+    if (config_load_agent(pool, config, agent_obj) != RESULT_OK) {
         RETURN_ERR("Failed to load agent configuration");
     }
 

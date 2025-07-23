@@ -42,5 +42,7 @@ int main() {
         RETURN_ERR("Failed to run lkjagent");
     }
 
+    free(lkjagent);
+
     return 0;
 }

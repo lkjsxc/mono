@@ -5,6 +5,8 @@
 #include "std.h"
 #include "types.h"
 #include "utils/lkjconfig.h"
+#include "utils/lkjhttp.h"
+#include "utils/lkjjson.h"
 #include "utils/lkjpool.h"
 #include "utils/lkjstring.h"
 

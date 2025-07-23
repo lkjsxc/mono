@@ -122,6 +122,8 @@ typedef struct {
 typedef struct {
     json_value_t* json;
     agent_status_t status;
+    string_t* context_memory;  // Agent's persistent memory across iterations
+    uint64_t iteration_count;  // Track current iteration
 } agent_t;
 
 typedef struct {

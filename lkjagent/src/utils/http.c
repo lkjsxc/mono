@@ -35,7 +35,7 @@ result_t http_parse_url(pool_t* pool, const char* url_str, http_url_t* url) {
     }
 
     // Copy original URL
-    if (string_assign(url->url, url_str) != RESULT_OK) {
+    if (string_assign(pool, &url->url, url_str) != RESULT_OK) {
         RETURN_ERR("URL string too long");
     }
 
@@ -68,11 +68,11 @@ result_t http_parse_url(pool_t* pool, const char* url_str, http_url_t* url) {
 
     // Default port
     if (url->is_https) {
-        if (string_assign(url->port, HTTPS_DEFAULT_PORT_STR) != RESULT_OK) {
+        if (string_assign(pool, &url->port, HTTPS_DEFAULT_PORT_STR) != RESULT_OK) {
             RETURN_ERR("Failed to set default HTTPS port");
         }
     } else {
-        if (string_assign(url->port, HTTP_DEFAULT_PORT_STR) != RESULT_OK) {
+        if (string_assign(pool, &url->port, HTTP_DEFAULT_PORT_STR) != RESULT_OK) {
             RETURN_ERR("Failed to set default HTTP port");
         }
     }
@@ -124,7 +124,7 @@ result_t http_parse_url(pool_t* pool, const char* url_str, http_url_t* url) {
         }
     } else {
         // Default path
-        if (string_assign(url->path, "/") != RESULT_OK) {
+        if (string_assign(pool, &url->path, "/") != RESULT_OK) {
             RETURN_ERR("Failed to set default path");
         }
     }
@@ -162,11 +162,11 @@ result_t http_request_add_header(pool_t* pool, http_request_t* request, const ch
         RETURN_ERR("Failed to allocate memory for header");
     }
 
-    if (string_assign(header->name, name) != RESULT_OK) {
+    if (string_assign(pool, &header->name, name) != RESULT_OK) {
         RETURN_ERR("Header name too long");
     }
 
-    if (string_assign(header->value, value) != RESULT_OK) {
+    if (string_assign(pool, &header->value, value) != RESULT_OK) {
         RETURN_ERR("Header value too long");
     }
 
@@ -179,7 +179,7 @@ result_t http_request_set_body(pool_t* pool, http_request_t* request, const char
         RETURN_ERR("Failed to allocate memory for request body");
     }
 
-    return string_assign(request->body, body);
+    return string_assign(pool, &request->body, body);
 }
 
 result_t http_response_init(pool_t* pool, http_response_t* response) {
@@ -238,7 +238,7 @@ static result_t send_all(int sockfd, const char* data, size_t len) {
             if (sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
                 continue;  // Retry
             }
-            return RESULT_ERR;
+            RETURN_ERR("Failed to send data");
         }
         total_sent += sent;
     }
@@ -246,7 +246,7 @@ static result_t send_all(int sockfd, const char* data, size_t len) {
     return RESULT_OK;
 }
 
-static result_t receive_response(int sockfd, string_t* response_buffer) {
+static result_t receive_response(pool_t* pool, int sockfd, string_t* response_buffer) {
     char buffer[HTTP_BUFFER_SIZE];
     ssize_t bytes_received;
 
@@ -254,7 +254,7 @@ static result_t receive_response(int sockfd, string_t* response_buffer) {
 
     while ((bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0)) > 0) {
         buffer[bytes_received] = '\0';
-        if (string_append_data(response_buffer, buffer, bytes_received) != RESULT_OK) {
+        if (string_append_data(pool, &response_buffer, buffer, bytes_received) != RESULT_OK) {
             RETURN_ERR("Response buffer overflow");
         }
 
@@ -366,52 +366,52 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     }
 
     // Request line
-    if (string_assign(request_str, http_method_strings[request->method]) != RESULT_OK ||
-        string_append(request_str, " ") != RESULT_OK ||
-        string_append(request_str, request->url.path->data) != RESULT_OK) {
+    if (string_assign(pool, &request_str, http_method_strings[request->method]) != RESULT_OK ||
+        string_append_str(pool, &request_str, " ") != RESULT_OK ||
+        string_append_str(pool, &request_str, request->url.path->data) != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to build request line");
     }
 
     if (request->url.query->size > 0) {
-        if (string_append(request_str, "?") != RESULT_OK ||
-            string_append(request_str, request->url.query->data) != RESULT_OK) {
+        if (string_append_str(pool, &request_str, "?") != RESULT_OK ||
+            string_append_str(pool, &request_str, request->url.query->data) != RESULT_OK) {
             close(sockfd);
             RETURN_ERR("Failed to add query string");
         }
     }
 
-    if (string_append(request_str, " HTTP/1.1\r\n") != RESULT_OK) {
+    if (string_append_str(pool, &request_str, " HTTP/1.1\r\n") != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to add HTTP version");
     }
 
     // Host header
-    if (string_append(request_str, "Host: ") != RESULT_OK ||
-        string_append(request_str, request->url.host->data) != RESULT_OK ||
-        string_append(request_str, "\r\n") != RESULT_OK) {
+    if (string_append_str(pool, &request_str, "Host: ") != RESULT_OK ||
+        string_append_str(pool, &request_str, request->url.host->data) != RESULT_OK ||
+        string_append_str(pool, &request_str, "\r\n") != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to add Host header");
     }
 
     // User-Agent header
-    if (string_append(request_str, "User-Agent: lkjagent/1.0\r\n") != RESULT_OK) {
+    if (string_append_str(pool, &request_str, "User-Agent: lkjagent/1.0\r\n") != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to add User-Agent header");
     }
 
     // Connection header
-    if (string_append(request_str, "Connection: close\r\n") != RESULT_OK) {
+    if (string_append_str(pool, &request_str, "Connection: close\r\n") != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to add Connection header");
     }
 
     // Add custom headers
     for (uint64_t i = 0; i < request->header_count; i++) {
-        if (string_append(request_str, request->headers[i].name->data) != RESULT_OK ||
-            string_append(request_str, ": ") != RESULT_OK ||
-            string_append(request_str, request->headers[i].value->data) != RESULT_OK ||
-            string_append(request_str, "\r\n") != RESULT_OK) {
+        if (string_append_str(pool, &request_str, request->headers[i].name->data) != RESULT_OK ||
+            string_append_str(pool, &request_str, ": ") != RESULT_OK ||
+            string_append_str(pool, &request_str, request->headers[i].value->data) != RESULT_OK ||
+            string_append_str(pool, &request_str, "\r\n") != RESULT_OK) {
             close(sockfd);
             RETURN_ERR("Failed to add custom header");
         }
@@ -421,21 +421,21 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     if (request->body && request->body->size > 0) {
         char content_length_str[64];  // Increased buffer size
         snprintf(content_length_str, sizeof(content_length_str), "Content-Length: %lu\r\n", request->body->size);
-        if (string_append(request_str, content_length_str) != RESULT_OK) {
+        if (string_append_str(pool, &request_str, content_length_str) != RESULT_OK) {
             close(sockfd);
             RETURN_ERR("Failed to add Content-Length header");
         }
     }
 
     // End headers
-    if (string_append(request_str, "\r\n") != RESULT_OK) {
+    if (string_append_str(pool, &request_str, "\r\n") != RESULT_OK) {
         close(sockfd);
         RETURN_ERR("Failed to add header terminator");
     }
 
     // Add body if present
     if (request->body && request->body->size > 0) {
-        if (string_append_data(request_str, request->body->data, request->body->size) != RESULT_OK) {
+        if (string_append_data(pool, &request_str, request->body->data, request->body->size) != RESULT_OK) {
             close(sockfd);
             RETURN_ERR("Failed to add request body");
         }
@@ -455,7 +455,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
         RETURN_ERR("Failed to allocate memory for response buffer");
     }
 
-    result_t receive_result = receive_response(sockfd, response_buffer);
+    result_t receive_result = receive_response(pool, sockfd, response_buffer);
     close(sockfd);
 
     if (receive_result != RESULT_OK) {
