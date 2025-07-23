@@ -1,0 +1,9 @@
+{
+    "working_memory": {
+        "todo": "Add characters until 10",
+        "character_alice_about": "female, 25 years old, adventurous, loves nature"
+    },
+    "storage": {
+        "character_charlie_about": "male, 28 years old, easygoing, enjoys hiking"
+    }
+}

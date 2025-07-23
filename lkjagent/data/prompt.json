@@ -1,0 +1,14 @@
+{
+    "system": {
+        "output_format": "json",
+        "task": "Write a endless story",
+        "output_example1": {
+            "working_memory_add": {
+                "character_setting_bob":"male, 30 years old, cautious, enjoys reading"
+            }
+        },
+        "output_example2": {
+            "working_memory_remove": "character_setting_alice"
+        }
+    }
+}
