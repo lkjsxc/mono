@@ -9,8 +9,14 @@ result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
     // Initialize agent structure
     agent->status = config->agent_default_status;
     agent->iteration_count = 0;
-    agent->working_memory = pool_json_object_alloc(pool, &agent->working_memory);
-    agent->storage = pool_json_object_alloc(pool, &agent->storage);
+    
+    if (pool_json_object_alloc(pool, &agent->working_memory) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate working memory object");
+    }
+    
+    if (pool_json_object_alloc(pool, &agent->storage) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate storage object");
+    }
 
     return RESULT_OK;
 }
