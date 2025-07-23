@@ -13,7 +13,7 @@ result_t lkjagent_init(lkjagent_t* lkjagent) {
         RETURN_ERR("Failed to load configuration from file");
     }
 
-    if (agent_init(&lkjagent->config, &lkjagent->agent) != RESULT_OK) {
+    if (agent_init(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
         RETURN_ERR("Failed to initialize agent");
     }
 

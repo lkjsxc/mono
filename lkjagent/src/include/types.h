@@ -122,6 +122,8 @@ typedef struct {
 typedef struct {
     agent_status_t status;
     uint64_t iteration_count;
+    json_object_t* working_memory;
+    json_object_t* storage;
 } agent_t;
 
 typedef struct {

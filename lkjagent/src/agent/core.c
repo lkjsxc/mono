@@ -5,26 +5,28 @@
 
 #include "agent/core.h"
 
-result_t agent_init(config_t* config, agent_t* agent) {
+result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
     // Initialize agent structure
     agent->status = config->agent_default_status;
     agent->iteration_count = 0;
+    agent->working_memory = pool_json_object_alloc(pool, &agent->working_memory);
+    agent->storage = pool_json_object_alloc(pool, &agent->storage);
 
     return RESULT_OK;
 }
 
+result_t agent_step(pool_t* pool, config_t* config, agent_t* agent) {
+    return RESULT_OK;
+}
+
 result_t agent_run(pool_t* pool, config_t* config, agent_t* agent) {
+    printf("Starting agent with max iterations: %lu\n", config->agent_max_iterate);
+    printf("Initial status: %d\n", (int)agent->status);
 
-    while(agent->iteration_count < config->agent_max_iterate) {
-        
-        // Generate request json
-        json_value_t* request_json = NULL;
-        if(json_create_object(pool, &request_json) != RESULT_OK) {
-            RETURN_ERR("Failed to create request JSON object");
+    while (agent->iteration_count < config->agent_max_iterate) {
+        if (agent_step(pool, config, agent) != RESULT_OK) {
+            RETURN_ERR("Agent step failed");
         }
-
-
-
         agent->iteration_count++;
     }
 

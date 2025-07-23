@@ -6,43 +6,48 @@ result_t config_load_agent_prompt(pool_t* pool, config_t* config, json_value_t* 
     }
 
     json_value_t* system_prompt_value = json_object_get(prompt_obj, "system");
-    if (system_prompt_value && system_prompt_value->type != JSON_TYPE_STRING) {
+    if (system_prompt_value && system_prompt_value->type == JSON_TYPE_STRING) {
+        if (string_assign(pool, &config->agent_prompt_system, system_prompt_value->u.string_value->data) != RESULT_OK) {
+            RETURN_ERR("Failed to assign agent system prompt string");
+        }
+    } else {
         RETURN_ERR("Agent system prompt must be a string");
-    }
-    if (string_assign(pool, &config->agent_prompt_system, system_prompt_value->u.string_value->data) != RESULT_OK) {
-        RETURN_ERR("Failed to assign agent system prompt string");
     }
 
     json_value_t* thinking_prompt_value = json_object_get(prompt_obj, "thinking");
-    if (thinking_prompt_value && thinking_prompt_value->type != JSON_TYPE_STRING) {
+    if (thinking_prompt_value && thinking_prompt_value->type == JSON_TYPE_STRING) {
+        if (string_assign(pool, &config->agent_prompt_thinking, thinking_prompt_value->u.string_value->data) != RESULT_OK) {
+            RETURN_ERR("Failed to assign agent thinking prompt string");
+        }
+    } else {
         RETURN_ERR("Agent thinking prompt must be a string");
-    }
-    if (string_assign(pool, &config->agent_prompt_thinking, thinking_prompt_value->u.string_value->data) != RESULT_OK) {
-        RETURN_ERR("Failed to assign agent thinking prompt string");
     }
 
     json_value_t* paging_prompt_value = json_object_get(prompt_obj, "paging");
-    if (paging_prompt_value && paging_prompt_value->type != JSON_TYPE_STRING) {
+    if (paging_prompt_value && paging_prompt_value->type == JSON_TYPE_STRING) {
+        if (string_assign(pool, &config->agent_prompt_paging, paging_prompt_value->u.string_value->data) != RESULT_OK) {
+            RETURN_ERR("Failed to assign agent paging prompt string");
+        }
+    } else {
         RETURN_ERR("Agent paging prompt must be a string");
-    }
-    if (string_assign(pool, &config->agent_prompt_paging, paging_prompt_value->u.string_value->data) != RESULT_OK) {
-        RETURN_ERR("Failed to assign agent paging prompt string");
     }
 
     json_value_t* evaluating_prompt_value = json_object_get(prompt_obj, "evaluating");
-    if (evaluating_prompt_value && evaluating_prompt_value->type != JSON_TYPE_STRING) {
+    if (evaluating_prompt_value && evaluating_prompt_value->type == JSON_TYPE_STRING) {
+        if (string_assign(pool, &config->agent_prompt_evaluating, evaluating_prompt_value->u.string_value->data) != RESULT_OK) {
+            RETURN_ERR("Failed to assign agent evaluating prompt string");
+        }
+    } else {
         RETURN_ERR("Agent evaluating prompt must be a string");
-    }
-    if (string_assign(pool, &config->agent_prompt_evaluating, evaluating_prompt_value->u.string_value->data) != RESULT_OK) {
-        RETURN_ERR("Failed to assign agent evaluating prompt string");
     }
 
     json_value_t* executing_prompt_value = json_object_get(prompt_obj, "executing");
-    if (executing_prompt_value && executing_prompt_value->type != JSON_TYPE_STRING) {
+    if (executing_prompt_value && executing_prompt_value->type == JSON_TYPE_STRING) {
+        if (string_assign(pool, &config->agent_prompt_executing, executing_prompt_value->u.string_value->data) != RESULT_OK) {
+            RETURN_ERR("Failed to assign agent executing prompt string");
+        }
+    } else {
         RETURN_ERR("Agent executing prompt must be a string");
-    }
-    if (string_assign(pool, &config->agent_prompt_executing, executing_prompt_value->u.string_value->data) != RESULT_OK) {
-        RETURN_ERR("Failed to assign agent executing prompt string");
     }
 
     return RESULT_OK;
