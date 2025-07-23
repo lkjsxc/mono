@@ -125,4 +125,30 @@ uint64_t json_array_length(const json_value_t* array);
  */
 uint64_t json_object_length(const json_value_t* object);
 
+/**
+ * Delete (free) a JSON value and all its nested content
+ * @param pool Memory pool for deallocations
+ * @param value JSON value to delete
+ * @return RESULT_OK on success, RESULT_ERR on error
+ */
+__attribute__((warn_unused_result)) result_t json_delete(pool_t* pool, json_value_t* value);
+
+/**
+ * Remove and delete a key-value pair from a JSON object
+ * @param pool Memory pool for deallocations
+ * @param object JSON object value
+ * @param key Key string to remove
+ * @return RESULT_OK on success, RESULT_ERR on error (including key not found)
+ */
+__attribute__((warn_unused_result)) result_t json_object_remove(pool_t* pool, json_value_t* object, const char* key);
+
+/**
+ * Remove and delete a value from a JSON array at the specified index
+ * @param pool Memory pool for deallocations
+ * @param array JSON array value
+ * @param index Array index to remove
+ * @return RESULT_OK on success, RESULT_ERR on error (including index out of bounds)
+ */
+__attribute__((warn_unused_result)) result_t json_array_remove(pool_t* pool, json_value_t* array, uint64_t index);
+
 #endif

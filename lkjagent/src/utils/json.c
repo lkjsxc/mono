@@ -603,3 +603,194 @@ uint64_t json_object_length(const json_value_t* object) {
 
     return object->u.object_value->length;
 }
+
+result_t json_delete(pool_t* pool, json_value_t* value) {
+    if (!pool || !value) {
+        RETURN_ERR("Invalid arguments to json_delete");
+    }
+
+    switch (value->type) {
+        case JSON_TYPE_STRING:
+            if (value->u.string_value) {
+                if (pool_string_free(pool, value->u.string_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to free string value");
+                }
+            }
+            break;
+
+        case JSON_TYPE_OBJECT:
+            if (value->u.object_value) {
+                // Free all object elements and their contents
+                json_object_element_t* element = value->u.object_value->head;
+                while (element) {
+                    json_object_element_t* next = element->next;
+                    
+                    // Free the key string
+                    if (element->key && pool_string_free(pool, element->key) != RESULT_OK) {
+                        RETURN_ERR("Failed to free object key");
+                    }
+                    
+                    // Recursively delete the value
+                    if (element->value && json_delete(pool, element->value) != RESULT_OK) {
+                        RETURN_ERR("Failed to delete object element value");
+                    }
+                    
+                    // Free the element itself
+                    if (pool_json_object_element_free(pool, element) != RESULT_OK) {
+                        RETURN_ERR("Failed to free object element");
+                    }
+                    
+                    element = next;
+                }
+                
+                // Free the object structure
+                if (pool_json_object_free(pool, value->u.object_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to free object");
+                }
+            }
+            break;
+
+        case JSON_TYPE_ARRAY:
+            if (value->u.array_value) {
+                // Free all array elements and their contents
+                json_array_element_t* element = value->u.array_value->head;
+                while (element) {
+                    json_array_element_t* next = element->next;
+                    
+                    // Recursively delete the value
+                    if (element->value && json_delete(pool, element->value) != RESULT_OK) {
+                        RETURN_ERR("Failed to delete array element value");
+                    }
+                    
+                    // Free the element itself
+                    if (pool_json_array_element_free(pool, element) != RESULT_OK) {
+                        RETURN_ERR("Failed to free array element");
+                    }
+                    
+                    element = next;
+                }
+                
+                // Free the array structure
+                if (pool_json_array_free(pool, value->u.array_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to free array");
+                }
+            }
+            break;
+
+        case JSON_TYPE_NULL:
+        case JSON_TYPE_BOOL:
+        case JSON_TYPE_NUMBER:
+            // These types don't have additional memory to free
+            break;
+    }
+
+    // Free the value itself
+    if (pool_json_value_free(pool, value) != RESULT_OK) {
+        RETURN_ERR("Failed to free JSON value");
+    }
+
+    return RESULT_OK;
+}
+
+result_t json_object_remove(pool_t* pool, json_value_t* object, const char* key) {
+    if (!pool || !object || !key || object->type != JSON_TYPE_OBJECT) {
+        RETURN_ERR("Invalid arguments to json_object_remove");
+    }
+
+    json_object_t* obj = object->u.object_value;
+    if (!obj) {
+        RETURN_ERR("Object value is NULL");
+    }
+
+    json_object_element_t* prev = NULL;
+    json_object_element_t* current = obj->head;
+
+    // Search for the element with the matching key
+    while (current) {
+        if (current->key && strcmp(current->key->data, key) == 0) {
+            // Found the element to remove
+            
+            // Update the linked list
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                obj->head = current->next;
+            }
+            
+            // Decrease object length
+            obj->length--;
+            
+            // Free the key string
+            if (current->key && pool_string_free(pool, current->key) != RESULT_OK) {
+                RETURN_ERR("Failed to free object key");
+            }
+            
+            // Recursively delete the value
+            if (current->value && json_delete(pool, current->value) != RESULT_OK) {
+                RETURN_ERR("Failed to delete object element value");
+            }
+            
+            // Free the element itself
+            if (pool_json_object_element_free(pool, current) != RESULT_OK) {
+                RETURN_ERR("Failed to free object element");
+            }
+            
+            return RESULT_OK;
+        }
+        
+        prev = current;
+        current = current->next;
+    }
+
+    RETURN_ERR("Key not found in object");
+}
+
+result_t json_array_remove(pool_t* pool, json_value_t* array, uint64_t index) {
+    if (!pool || !array || array->type != JSON_TYPE_ARRAY) {
+        RETURN_ERR("Invalid arguments to json_array_remove");
+    }
+
+    json_array_t* arr = array->u.array_value;
+    if (!arr) {
+        RETURN_ERR("Array value is NULL");
+    }
+
+    if (index >= arr->length) {
+        RETURN_ERR("Index out of bounds");
+    }
+
+    json_array_element_t* prev = NULL;
+    json_array_element_t* current = arr->head;
+
+    // Navigate to the element at the specified index
+    for (uint64_t i = 0; i < index && current; i++) {
+        prev = current;
+        current = current->next;
+    }
+
+    if (!current) {
+        RETURN_ERR("Element not found at index");
+    }
+
+    // Update the linked list
+    if (prev) {
+        prev->next = current->next;
+    } else {
+        arr->head = current->next;
+    }
+
+    // Decrease array length
+    arr->length--;
+
+    // Recursively delete the value
+    if (current->value && json_delete(pool, current->value) != RESULT_OK) {
+        RETURN_ERR("Failed to delete array element value");
+    }
+
+    // Free the element itself
+    if (pool_json_array_element_free(pool, current) != RESULT_OK) {
+        RETURN_ERR("Failed to free array element");
+    }
+
+    return RESULT_OK;
+}
