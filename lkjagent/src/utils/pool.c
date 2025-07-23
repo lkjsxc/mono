@@ -192,7 +192,7 @@ result_t pool_string1048576_alloc(pool_t* pool, string_t** string) {
 result_t pool_string1048576_free(pool_t* pool, string_t* string) {
     // Check if we have space in the freelist
     if (pool->pool_string1048576_freelist_count >= POOL_STRING1048576_MAXCOUNT) {
-        return RESULT_ERR;  // Freelist full (should not happen in normal operation)
+        RETURN_ERR("Pool string1048576 freelist full");
     }
 
     // Validate that this string belongs to our pool
@@ -210,7 +210,7 @@ result_t pool_string1048576_free(pool_t* pool, string_t* string) {
 
 result_t pool_json_value_alloc(pool_t* pool, json_value_t** value) {
     if (pool->pool_json_value_freelist_count == 0) {
-        return RESULT_ERR;  // Pool exhausted
+        RETURN_ERR("Pool json_value exhausted");
     }
 
     pool->pool_json_value_freelist_count--;
@@ -224,12 +224,12 @@ result_t pool_json_value_alloc(pool_t* pool, json_value_t** value) {
 
 result_t pool_json_value_free(pool_t* pool, json_value_t* value) {
     if (pool->pool_json_value_freelist_count >= POOL_JSON_VALUE_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_value freelist full");
     }
 
     if (value < pool->pool_json_value ||
         value >= pool->pool_json_value + POOL_JSON_VALUE_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("JSON value doesn't belong to pool");
     }
 
     pool->pool_json_value_freelist_data[pool->pool_json_value_freelist_count] = value;
@@ -240,7 +240,7 @@ result_t pool_json_value_free(pool_t* pool, json_value_t* value) {
 
 result_t pool_json_object_alloc(pool_t* pool, json_object_t** object) {
     if (pool->pool_json_object_freelist_count == 0) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_object exhausted");
     }
 
     pool->pool_json_object_freelist_count--;
@@ -255,12 +255,12 @@ result_t pool_json_object_alloc(pool_t* pool, json_object_t** object) {
 
 result_t pool_json_object_free(pool_t* pool, json_object_t* object) {
     if (pool->pool_json_object_freelist_count >= POOL_JSON_OBJECT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_object freelist full");
     }
 
     if (object < pool->pool_json_object ||
         object >= pool->pool_json_object + POOL_JSON_OBJECT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("JSON object doesn't belong to pool");
     }
 
     pool->pool_json_object_freelist_data[pool->pool_json_object_freelist_count] = object;
@@ -271,7 +271,7 @@ result_t pool_json_object_free(pool_t* pool, json_object_t* object) {
 
 result_t pool_json_array_alloc(pool_t* pool, json_array_t** array) {
     if (pool->pool_json_array_freelist_count == 0) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_array exhausted");
     }
 
     pool->pool_json_array_freelist_count--;
@@ -286,12 +286,12 @@ result_t pool_json_array_alloc(pool_t* pool, json_array_t** array) {
 
 result_t pool_json_array_free(pool_t* pool, json_array_t* array) {
     if (pool->pool_json_array_freelist_count >= POOL_JSON_ARRAY_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_array freelist full");
     }
 
     if (array < pool->pool_json_array ||
         array >= pool->pool_json_array + POOL_JSON_ARRAY_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("JSON array doesn't belong to pool");
     }
 
     pool->pool_json_array_freelist_data[pool->pool_json_array_freelist_count] = array;
@@ -302,7 +302,7 @@ result_t pool_json_array_free(pool_t* pool, json_array_t* array) {
 
 result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** element) {
     if (pool->pool_json_object_element_freelist_count == 0) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_object_element exhausted");
     }
 
     pool->pool_json_object_element_freelist_count--;
@@ -318,12 +318,12 @@ result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** el
 
 result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* element) {
     if (pool->pool_json_object_element_freelist_count >= POOL_JSON_OBJECT_ELEMENT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_object_element freelist full");
     }
 
     if (element < pool->pool_json_object_element ||
         element >= pool->pool_json_object_element + POOL_JSON_OBJECT_ELEMENT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("JSON object element doesn't belong to pool");
     }
 
     pool->pool_json_object_element_freelist_data[pool->pool_json_object_element_freelist_count] = element;
@@ -334,7 +334,7 @@ result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* elem
 
 result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** element) {
     if (pool->pool_json_array_element_freelist_count == 0) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_array_element exhausted");
     }
 
     pool->pool_json_array_element_freelist_count--;
@@ -349,12 +349,12 @@ result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** elem
 
 result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* element) {
     if (pool->pool_json_array_element_freelist_count >= POOL_JSON_ARRAY_ELEMENT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("Pool json_array_element freelist full");
     }
 
     if (element < pool->pool_json_array_element ||
         element >= pool->pool_json_array_element + POOL_JSON_ARRAY_ELEMENT_MAXCOUNT) {
-        return RESULT_ERR;
+        RETURN_ERR("JSON array element doesn't belong to pool");
     }
 
     pool->pool_json_array_element_freelist_data[pool->pool_json_array_element_freelist_count] = element;
