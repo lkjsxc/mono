@@ -157,8 +157,8 @@ static result_t json_parse_string(pool_t* pool, const char** cursor, json_value_
         return RESULT_ERR;
     }
 
-    string_t* str;
-    if (pool_string_alloc(pool, &str, 256) != RESULT_OK) {
+    string_t* string;
+    if (pool_string_alloc(pool, &string, 256) != RESULT_OK) {
         if (pool_json_value_free(pool, *value) != RESULT_OK) {
             RETURN_ERR("Failed to free JSON value after string allocation failure");
         }
@@ -166,7 +166,7 @@ static result_t json_parse_string(pool_t* pool, const char** cursor, json_value_
     }
 
     (*value)->type = JSON_TYPE_STRING;
-    (*value)->u.string_value = str;
+    (*value)->u.string_value = string;
 
     (*cursor)++;  // Skip opening '"'
 
@@ -202,11 +202,11 @@ static result_t json_parse_string(pool_t* pool, const char** cursor, json_value_
                 default:
                     return RESULT_ERR;
             }
-            if (string_append_char(pool, &str, escaped) != RESULT_OK) {
+            if (string_append_char(pool, &(*value)->u.string_value, escaped) != RESULT_OK) {
                 return RESULT_ERR;
             }
         } else {
-            if (string_append_char(pool, &str, **cursor) != RESULT_OK) {
+            if (string_append_char(pool, &(*value)->u.string_value, **cursor) != RESULT_OK) {
                 return RESULT_ERR;
             }
         }
