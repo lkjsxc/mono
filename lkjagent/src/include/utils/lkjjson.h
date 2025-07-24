@@ -23,7 +23,7 @@ __attribute__((warn_unused_result)) result_t json_parse(pool_t* pool, const stri
  * @param output String to store the serialized JSON
  * @return RESULT_OK on success, RESULT_ERR on error
  */
-__attribute__((warn_unused_result)) result_t json_stringify(pool_t* pool, const json_value_t* value, string_t* output);
+__attribute__((warn_unused_result)) result_t json_stringify(pool_t* pool, const json_value_t* value, string_t** output);
 
 /**
  * Create a new JSON null value

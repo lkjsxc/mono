@@ -13,6 +13,7 @@ result_t config_load_agent_prompt(pool_t* pool, config_t* config, json_value_t* 
     } else {
         RETURN_ERR("Agent system prompt must be a string");
     }
+    printf("Agent system prompt: %s\n", config->agent_prompt_system->data);
 
     json_value_t* thinking_prompt_value = json_object_get(prompt_obj, "thinking");
     if (thinking_prompt_value && thinking_prompt_value->type == JSON_TYPE_STRING) {
@@ -144,6 +145,17 @@ result_t config_load2(pool_t* pool, config_t* config, string_t* buf, const char*
     if (json_parse(pool, buf, &json_value) != RESULT_OK) {
         RETURN_ERR("Failed to parse JSON configuration");
     }
+
+    
+    string_t* str;
+    if (pool_string_alloc(pool, &str, 4096) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate string for agent prompts");
+    }
+    if(json_stringify(pool, json_value , &str) != RESULT_OK) {
+        RETURN_ERR("Operation failed");
+    }
+    printf("Agent prompts JSON: %s\n", str->data);
+    
 
     // Ensure we have a JSON object
     if (json_value->type != JSON_TYPE_OBJECT) {

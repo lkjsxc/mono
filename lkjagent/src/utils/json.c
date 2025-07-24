@@ -8,8 +8,8 @@ static result_t json_parse_string(pool_t* pool, const char** cursor, json_value_
 static result_t json_parse_number(pool_t* pool, const char** cursor, json_value_t** value);
 static result_t json_parse_literal(pool_t* pool, const char** cursor, json_value_t** value);
 static void json_skip_whitespace(const char** cursor);
-static result_t json_stringify_value(pool_t* pool, const json_value_t* value, string_t* output);
-static result_t json_escape_string(pool_t* pool, const char* str, string_t* output);
+static result_t json_stringify_value(pool_t* pool, const json_value_t* value, string_t** output);
+static result_t json_escape_string(pool_t* pool, const char* str, string_t** output);
 
 result_t json_parse(pool_t* pool, const string_t* json_string, json_value_t** value) {
     if (!pool || !json_string || !value) {
@@ -274,45 +274,45 @@ static void json_skip_whitespace(const char** cursor) {
     }
 }
 
-result_t json_stringify(pool_t* pool, const json_value_t* value, string_t* output) {
+result_t json_stringify(pool_t* pool, const json_value_t* value, string_t** output) {
     if (!pool || !value || !output) {
         return RESULT_ERR;
     }
 
-    string_clear(output);
+    string_clear(*output);
     return json_stringify_value(pool, value, output);
 }
 
-static result_t json_stringify_value(pool_t* pool, const json_value_t* value, string_t* output) {
+static result_t json_stringify_value(pool_t* pool, const json_value_t* value, string_t** output) {
     switch (value->type) {
         case JSON_TYPE_NULL:
-            return string_append_str(pool, &output, "null");
+            return string_append_str(pool, output, "null");
 
         case JSON_TYPE_BOOL:
-            return string_append_str(pool, &output, value->u.bool_value ? "true" : "false");
+            return string_append_str(pool, output, value->u.bool_value ? "true" : "false");
 
         case JSON_TYPE_NUMBER: {
             char buffer[32];
             snprintf(buffer, sizeof(buffer), "%.15g", value->u.number_value);
-            return string_append_str(pool, &output, buffer);
+            return string_append_str(pool, output, buffer);
         }
 
         case JSON_TYPE_STRING:
-            if (string_append_char(pool, &output, '"') != RESULT_OK)
+            if (string_append_char(pool, output, '"') != RESULT_OK)
                 return RESULT_ERR;
             if (json_escape_string(pool, value->u.string_value->data, output) != RESULT_OK)
                 return RESULT_ERR;
-            return string_append_char(pool, &output, '"');
+            return string_append_char(pool, output, '"');
 
         case JSON_TYPE_ARRAY: {
-            if (string_append_char(pool, &output, '[') != RESULT_OK)
+            if (string_append_char(pool, output, '[') != RESULT_OK)
                 return RESULT_ERR;
 
             json_array_element_t* element = value->u.array_value->head;
             int first = 1;
             while (element) {
                 if (!first) {
-                    if (string_append_char(pool, &output, ',') != RESULT_OK)
+                    if (string_append_char(pool, output, ',') != RESULT_OK)
                         return RESULT_ERR;
                 }
                 if (json_stringify_value(pool, element->value, output) != RESULT_OK)
@@ -321,26 +321,26 @@ static result_t json_stringify_value(pool_t* pool, const json_value_t* value, st
                 first = 0;
             }
 
-            return string_append_char(pool, &output, ']');
+            return string_append_char(pool, output, ']');
         }
 
         case JSON_TYPE_OBJECT: {
-            if (string_append_char(pool, &output, '{') != RESULT_OK)
+            if (string_append_char(pool, output, '{') != RESULT_OK)
                 return RESULT_ERR;
 
             json_object_element_t* element = value->u.object_value->head;
             int first = 1;
             while (element) {
                 if (!first) {
-                    if (string_append_char(pool, &output, ',') != RESULT_OK)
+                    if (string_append_char(pool, output, ',') != RESULT_OK)
                         return RESULT_ERR;
                 }
 
-                if (string_append_char(pool, &output, '"') != RESULT_OK)
+                if (string_append_char(pool, output, '"') != RESULT_OK)
                     return RESULT_ERR;
                 if (json_escape_string(pool, element->key->data, output) != RESULT_OK)
                     return RESULT_ERR;
-                if (string_append_str(pool, &output, "\":") != RESULT_OK)
+                if (string_append_str(pool, output, "\":") != RESULT_OK)
                     return RESULT_ERR;
                 if (json_stringify_value(pool, element->value, output) != RESULT_OK)
                     return RESULT_ERR;
@@ -349,46 +349,46 @@ static result_t json_stringify_value(pool_t* pool, const json_value_t* value, st
                 first = 0;
             }
 
-            return string_append_char(pool, &output, '}');
+            return string_append_char(pool, output, '}');
         }
     }
 
     return RESULT_ERR;
 }
 
-static result_t json_escape_string(pool_t* pool, const char* str, string_t* output) {
+static result_t json_escape_string(pool_t* pool, const char* str, string_t** output) {
     while (*str) {
         switch (*str) {
             case '"':
-                if (string_append_str(pool, &output, "\\\"") != RESULT_OK)
+                if (string_append_str(pool, output, "\\\"") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\\':
-                if (string_append_str(pool, &output, "\\\\") != RESULT_OK)
+                if (string_append_str(pool, output, "\\\\") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\b':
-                if (string_append_str(pool, &output, "\\b") != RESULT_OK)
+                if (string_append_str(pool, output, "\\b") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\f':
-                if (string_append_str(pool, &output, "\\f") != RESULT_OK)
+                if (string_append_str(pool, output, "\\f") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\n':
-                if (string_append_str(pool, &output, "\\n") != RESULT_OK)
+                if (string_append_str(pool, output, "\\n") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\r':
-                if (string_append_str(pool, &output, "\\r") != RESULT_OK)
+                if (string_append_str(pool, output, "\\r") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             case '\t':
-                if (string_append_str(pool, &output, "\\t") != RESULT_OK)
+                if (string_append_str(pool, output, "\\t") != RESULT_OK)
                     return RESULT_ERR;
                 break;
             default:
-                if (string_append_char(pool, &output, *str) != RESULT_OK)
+                if (string_append_char(pool, output, *str) != RESULT_OK)
                     return RESULT_ERR;
                 break;
         }
