@@ -11,6 +11,7 @@
 #include "utils/lkjstring.h"
 
 result_t agent_init(pool_t* pool, config_t* config, agent_t* agent);
+result_t agent_step(pool_t* pool, config_t* config, agent_t* agent);
 result_t agent_run(pool_t* pool, config_t* config, agent_t* agent);
 
 #endif
