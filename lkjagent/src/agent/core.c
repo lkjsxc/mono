@@ -10,11 +10,11 @@ result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
     agent->status = config->agent_default_status;
     agent->iteration_count = 0;
 
-    if (pool_json_object_alloc(pool, &agent->working_memory) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &agent->working_memory) != RESULT_OK) {
         RETURN_ERR("Failed to allocate working memory object");
     }
 
-    if (pool_json_object_alloc(pool, &agent->storage) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &agent->storage) != RESULT_OK) {
         RETURN_ERR("Failed to allocate storage object");
     }
 
@@ -67,119 +67,55 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
     }
 
     // Construct comprehensive system prompt
-    string_t* system_prompt_text;
-    if (pool_string_alloc(pool, &system_prompt_text, 256) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate system prompt text string");
+    json_value_t* system_prompt;
+    if (json_create_object(pool, &system_prompt) != RESULT_OK) {
+        RETURN_ERR("Failed to create system prompt object");
     }
 
-    // Start with base system prompt
-    if (string_copy(pool, &system_prompt_text, config->agent_prompt_system) != RESULT_OK) {
-        RETURN_ERR("Failed to assign base system prompt");
+    if (json_deep_copy(pool, config->agent_prompt_system, &system_prompt) != RESULT_OK) {
+        RETURN_ERR("Failed to copy system prompt JSON object");
     }
-
-    // // Add status-specific prompt if available and different from system
-    // string_t* status_prompt = NULL;
-    // switch (agent->status) {
-    //     case AGENT_STATUS_THINKING:
-    //         status_prompt = config->agent_prompt_thinking;
-    //         break;
-    //     case AGENT_STATUS_PAGING:
-    //         status_prompt = config->agent_prompt_paging;
-    //         break;
-    //     case AGENT_STATUS_EVALUATING:
-    //         status_prompt = config->agent_prompt_evaluating;
-    //         break;
-    //     case AGENT_STATUS_EXECUTING:
-    //         status_prompt = config->agent_prompt_executing;
-    //         break;
-    //     default:
-    //         status_prompt = NULL;
-    //         break;
-    // }
-
-    // if (status_prompt && status_prompt->size > 0) {
-    //     if (string_append_str(pool, &system_prompt_text, "\n\nStatus-specific instructions: ") != RESULT_OK) {
-    //         RETURN_ERR("Failed to append status separator");
-    //     }
-    //     if (string_append(pool, &system_prompt_text, status_prompt) != RESULT_OK) {
-    //         RETURN_ERR("Failed to append status-specific prompt");
-    //     }
-    // }
 
     // Add current working memory context
-    if (agent->working_memory) {
-        string_t* working_memory_str;
-        if (pool_string_alloc(pool, &working_memory_str, 16384) != RESULT_OK) {
-            RETURN_ERR("Failed to allocate working memory string");
-        }
-
-        json_value_t* working_memory_json = (json_value_t*)agent->working_memory;
-        if (json_stringify(pool, working_memory_json, &working_memory_str) == RESULT_OK && working_memory_str->size > 2) {
-            if (string_append_str(pool, &system_prompt_text, "\n\nCurrent working memory: ") != RESULT_OK) {
-                RETURN_ERR("Failed to append working memory separator");
-            }
-            if (string_append(pool, &system_prompt_text, working_memory_str) != RESULT_OK) {
-                RETURN_ERR("Failed to append working memory content");
-            }
-        }
-
-        if (pool_string_free(pool, working_memory_str) != RESULT_OK) {
-            RETURN_ERR("Failed to free working memory string");
-        }
+    if (json_object_set(pool, system_prompt, "working_memory", agent->working_memory) != RESULT_OK) {
+        RETURN_ERR("Failed to set working memory in system prompt");
     }
 
     // Add current storage context
-    if (agent->storage) {
-        string_t* storage_str;
-        if (pool_string_alloc(pool, &storage_str, 16384) != RESULT_OK) {
-            RETURN_ERR("Failed to allocate storage string");
-        }
+    // implement later
 
-        json_value_t* storage_json = (json_value_t*)agent->storage;
-        if (json_stringify(pool, storage_json, &storage_str) == RESULT_OK && storage_str->size > 2) {
-            if (string_append_str(pool, &system_prompt_text, "\n\nCurrent storage: ") != RESULT_OK) {
-                RETURN_ERR("Failed to append storage separator");
-            }
-            if (string_append(pool, &system_prompt_text, storage_str) != RESULT_OK) {
-                RETURN_ERR("Failed to append storage content");
-            }
-        }
-
-        if (pool_string_free(pool, storage_str) != RESULT_OK) {
-            RETURN_ERR("Failed to free storage string");
-        }
+    // Convert system prompt JSON to string for LLM content
+    string_t* content_string;
+    if (pool_string_alloc(pool, &content_string, 4096) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate content string");
     }
 
-    // // Add iteration context
-    // char iteration_info[256];
-    // snprintf(iteration_info, sizeof(iteration_info), "\n\nCurrent iteration: %lu/%lu", 
-    //          agent->iteration_count, config->agent_max_iterate);
-    // if (string_append_str(pool, &system_prompt_text, iteration_info) != RESULT_OK) {
-    //     RETURN_ERR("Failed to append iteration information");
-    // }
+    if (json_stringify(pool, system_prompt, &content_string) != RESULT_OK) {
+        RETURN_ERR("Failed to stringify system prompt JSON");
+    }
 
     json_value_t* content_value;
-    if (json_create_string(pool, system_prompt_text->data, &content_value) != RESULT_OK) {
-        RETURN_ERR("Failed to create content JSON value");
+    if (json_create_string(pool, content_string->data, &content_value) != RESULT_OK) {
+        RETURN_ERR("Failed to create content string value");
     }
-    printf("config->agent_prompt_system: %s\n", config->agent_prompt_system->data);
-    printf("system_prompt_text: %s\n", system_prompt_text->data);
-    printf("content_value: %s\n", content_value->u.string_value->data);
+
     if (json_object_set(pool, system_message, "content", content_value) != RESULT_OK) {
         RETURN_ERR("Failed to set content in system message");
     }
 
+    // Clean up content string
+    if (pool_string_free(pool, content_string) != RESULT_OK) {
+        RETURN_ERR("Failed to free content string");
+    }
+
+    // Add system message to messages array
     if (json_array_append(pool, messages_array, system_message) != RESULT_OK) {
-        RETURN_ERR("Failed to append system message to array");
+        RETURN_ERR("Failed to add system message to messages array");
     }
 
-    // Clean up system prompt text
-    if (pool_string_free(pool, system_prompt_text) != RESULT_OK) {
-        RETURN_ERR("Failed to free system prompt text");
-    }
-
+    // Add messages array to request JSON
     if (json_object_set(pool, request_json, "messages", messages_array) != RESULT_OK) {
-        RETURN_ERR("Failed to set messages in request JSON");
+        RETURN_ERR("Failed to set messages array in request JSON");
     }
 
     // Serialize JSON to string
@@ -191,6 +127,9 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
     if (json_stringify(pool, request_json, &request_body) != RESULT_OK) {
         RETURN_ERR("Failed to stringify request JSON");
     }
+
+    // Debug: Print the system prompt to see if it has escape sequences
+    printf("DEBUG: System prompt JSON:\n%s\n", request_body->data);
 
     // Make HTTP request
     http_response_t response;
@@ -244,19 +183,19 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
     if (think_end_pos == -1) {
         RETURN_ERR("Agent response missing </think> tag");
     }
-    
+
     // Calculate position after the </think> tag
-    uint64_t json_start_pos = (uint64_t)think_end_pos + 8; // 8 = strlen("</think>")
+    uint64_t json_start_pos = (uint64_t)think_end_pos + 8;  // 8 = strlen("</think>")
     if (json_start_pos >= response_text->size) {
         RETURN_ERR("No content found after </think> tag");
     }
-    
+
     // Create a string containing only the JSON part
     string_t* json_text;
     if (pool_string_alloc(pool, &json_text, response_text->size - json_start_pos + 1) != RESULT_OK) {
         RETURN_ERR("Failed to allocate JSON text string");
     }
-    
+
     const char* json_start = response_text->data + json_start_pos;
     if (string_assign(pool, &json_text, json_start) != RESULT_OK) {
         if (pool_string_free(pool, json_text) != RESULT_OK) {
@@ -264,7 +203,11 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
         }
         RETURN_ERR("Failed to assign JSON text");
     }
-    
+
+    if(string_unescape(pool, &json_text) != RESULT_OK) {
+        RETURN_ERR("Failed to unescape JSON text");
+    }
+
     // Parse the extracted JSON
     json_value_t* response_json;
     if (json_parse(pool, json_text, &response_json) != RESULT_OK) {
@@ -273,7 +216,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
         }
         RETURN_ERR("Failed to parse agent response as JSON");
     }
-    
+
     // Clean up the temporary JSON text string
     if (pool_string_free(pool, json_text) != RESULT_OK) {
         RETURN_ERR("Failed to free JSON text string");
@@ -291,7 +234,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
 
         while (element) {
             // Add each key-value pair to working memory
-            if (json_object_set(pool, (json_value_t*)agent->working_memory, element->key->data, element->value) != RESULT_OK) {
+            if (json_object_set(pool, agent->working_memory, element->key->data, element->value) != RESULT_OK) {
                 RETURN_ERR("Failed to add item to working memory");
             }
             element = element->next;
@@ -303,7 +246,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
     if (working_memory_remove) {
         if (working_memory_remove->type == JSON_TYPE_STRING) {
             // Remove single key
-            json_value_t* working_memory_value = (json_value_t*)agent->working_memory;
+            json_value_t* working_memory_value = agent->working_memory;
             if (json_object_remove(pool, working_memory_value, working_memory_remove->u.string_value->data) != RESULT_OK) {
                 RETURN_ERR("Failed to remove item from working memory");
             }
@@ -314,7 +257,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
 
             while (element) {
                 if (element->value->type == JSON_TYPE_STRING) {
-                    json_value_t* working_memory_value = (json_value_t*)agent->working_memory;
+                    json_value_t* working_memory_value = agent->working_memory;
                     if (json_object_remove(pool, working_memory_value, element->value->u.string_value->data) != RESULT_OK) {
                         RETURN_ERR("Failed to remove item from working memory");
                     }
@@ -332,7 +275,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
 
         while (element) {
             // Add each key-value pair to storage
-            if (json_object_set(pool, (json_value_t*)agent->storage, element->key->data, element->value) != RESULT_OK) {
+            if (json_object_set(pool, agent->storage, element->key->data, element->value) != RESULT_OK) {
                 RETURN_ERR("Failed to add item to storage");
             }
             element = element->next;
@@ -344,7 +287,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
     if (storage_remove) {
         if (storage_remove->type == JSON_TYPE_STRING) {
             // Remove single key
-            json_value_t* storage_value = (json_value_t*)agent->storage;
+            json_value_t* storage_value = agent->storage;
             if (json_object_remove(pool, storage_value, storage_remove->u.string_value->data) != RESULT_OK) {
                 RETURN_ERR("Failed to remove item from storage");
             }
@@ -355,7 +298,7 @@ static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* co
 
             while (element) {
                 if (element->value->type == JSON_TYPE_STRING) {
-                    json_value_t* storage_value = (json_value_t*)agent->storage;
+                    json_value_t* storage_value = agent->storage;
                     if (json_object_remove(pool, storage_value, element->value->u.string_value->data) != RESULT_OK) {
                         RETURN_ERR("Failed to remove item from storage");
                     }

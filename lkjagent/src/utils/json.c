@@ -794,3 +794,82 @@ result_t json_array_remove(pool_t* pool, json_value_t* array, uint64_t index) {
 
     return RESULT_OK;
 }
+
+result_t json_deep_copy(pool_t* pool, const json_value_t* src, json_value_t** dst) {
+    if (!pool || !src || !dst) {
+        RETURN_ERR("Invalid parameters");
+    }
+
+    switch (src->type) {
+        case JSON_TYPE_NULL:
+            if (json_create_null(pool, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create null copy");
+            }
+            break;
+
+        case JSON_TYPE_BOOL:
+            if (json_create_bool(pool, src->u.bool_value, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create bool copy");
+            }
+            break;
+
+        case JSON_TYPE_NUMBER:
+            if (json_create_number(pool, src->u.number_value, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create number copy");
+            }
+            break;
+
+        case JSON_TYPE_STRING:
+            if (json_create_string(pool, src->u.string_value->data, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create string copy");
+            }
+            break;
+
+        case JSON_TYPE_OBJECT: {
+            if (json_create_object(pool, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create object copy");
+            }
+            
+            json_object_element_t* element = src->u.object_value->head;
+            while (element) {
+                json_value_t* copied_value;
+                if (json_deep_copy(pool, element->value, &copied_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to deep copy object element value");
+                }
+                
+                if (json_object_set(pool, *dst, element->key->data, copied_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to set copied element in object");
+                }
+                
+                element = element->next;
+            }
+            break;
+        }
+
+        case JSON_TYPE_ARRAY: {
+            if (json_create_array(pool, dst) != RESULT_OK) {
+                RETURN_ERR("Failed to create array copy");
+            }
+            
+            json_array_element_t* element = src->u.array_value->head;
+            while (element) {
+                json_value_t* copied_value;
+                if (json_deep_copy(pool, element->value, &copied_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to deep copy array element value");
+                }
+                
+                if (json_array_append(pool, *dst, copied_value) != RESULT_OK) {
+                    RETURN_ERR("Failed to append copied element to array");
+                }
+                
+                element = element->next;
+            }
+            break;
+        }
+
+        default:
+            RETURN_ERR("Unknown JSON type");
+    }
+
+    return RESULT_OK;
+}

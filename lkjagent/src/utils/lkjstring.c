@@ -314,3 +314,77 @@ int64_t string_find_char_from(const string_t* string, char c, uint64_t pos) {
     
     return found - string->data;
 }
+
+result_t string_unescape(pool_t* pool, string_t** string) {
+    if (!pool || !string || !*string || !(*string)->data) {
+        RETURN_ERR("Invalid parameters");
+    }
+    
+    string_t* input = *string;
+    string_t* unescaped;
+    
+    // Allocate a new string with the same capacity as the input
+    if (pool_string_alloc(pool, &unescaped, input->capacity) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate unescaped string");
+    }
+    
+    uint64_t src_pos = 0;
+    uint64_t dst_pos = 0;
+    
+    while (src_pos < input->size) {
+        if (input->data[src_pos] == '\\' && src_pos + 1 < input->size) {
+            // Handle escape sequences
+            char next_char = input->data[src_pos + 1];
+            switch (next_char) {
+                case '\\':
+                    unescaped->data[dst_pos++] = '\\';
+                    break;
+                case 'n':
+                    unescaped->data[dst_pos++] = '\n';
+                    break;
+                case 't':
+                    unescaped->data[dst_pos++] = '\t';
+                    break;
+                case 'r':
+                    unescaped->data[dst_pos++] = '\r';
+                    break;
+                case '"':
+                    unescaped->data[dst_pos++] = '"';
+                    break;
+                case '/':
+                    unescaped->data[dst_pos++] = '/';
+                    break;
+                case 'b':
+                    unescaped->data[dst_pos++] = '\b';
+                    break;
+                case 'f':
+                    unescaped->data[dst_pos++] = '\f';
+                    break;
+                default:
+                    // For unknown escape sequences, keep the backslash and the character
+                    unescaped->data[dst_pos++] = '\\';
+                    unescaped->data[dst_pos++] = next_char;
+                    break;
+            }
+            src_pos += 2; // Skip both the backslash and the escaped character
+        } else {
+            // Regular character, copy as-is
+            unescaped->data[dst_pos++] = input->data[src_pos];
+            src_pos++;
+        }
+    }
+    
+    unescaped->data[dst_pos] = '\0';
+    unescaped->size = dst_pos;
+    
+    // Free the original string and replace it with the unescaped version
+    if (pool_string_free(pool, input) != RESULT_OK) {
+        if (pool_string_free(pool, unescaped) != RESULT_OK) {
+            // Log error but continue with original error
+        }
+        RETURN_ERR("Failed to free original string");
+    }
+    
+    *string = unescaped;
+    return RESULT_OK;
+}

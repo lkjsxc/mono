@@ -24,4 +24,6 @@ int64_t string_find_char(const string_t* string, char c);
 int64_t string_find_from(const string_t* string, const char* substr, uint64_t pos);
 int64_t string_find_char_from(const string_t* string, char c, uint64_t pos);
 
+__attribute__((warn_unused_result)) result_t string_unescape(pool_t* pool, string_t** string);
+
 #endif

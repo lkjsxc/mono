@@ -6,48 +6,53 @@ result_t config_load_agent_prompt(pool_t* pool, config_t* config, json_value_t* 
     }
 
     json_value_t* system_prompt_value = json_object_get(prompt_obj, "system");
-    if (system_prompt_value && system_prompt_value->type == JSON_TYPE_STRING) {
-        if (string_assign(pool, &config->agent_prompt_system, system_prompt_value->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to assign agent system prompt string");
+    if (system_prompt_value && system_prompt_value->type == JSON_TYPE_OBJECT) {
+        // Deep copy the JSON object
+        if (json_deep_copy(pool, system_prompt_value, &config->agent_prompt_system) != RESULT_OK) {
+            RETURN_ERR("Failed to copy agent system prompt object");
         }
     } else {
-        RETURN_ERR("Agent system prompt must be a string");
+        RETURN_ERR("Agent system prompt must be an object");
     }
 
     json_value_t* thinking_prompt_value = json_object_get(prompt_obj, "thinking");
-    if (thinking_prompt_value && thinking_prompt_value->type == JSON_TYPE_STRING) {
-        if (string_assign(pool, &config->agent_prompt_thinking, thinking_prompt_value->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to assign agent thinking prompt string");
+    if (thinking_prompt_value && thinking_prompt_value->type == JSON_TYPE_OBJECT) {
+        // Deep copy the JSON object
+        if (json_deep_copy(pool, thinking_prompt_value, &config->agent_prompt_thinking) != RESULT_OK) {
+            RETURN_ERR("Failed to copy agent thinking prompt object");
         }
     } else {
-        RETURN_ERR("Agent thinking prompt must be a string");
+        RETURN_ERR("Agent thinking prompt must be an object");
     }
 
     json_value_t* paging_prompt_value = json_object_get(prompt_obj, "paging");
-    if (paging_prompt_value && paging_prompt_value->type == JSON_TYPE_STRING) {
-        if (string_assign(pool, &config->agent_prompt_paging, paging_prompt_value->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to assign agent paging prompt string");
+    if (paging_prompt_value && paging_prompt_value->type == JSON_TYPE_OBJECT) {
+        // Deep copy the JSON object
+        if (json_deep_copy(pool, paging_prompt_value, &config->agent_prompt_paging) != RESULT_OK) {
+            RETURN_ERR("Failed to copy agent paging prompt object");
         }
     } else {
-        RETURN_ERR("Agent paging prompt must be a string");
+        RETURN_ERR("Agent paging prompt must be an object");
     }
 
     json_value_t* evaluating_prompt_value = json_object_get(prompt_obj, "evaluating");
-    if (evaluating_prompt_value && evaluating_prompt_value->type == JSON_TYPE_STRING) {
-        if (string_assign(pool, &config->agent_prompt_evaluating, evaluating_prompt_value->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to assign agent evaluating prompt string");
+    if (evaluating_prompt_value && evaluating_prompt_value->type == JSON_TYPE_OBJECT) {
+        // Deep copy the JSON object
+        if (json_deep_copy(pool, evaluating_prompt_value, &config->agent_prompt_evaluating) != RESULT_OK) {
+            RETURN_ERR("Failed to copy agent evaluating prompt object");
         }
     } else {
-        RETURN_ERR("Agent evaluating prompt must be a string");
+        RETURN_ERR("Agent evaluating prompt must be an object");
     }
 
     json_value_t* executing_prompt_value = json_object_get(prompt_obj, "executing");
-    if (executing_prompt_value && executing_prompt_value->type == JSON_TYPE_STRING) {
-        if (string_assign(pool, &config->agent_prompt_executing, executing_prompt_value->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to assign agent executing prompt string");
+    if (executing_prompt_value && executing_prompt_value->type == JSON_TYPE_OBJECT) {
+        // Deep copy the JSON object
+        if (json_deep_copy(pool, executing_prompt_value, &config->agent_prompt_executing) != RESULT_OK) {
+            RETURN_ERR("Failed to copy agent executing prompt object");
         }
     } else {
-        RETURN_ERR("Agent executing prompt must be a string");
+        RETURN_ERR("Agent executing prompt must be an object");
     }
 
     return RESULT_OK;
@@ -215,19 +220,19 @@ result_t config_init(pool_t* pool, config_t* config) {
     if (pool_string_alloc(pool, &config->llm_model, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate llm model string");
     }
-    if (pool_string_alloc(pool, &config->agent_prompt_system, 4096) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &config->agent_prompt_system) != RESULT_OK) {
         RETURN_ERR("Failed to allocate agent prompt system string");
     }
-    if (pool_string_alloc(pool, &config->agent_prompt_thinking, 4096) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &config->agent_prompt_thinking) != RESULT_OK) {
         RETURN_ERR("Failed to allocate agent prompt thinking string");
     }
-    if (pool_string_alloc(pool, &config->agent_prompt_paging, 4096) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &config->agent_prompt_paging) != RESULT_OK) {
         RETURN_ERR("Failed to allocate agent prompt paging string");
     }
-    if (pool_string_alloc(pool, &config->agent_prompt_evaluating, 4096) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &config->agent_prompt_evaluating) != RESULT_OK) {
         RETURN_ERR("Failed to allocate agent prompt evaluating string");
     }
-    if (pool_string_alloc(pool, &config->agent_prompt_executing, 4096) != RESULT_OK) {
+    if (pool_json_value_alloc(pool, &config->agent_prompt_executing) != RESULT_OK) {
         RETURN_ERR("Failed to allocate agent prompt executing string");
     }
     return RESULT_OK;

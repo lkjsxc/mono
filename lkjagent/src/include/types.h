@@ -112,18 +112,18 @@ typedef struct {
     uint64_t agent_hard_limit;
     uint64_t agent_max_iterate;
     agent_status_t agent_default_status;
-    string_t* agent_prompt_system;
-    string_t* agent_prompt_thinking;
-    string_t* agent_prompt_paging;
-    string_t* agent_prompt_evaluating;
-    string_t* agent_prompt_executing;
+    json_value_t* agent_prompt_system;
+    json_value_t* agent_prompt_thinking;
+    json_value_t* agent_prompt_paging;
+    json_value_t* agent_prompt_evaluating;
+    json_value_t* agent_prompt_executing;
 } config_t;
 
 typedef struct {
     agent_status_t status;
     uint64_t iteration_count;
-    json_object_t* working_memory;
-    json_object_t* storage;
+    json_value_t* working_memory;
+    json_value_t* storage;
 } agent_t;
 
 typedef struct {

@@ -6,16 +6,27 @@
     "temperature": 0.7
   },
   "agent": {
-    "soft_limit": 2048,
-    "hard_limit": 4096,
-    "max_iterate": 65536,
+    "soft_limit": 4096,
+    "hard_limit": 8192,
+    "max_iterate": 9223372036854775807,
     "default_status": "thinking",
     "prompt": {
-      "system": "{\"system\": {\"output_format\": \"json\",\"task\": \"Write a endless story\",\"output_example1\": {\"working_memory_add\": {\"character_setting_bob\":\"male, 30 years old, cautious, enjoys reading\"}},\"output_example2\": {\"working_memory_remove\": \"character_setting_alice\"}}}",
-      "thinking": "",
-      "paging": "",
-      "evaluating": "",
-      "executing": ""
+      "system": {
+        "output_format": "JSON",
+        "task": "Write a endless story",
+        "output_example1": {
+          "working_memory_add": {
+            "character_setting_bob": "male, 30 years old, cautious, enjoys reading"
+          }
+        },
+        "output_example2": {
+          "working_memory_remove": "character_setting_alice"
+        }
+      },
+      "thinking": {},
+      "paging": {},
+      "evaluating": {},
+      "executing": {}
     }
   }
 }

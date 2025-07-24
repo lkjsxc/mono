@@ -151,4 +151,14 @@ __attribute__((warn_unused_result)) result_t json_object_remove(pool_t* pool, js
  */
 __attribute__((warn_unused_result)) result_t json_array_remove(pool_t* pool, json_value_t* array, uint64_t index);
 
+/**
+ * Deep copy a JSON value, recursively copying all nested objects and arrays.
+ * 
+ * @param pool The memory pool.
+ * @param src The source JSON value to copy.
+ * @param dst Pointer to store the copied JSON value.
+ * @return RESULT_OK on success, or an error code on failure.
+ */
+__attribute__((warn_unused_result)) result_t json_deep_copy(pool_t* pool, const json_value_t* src, json_value_t** dst);
+
 #endif
