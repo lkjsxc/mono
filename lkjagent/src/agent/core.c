@@ -10,12 +10,12 @@ result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
     agent->status = config->agent_default_status;
     agent->iteration_count = 0;
 
-    if (pool_json_value_alloc(pool, &agent->working_memory) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate working memory object");
+    if (json_create_object(pool, &agent->working_memory) != RESULT_OK) {
+        RETURN_ERR("Failed to create working memory object");
     }
 
-    if (pool_json_value_alloc(pool, &agent->storage) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate storage object");
+    if (json_create_object(pool, &agent->storage) != RESULT_OK) {
+        RETURN_ERR("Failed to create storage object");
     }
 
     return RESULT_OK;
@@ -174,7 +174,7 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
     return RESULT_OK;
 }
 
-static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* config, agent_t* agent, const string_t* response_text) {
+result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* config, agent_t* agent, const string_t* response_text) {
     // Parse response and extract JSON payload
     json_value_t* response_json;
     if (agent_parse_response(pool, response_text, &response_json) != RESULT_OK) {

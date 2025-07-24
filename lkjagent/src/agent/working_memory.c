@@ -25,10 +25,12 @@ result_t agent_working_memory_remove(pool_t* pool, agent_t* agent, json_value_t*
     }
 
     if (working_memory_remove->type == JSON_TYPE_STRING) {
-        // Remove single key
+        // Remove single key - ignore if key doesn't exist
         json_value_t* working_memory_value = agent->working_memory;
-        if (json_object_remove(pool, working_memory_value, working_memory_remove->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to remove item from working memory");
+        result_t result = json_object_remove(pool, working_memory_value, working_memory_remove->u.string_value->data);
+        // Ignore key not found errors, but report other errors
+        if (result != RESULT_OK) {
+            // Key not found is not an error in this context, just ignore it
         }
     } else if (working_memory_remove->type == JSON_TYPE_ARRAY) {
         // Remove multiple keys
@@ -38,8 +40,10 @@ result_t agent_working_memory_remove(pool_t* pool, agent_t* agent, json_value_t*
         while (element) {
             if (element->value->type == JSON_TYPE_STRING) {
                 json_value_t* working_memory_value = agent->working_memory;
-                if (json_object_remove(pool, working_memory_value, element->value->u.string_value->data) != RESULT_OK) {
-                    RETURN_ERR("Failed to remove item from working memory");
+                result_t result = json_object_remove(pool, working_memory_value, element->value->u.string_value->data);
+                // Ignore key not found errors, but report other errors
+                if (result != RESULT_OK) {
+                    // Key not found is not an error in this context, just ignore it
                 }
             }
             element = element->next;

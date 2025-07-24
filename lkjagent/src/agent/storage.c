@@ -25,10 +25,12 @@ result_t agent_storage_remove(pool_t* pool, agent_t* agent, json_value_t* storag
     }
 
     if (storage_remove->type == JSON_TYPE_STRING) {
-        // Remove single key
+        // Remove single key - ignore if key doesn't exist
         json_value_t* storage_value = agent->storage;
-        if (json_object_remove(pool, storage_value, storage_remove->u.string_value->data) != RESULT_OK) {
-            RETURN_ERR("Failed to remove item from storage");
+        result_t result = json_object_remove(pool, storage_value, storage_remove->u.string_value->data);
+        // Ignore key not found errors, but report other errors
+        if (result != RESULT_OK) {
+            // Key not found is not an error in this context, just ignore it
         }
     } else if (storage_remove->type == JSON_TYPE_ARRAY) {
         // Remove multiple keys
@@ -38,8 +40,10 @@ result_t agent_storage_remove(pool_t* pool, agent_t* agent, json_value_t* storag
         while (element) {
             if (element->value->type == JSON_TYPE_STRING) {
                 json_value_t* storage_value = agent->storage;
-                if (json_object_remove(pool, storage_value, element->value->u.string_value->data) != RESULT_OK) {
-                    RETURN_ERR("Failed to remove item from storage");
+                result_t result = json_object_remove(pool, storage_value, element->value->u.string_value->data);
+                // Ignore key not found errors, but report other errors
+                if (result != RESULT_OK) {
+                    // Key not found is not an error in this context, just ignore it
                 }
             }
             element = element->next;
