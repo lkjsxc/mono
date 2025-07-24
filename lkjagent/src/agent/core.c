@@ -128,9 +128,6 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
         RETURN_ERR("Failed to stringify request JSON");
     }
 
-    // Debug: Print the system prompt to see if it has escape sequences
-    printf("DEBUG: System prompt JSON:\n%s\n", request_body->data);
-
     // Make HTTP request
     http_response_t response;
     if (http_post_json(pool, config->llm_endpoint->data, request_body->data, &response) != RESULT_OK) {
@@ -178,152 +175,55 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
 }
 
 static result_t agent_execute(pool_t* pool, __attribute__((unused)) config_t* config, agent_t* agent, const string_t* response_text) {
-    // Find the </think> tag and extract JSON content after it
-    int64_t think_end_pos = string_find(response_text, "</think>");
-    if (think_end_pos == -1) {
-        RETURN_ERR("Agent response missing </think> tag");
-    }
-
-    // Calculate position after the </think> tag
-    uint64_t json_start_pos = (uint64_t)think_end_pos + 8;  // 8 = strlen("</think>")
-    if (json_start_pos >= response_text->size) {
-        RETURN_ERR("No content found after </think> tag");
-    }
-
-    // Create a string containing only the JSON part
-    string_t* json_text;
-    if (pool_string_alloc(pool, &json_text, response_text->size - json_start_pos + 1) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate JSON text string");
-    }
-
-    const char* json_start = response_text->data + json_start_pos;
-    if (string_assign(pool, &json_text, json_start) != RESULT_OK) {
-        if (pool_string_free(pool, json_text) != RESULT_OK) {
-            RETURN_ERR("Failed to free JSON text string and assign JSON text");
-        }
-        RETURN_ERR("Failed to assign JSON text");
-    }
-
-    if(string_unescape(pool, &json_text) != RESULT_OK) {
-        RETURN_ERR("Failed to unescape JSON text");
-    }
-
-    // Parse the extracted JSON
+    // Parse response and extract JSON payload
     json_value_t* response_json;
-    if (json_parse(pool, json_text, &response_json) != RESULT_OK) {
-        if (pool_string_free(pool, json_text) != RESULT_OK) {
-            RETURN_ERR("Failed to free JSON text string and parse agent response as JSON");
-        }
-        RETURN_ERR("Failed to parse agent response as JSON");
-    }
-
-    // Clean up the temporary JSON text string
-    if (pool_string_free(pool, json_text) != RESULT_OK) {
-        RETURN_ERR("Failed to free JSON text string");
-    }
-
-    if (response_json->type != JSON_TYPE_OBJECT) {
-        RETURN_ERR("Agent response must be a JSON object");
+    if (agent_parse_response(pool, response_text, &response_json) != RESULT_OK) {
+        RETURN_ERR("Failed to parse agent response");
     }
 
     // Process working_memory_add operations
     json_value_t* working_memory_add = json_object_get(response_json, "working_memory_add");
-    if (working_memory_add && working_memory_add->type == JSON_TYPE_OBJECT) {
-        json_object_t* add_obj = working_memory_add->u.object_value;
-        json_object_element_t* element = add_obj->head;
-
-        while (element) {
-            // Add each key-value pair to working memory
-            if (json_object_set(pool, agent->working_memory, element->key->data, element->value) != RESULT_OK) {
-                RETURN_ERR("Failed to add item to working memory");
-            }
-            element = element->next;
+    if (agent_working_memory_add(pool, agent, working_memory_add) != RESULT_OK) {
+        if (pool_json_value_free(pool, response_json) != RESULT_OK) {
+            RETURN_ERR("Failed to free response JSON value and process working memory add");
         }
+        RETURN_ERR("Failed to process working memory add operations");
     }
 
     // Process working_memory_remove operations
     json_value_t* working_memory_remove = json_object_get(response_json, "working_memory_remove");
-    if (working_memory_remove) {
-        if (working_memory_remove->type == JSON_TYPE_STRING) {
-            // Remove single key
-            json_value_t* working_memory_value = agent->working_memory;
-            if (json_object_remove(pool, working_memory_value, working_memory_remove->u.string_value->data) != RESULT_OK) {
-                RETURN_ERR("Failed to remove item from working memory");
-            }
-        } else if (working_memory_remove->type == JSON_TYPE_ARRAY) {
-            // Remove multiple keys
-            json_array_t* remove_array = working_memory_remove->u.array_value;
-            json_array_element_t* element = remove_array->head;
-
-            while (element) {
-                if (element->value->type == JSON_TYPE_STRING) {
-                    json_value_t* working_memory_value = agent->working_memory;
-                    if (json_object_remove(pool, working_memory_value, element->value->u.string_value->data) != RESULT_OK) {
-                        RETURN_ERR("Failed to remove item from working memory");
-                    }
-                }
-                element = element->next;
-            }
+    if (agent_working_memory_remove(pool, agent, working_memory_remove) != RESULT_OK) {
+        if (pool_json_value_free(pool, response_json) != RESULT_OK) {
+            RETURN_ERR("Failed to free response JSON value and process working memory remove");
         }
+        RETURN_ERR("Failed to process working memory remove operations");
     }
 
     // Process storage_add operations
     json_value_t* storage_add = json_object_get(response_json, "storage_add");
-    if (storage_add && storage_add->type == JSON_TYPE_OBJECT) {
-        json_object_t* add_obj = storage_add->u.object_value;
-        json_object_element_t* element = add_obj->head;
-
-        while (element) {
-            // Add each key-value pair to storage
-            if (json_object_set(pool, agent->storage, element->key->data, element->value) != RESULT_OK) {
-                RETURN_ERR("Failed to add item to storage");
-            }
-            element = element->next;
+    if (agent_storage_add(pool, agent, storage_add) != RESULT_OK) {
+        if (pool_json_value_free(pool, response_json) != RESULT_OK) {
+            RETURN_ERR("Failed to free response JSON value and process storage add");
         }
+        RETURN_ERR("Failed to process storage add operations");
     }
 
     // Process storage_remove operations
     json_value_t* storage_remove = json_object_get(response_json, "storage_remove");
-    if (storage_remove) {
-        if (storage_remove->type == JSON_TYPE_STRING) {
-            // Remove single key
-            json_value_t* storage_value = agent->storage;
-            if (json_object_remove(pool, storage_value, storage_remove->u.string_value->data) != RESULT_OK) {
-                RETURN_ERR("Failed to remove item from storage");
-            }
-        } else if (storage_remove->type == JSON_TYPE_ARRAY) {
-            // Remove multiple keys
-            json_array_t* remove_array = storage_remove->u.array_value;
-            json_array_element_t* element = remove_array->head;
-
-            while (element) {
-                if (element->value->type == JSON_TYPE_STRING) {
-                    json_value_t* storage_value = agent->storage;
-                    if (json_object_remove(pool, storage_value, element->value->u.string_value->data) != RESULT_OK) {
-                        RETURN_ERR("Failed to remove item from storage");
-                    }
-                }
-                element = element->next;
-            }
+    if (agent_storage_remove(pool, agent, storage_remove) != RESULT_OK) {
+        if (pool_json_value_free(pool, response_json) != RESULT_OK) {
+            RETURN_ERR("Failed to free response JSON value and process storage remove");
         }
+        RETURN_ERR("Failed to process storage remove operations");
     }
 
     // Process status_change operations
     json_value_t* status_change = json_object_get(response_json, "status_change");
-    if (status_change && status_change->type == JSON_TYPE_STRING) {
-        const char* new_status = status_change->u.string_value->data;
-
-        if (strcmp(new_status, "thinking") == 0) {
-            agent->status = AGENT_STATUS_THINKING;
-        } else if (strcmp(new_status, "paging") == 0) {
-            agent->status = AGENT_STATUS_PAGING;
-        } else if (strcmp(new_status, "evaluating") == 0) {
-            agent->status = AGENT_STATUS_EVALUATING;
-        } else if (strcmp(new_status, "executing") == 0) {
-            agent->status = AGENT_STATUS_EXECUTING;
-        } else {
-            RETURN_ERR("Invalid agent status in response");
+    if (agent_status_change(agent, status_change) != RESULT_OK) {
+        if (pool_json_value_free(pool, response_json) != RESULT_OK) {
+            RETURN_ERR("Failed to free response JSON value and process status change");
         }
+        RETURN_ERR("Failed to process status change operations");
     }
 
     if (pool_json_value_free(pool, response_json) != RESULT_OK) {

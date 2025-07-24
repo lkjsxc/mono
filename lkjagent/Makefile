@@ -33,6 +33,7 @@ all: $(TARGET)
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 	mkdir -p $(OBJ_DIR)/utils
+	mkdir -p $(OBJ_DIR)/agent
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
