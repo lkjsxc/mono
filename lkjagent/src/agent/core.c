@@ -192,9 +192,6 @@ static result_t agent_request(pool_t* pool, config_t* config, agent_t* agent, st
         RETURN_ERR("Failed to stringify request JSON");
     }
 
-    // Debug log the request body
-    printf("Request body: %s\n", request_body->data);
-
     // Make HTTP request
     http_response_t response;
     if (http_post_json(pool, config->llm_endpoint->data, request_body->data, &response) != RESULT_OK) {

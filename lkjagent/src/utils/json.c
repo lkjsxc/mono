@@ -432,16 +432,16 @@ result_t json_create_string(pool_t* pool, const char* string_val, json_value_t**
         return RESULT_ERR;
     }
 
-    string_t* str;
-    if (pool_string_alloc(pool, &str, 256) != RESULT_OK) {
+    string_t* string;
+    if (pool_string_alloc(pool, &string, 256) != RESULT_OK) {
         if (pool_json_value_free(pool, *value) != RESULT_OK) {
             RETURN_ERR("Failed to free JSON value after string allocation failure");
         }
         return RESULT_ERR;
     }
 
-    if (string_assign(pool, &str, string_val) != RESULT_OK) {
-        if (pool_string_free(pool, str) != RESULT_OK) {
+    if (string_assign(pool, &string, string_val) != RESULT_OK) {
+        if (pool_string_free(pool, string) != RESULT_OK) {
             RETURN_ERR("Failed to free string after string assignment failure");
         }
         if (pool_json_value_free(pool, *value) != RESULT_OK) {
@@ -451,7 +451,7 @@ result_t json_create_string(pool_t* pool, const char* string_val, json_value_t**
     }
 
     (*value)->type = JSON_TYPE_STRING;
-    (*value)->u.string_value = str;
+    (*value)->u.string_value = string;
     return RESULT_OK;
 }
 
