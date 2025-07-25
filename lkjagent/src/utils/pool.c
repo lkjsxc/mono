@@ -93,6 +93,7 @@ result_t pool_string_realloc(pool_t* pool, string_t** string, uint64_t capacity)
     if (pool_string_alloc(pool, string, capacity) != RESULT_OK) {
         RETURN_ERR("Failed to allocate string with sufficient capacity");
     }
+    return RESULT_OK;
 }
 
 result_t pool_init(pool_t* pool) {
