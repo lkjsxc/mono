@@ -1,7 +1,7 @@
 #include "lkjagent.h"
 
 static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent) {
-    if(pool_init(&lkjagent->pool) != RESULT_OK) {
+    if (pool_init(&lkjagent->pool) != RESULT_OK) {
         RETURN_ERR("Failed to initialize memory pool");
     }
 
@@ -9,7 +9,21 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
-    printf("String16 freelist count: %lu\n", lkjagent->pool.string16_freelist_count);
+    string_t* string;
+    if (string_create(&lkjagent->pool, &string) != RESULT_OK) {
+        RETURN_ERR("Failed to create string");
+    }
+
+    if (string_copy_str(&lkjagent->pool, &string, "Good Morning World!") != RESULT_OK) {
+        RETURN_ERR("Failed to copy string");
+    }
+
+    printf("%s\n", string->data);
+
+    if (pool_string_free(&lkjagent->pool, string) != RESULT_OK) {
+        RETURN_ERR("Failed to free string");
+    }
+
     return RESULT_OK;
 }
 
@@ -20,13 +34,13 @@ int main() {
         RETURN_ERR("Failed to allocate memory for lkjagent");
     }
 
-    if(lkjagent_init(lkjagent) != RESULT_OK) {
+    if (lkjagent_init(lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to initialize lkjagent");
     }
 
-    if(lkjagent_run(lkjagent) != RESULT_OK) {
+    if (lkjagent_run(lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to run lkjagent");
     }
-    
+
     return RESULT_OK;
 }
