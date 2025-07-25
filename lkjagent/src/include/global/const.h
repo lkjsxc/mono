@@ -1,8 +1,6 @@
 #ifndef LKJAGENT_CONST_H
 #define LKJAGENT_CONST_H
 
-#include "std.h"
-
 #define BUF_CAPACITY (1024 * 1024 * 4)
 #define POOL_STRING16_MAXCOUNT (1048576)
 #define POOL_STRING256_MAXCOUNT (65536)

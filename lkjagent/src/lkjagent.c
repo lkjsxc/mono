@@ -1,48 +1,32 @@
 #include "lkjagent.h"
 
-result_t lkjagent_init(lkjagent_t* lkjagent) {
-    if (pool_init(&lkjagent->pool) != RESULT_OK) {
-        RETURN_ERR("Failed to initialize pools");
-    }
-
-    if (config_init(&lkjagent->pool, &lkjagent->config) != RESULT_OK) {
-        RETURN_ERR("Failed to load configuration");
-    }
-
-    if (config_load(&lkjagent->pool, &lkjagent->config, CONFIG_PATH) != RESULT_OK) {
-        RETURN_ERR("Failed to load configuration from file");
-    }
-
-    if (agent_init(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
-        RETURN_ERR("Failed to initialize agent");
+static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent) {
+    if(pool_init(&lkjagent->pool) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize memory pool");
     }
 
     return RESULT_OK;
 }
 
-result_t lkjagent_run(lkjagent_t* lkjagent) {
-    if (agent_run(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
-        RETURN_ERR("Failed to run agent");
-    }
-
+static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
+    printf("String16 freelist count: %lu\n", lkjagent->pool.string16_freelist_count);
     return RESULT_OK;
 }
 
 int main() {
     lkjagent_t* lkjagent = malloc(sizeof(lkjagent_t));
+
     if (!lkjagent) {
         RETURN_ERR("Failed to allocate memory for lkjagent");
     }
 
-    if (lkjagent_init(lkjagent) != RESULT_OK) {
+    if(lkjagent_init(lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to initialize lkjagent");
     }
 
-    if (lkjagent_run(lkjagent) != RESULT_OK) {
+    if(lkjagent_run(lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to run lkjagent");
     }
-
-    free(lkjagent);
-
-    return 0;
+    
+    return RESULT_OK;
 }
