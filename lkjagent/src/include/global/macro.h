@@ -2,6 +2,7 @@
 #define LKJAGENT_MACRO_H
 
 #include "std.h"
+#include "types.h"
 
 #define COUNTOF(array) (sizeof(array) / sizeof((array)[0]))
 
