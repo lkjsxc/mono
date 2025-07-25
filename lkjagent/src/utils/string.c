@@ -40,8 +40,10 @@ result_t string_clean(pool_t* pool, string_t* string) {
 }
 
 result_t string_copy_string(pool_t* pool, string_t** string1, const string_t* string2) {
-    if (pool_string_realloc(pool, string1, string2->capacity) != RESULT_OK) {
-        RETURN_ERR("Failed to reallocate string with sufficient capacity");
+    if ((*string1)->capacity != string2->capacity) {
+        if (pool_string_realloc(pool, string1, string2->capacity) != RESULT_OK) {
+            RETURN_ERR("Failed to reallocate string with sufficient capacity");
+        }
     }
     (*string1)->size = string2->size;
     memcpy((*string1)->data, string2->data, string2->size + 1);

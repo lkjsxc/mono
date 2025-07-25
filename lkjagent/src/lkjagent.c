@@ -11,14 +11,18 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
     string_t* string;
 
-    if (string_create_str(&lkjagent->pool, &string, "Good Morning World!") != RESULT_OK) {
+    if (string_create(&lkjagent->pool, &string) != RESULT_OK) {
         RETURN_ERR("Failed to create string");
     }
 
-    printf("%s\n", string->data);
+    if (file_read(&lkjagent->pool, "data/config.json", &string) != RESULT_OK) {
+        RETURN_ERR("Failed to read configuration file");
+    }
+
+    printf("Configuration: %s\n", string->data);
 
     if (string_destroy(&lkjagent->pool, string) != RESULT_OK) {
-        RETURN_ERR("Failed to free string");
+        RETURN_ERR("Failed to destroy string");
     }
 
     return RESULT_OK;

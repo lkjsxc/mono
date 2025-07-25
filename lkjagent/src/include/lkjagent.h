@@ -5,6 +5,7 @@
 #include "global/macro.h"
 #include "global/std.h"
 #include "global/types.h"
+#include "utils/file.h"
 #include "utils/pool.h"
 #include "utils/string.h"
 
