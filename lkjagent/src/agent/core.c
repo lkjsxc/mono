@@ -9,9 +9,6 @@ result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
     if (json_create_object(pool, &agent->data) != RESULT_OK) {
         RETURN_ERR("Failed to create agent data object");
     }
-    if(json_object_set_string(pool, agent->data, "state", config->agent_default_state->data) != RESULT_OK) {
-        RETURN_ERR("Failed to set agent default state");
-    }
 
     return RESULT_OK;
 }
