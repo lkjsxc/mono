@@ -68,21 +68,22 @@ static result_t agent_process_tagged_operation(pool_t* pool, agent_t* agent, con
 
     result_t result = RESULT_OK;
 
+
     if (strcmp(operation, "working_memory_add") == 0) {
-        if (json_object_set(pool, agent->working_memory, key->data, value) != RESULT_OK) {
+        if (json_object_set(pool, working_memory_value, key->data, value) != RESULT_OK) {
             result = RESULT_ERR;
         }
     } else if (strcmp(operation, "working_memory_remove") == 0) {
         // Ignore result for remove operations (key might not exist)
-        result_t remove_result = json_object_remove(pool, agent->working_memory, key->data);
+        result_t remove_result = json_object_remove(pool, working_memory_value, key->data);
         (void)remove_result; // Explicitly ignore the result
     } else if (strcmp(operation, "storage_add") == 0) {
-        if (json_object_set(pool, agent->storage, key->data, value) != RESULT_OK) {
+        if (json_object_set(pool, storage_value, key->data, value) != RESULT_OK) {
             result = RESULT_ERR;
         }
     } else if (strcmp(operation, "storage_remove") == 0) {
         // Ignore result for remove operations (key might not exist)
-        result_t remove_result = json_object_remove(pool, agent->storage, key->data);
+        result_t remove_result = json_object_remove(pool, storage_value, key->data);
         (void)remove_result; // Explicitly ignore the result
     }
 

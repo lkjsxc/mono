@@ -12,7 +12,6 @@
 #include "agent/response_parser.h"
 #include "agent/working_memory.h"
 #include "agent/storage.h"
-#include "agent/status.h"
 #include "agent/request.h"
 #include "agent/process.h"
 

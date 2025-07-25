@@ -9,7 +9,6 @@
 #include "agent/response_parser.h"
 #include "agent/working_memory.h"
 #include "agent/storage.h"
-#include "agent/status.h"
 
 /**
  * Process LLM response data and apply operations to agent state

@@ -87,6 +87,16 @@ __attribute__((warn_unused_result)) result_t json_create_array(pool_t* pool, jso
 __attribute__((warn_unused_result)) result_t json_object_set(pool_t* pool, json_value_t* object, const char* key, json_value_t* value);
 
 /**
+ * Add a string value to a JSON object (convenience function)
+ * @param pool Memory pool for allocations
+ * @param object JSON object value
+ * @param key Key string
+ * @param string_val String value to add
+ * @return RESULT_OK on success, RESULT_ERR on error
+ */
+__attribute__((warn_unused_result)) result_t json_object_set_string(pool_t* pool, json_value_t* object, const char* key, const char* string_val);
+
+/**
  * Get a value from a JSON object by key
  * @param object JSON object value
  * @param key Key string

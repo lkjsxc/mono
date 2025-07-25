@@ -24,13 +24,6 @@ typedef enum {
     JSON_TYPE_OBJECT
 } json_type_t;
 
-typedef enum {
-    AGENT_STATUS_THINKING,
-    AGENT_STATUS_PAGING,
-    AGENT_STATUS_EVALUATING,
-    AGENT_STATUS_EXECUTING,
-} agent_status_t;
-
 typedef struct json_value_s json_value_t;
 typedef struct json_object_s json_object_t;
 typedef struct json_array_s json_array_t;
@@ -111,19 +104,16 @@ typedef struct {
     uint64_t agent_paging_limit;
     uint64_t agent_hard_limit;
     uint64_t agent_max_iterate;
-    agent_status_t agent_default_status;
-    json_value_t* agent_prompt_system;
-    json_value_t* agent_prompt_thinking;
-    json_value_t* agent_prompt_paging;
-    json_value_t* agent_prompt_evaluating;
-    json_value_t* agent_prompt_executing;
+    string_t* agent_default_state;
+    string_t* agent_prompt_system;
+    string_t* agent_prompt_thinking;
+    string_t* agent_prompt_paging;
+    string_t* agent_prompt_evaluating;
+    string_t* agent_prompt_executing;
 } config_t;
 
 typedef struct {
-    agent_status_t status;
-    uint64_t iteration_count;
-    json_value_t* working_memory;
-    json_value_t* storage;
+    json_value_t* data;
 } agent_t;
 
 typedef struct {

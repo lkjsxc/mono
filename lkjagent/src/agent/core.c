@@ -6,36 +6,31 @@
 #include "agent/core.h"
 
 result_t agent_init(pool_t* pool, config_t* config, agent_t* agent) {
-    // Initialize agent structure
-    agent->status = config->agent_default_status;
-    agent->iteration_count = 0;
-
-    if (json_create_object(pool, &agent->working_memory) != RESULT_OK) {
-        RETURN_ERR("Failed to create working memory object");
+    if (json_create_object(pool, &agent->data) != RESULT_OK) {
+        RETURN_ERR("Failed to create agent data object");
     }
-
-    if (json_create_object(pool, &agent->storage) != RESULT_OK) {
-        RETURN_ERR("Failed to create storage object");
+    if(json_object_set_string(pool, agent->data, "state", config->agent_default_state->data) != RESULT_OK) {
+        RETURN_ERR("Failed to set agent default state");
     }
 
     return RESULT_OK;
 }
 
 result_t agent_step(pool_t* pool, config_t* config, agent_t* agent) {
-    string_t* response_text;
-    if (pool_string_alloc(pool, &response_text, 256) != RESULT_OK) {
+    string_t* response;
+    if (pool_string_alloc(pool, &response, 256) != RESULT_OK) {
         RETURN_ERR("Failed to allocate response text string");
     }
 
-    if (agent_request(pool, config, agent, &response_text) != RESULT_OK) {
+    if (agent_request(pool, config, agent, &response) != RESULT_OK) {
         RETURN_ERR("Agent request failed");
     }
 
-    if (agent_process(pool, config, agent, response_text) != RESULT_OK) {
+    if (agent_process(pool, config, agent, response) != RESULT_OK) {
         RETURN_ERR("Agent LLM response processing failed");
     }
 
-    if (pool_string_free(pool, response_text) != RESULT_OK) {
+    if (pool_string_free(pool, response) != RESULT_OK) {
         RETURN_ERR("Failed to free response text string");
     }
 
@@ -43,11 +38,10 @@ result_t agent_step(pool_t* pool, config_t* config, agent_t* agent) {
 }
 
 result_t agent_run(pool_t* pool, config_t* config, agent_t* agent) {
-    while (agent->iteration_count < config->agent_max_iterate) {
+    for (uint64_t i = 0; i < config->agent_max_iterate; i++) {
         if (agent_step(pool, config, agent) != RESULT_OK) {
             RETURN_ERR("Agent step failed");
         }
-        agent->iteration_count++;
     }
 
     return RESULT_OK;

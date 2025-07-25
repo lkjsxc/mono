@@ -528,6 +528,27 @@ result_t json_object_set(pool_t* pool, json_value_t* object, const char* key, js
     return RESULT_OK;
 }
 
+result_t json_object_set_string(pool_t* pool, json_value_t* object, const char* key, const char* string_val) {
+    if (!pool || !object || !key || !string_val) {
+        return RESULT_ERR;
+    }
+
+    json_value_t* string_value;
+    if (json_create_string(pool, string_val, &string_value) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+
+    if (json_object_set(pool, object, key, string_value) != RESULT_OK) {
+        // Clean up the created string value on failure
+        if (json_delete(pool, string_value) != RESULT_OK) {
+            RETURN_ERR("Failed to clean up string value after object set failure");
+        }
+        return RESULT_ERR;
+    }
+
+    return RESULT_OK;
+}
+
 json_value_t* json_object_get(const json_value_t* object, const char* key) {
     if (!object || object->type != JSON_TYPE_OBJECT || !key) {
         return NULL;
