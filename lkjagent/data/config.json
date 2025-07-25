@@ -12,9 +12,11 @@
     "default_status": "thinking",
     "prompt": {
       "system": {
+        "output_format": "JSON",
         "task": "Write a endless story"
       },
       "thinking": {
+        "description": "next_state is thinking, executing, or paging",
         "output_example1": {
           "thinking_log": "I need to add a new character to the story. I need to think about the character's traits and background.",
           "next_state": "thinking"
