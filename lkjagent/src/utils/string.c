@@ -92,6 +92,20 @@ result_t string_append_char(pool_t* pool, string_t** string, char c) {
     return RESULT_OK;
 }
 
+result_t string_escape(pool_t* pool, string_t** string) {
+    if (pool_string_realloc(pool, string, 114514) != RESULT_OK) {
+        RETURN_ERR("String escaping not implemented yet");
+    }
+    return RESULT_OK;
+}
+
+result_t string_unescape(pool_t* pool, string_t** string) {
+    if (pool_string_realloc(pool, string, 114514) != RESULT_OK) {
+        RETURN_ERR("String unescaping not implemented yet");
+    }
+    return RESULT_OK;
+}
+
 uint64_t string_equal_string(const string_t* string1, const string_t* string2) {
     if (string1->size != string2->size) {
         return 0;

@@ -25,6 +25,10 @@ __attribute__((warn_unused_result)) result_t string_append_str(pool_t* pool, str
 
 __attribute__((warn_unused_result)) result_t string_append_char(pool_t* pool, string_t** string, char c);
 
+__attribute__((warn_unused_result)) result_t string_escape(pool_t* pool, string_t** string);
+
+__attribute__((warn_unused_result)) result_t string_unescape(pool_t* pool, string_t** string);
+
 uint64_t string_equal_string(const string_t* string1, const string_t* string2);
 
 uint64_t string_equal_str(const string_t* string, const char* str);
