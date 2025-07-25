@@ -17,7 +17,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
     
     printf("%s\n", string->data);
 
-    if (pool_string_free(&lkjagent->pool, string) != RESULT_OK) {
+    if (string_destroy(&lkjagent->pool, string) != RESULT_OK) {
         RETURN_ERR("Failed to free string");
     }
 

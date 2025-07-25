@@ -56,3 +56,10 @@ result_t string_copy_str(pool_t* pool, string_t** string, const char* str) {
     memcpy((*string)->data, str, len + 1);
     return RESULT_OK;
 }
+
+result_t string_destroy(pool_t* pool, string_t* string) {
+    if (pool_string_free(pool, string) != RESULT_OK) {
+        RETURN_ERR("Failed to free string");
+    }
+    return RESULT_OK;
+}
