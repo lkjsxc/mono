@@ -22,4 +22,6 @@ __attribute__((warn_unused_result)) result_t pool_string_alloc(pool_t* pool, str
 
 __attribute__((warn_unused_result)) result_t pool_string_free(pool_t* pool, string_t* string);
 
+__attribute__((warn_unused_result)) result_t pool_string_realloc(pool_t* pool, string_t** string, uint64_t capacity);
+
 #endif
