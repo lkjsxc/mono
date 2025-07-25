@@ -63,11 +63,11 @@ result_t config_load_agent(pool_t* pool, config_t* config, json_value_t* agent_o
         RETURN_ERR("Agent configuration must be an object");
     }
 
-    json_value_t* agent_soft_limit_value = json_object_get(agent_obj, "soft_limit");
-    if (agent_soft_limit_value && agent_soft_limit_value->type != JSON_TYPE_NUMBER) {
+    json_value_t* agent_paging_limit_value = json_object_get(agent_obj, "paging_limit");
+    if (agent_paging_limit_value && agent_paging_limit_value->type != JSON_TYPE_NUMBER) {
         RETURN_ERR("Agent soft limit must be a number");
     }
-    config->agent_soft_limit = agent_soft_limit_value->u.number_value;
+    config->agent_paging_limit = agent_paging_limit_value->u.number_value;
 
     json_value_t* agent_hard_limit_value = json_object_get(agent_obj, "hard_limit");
     if (agent_hard_limit_value && agent_hard_limit_value->type != JSON_TYPE_NUMBER) {

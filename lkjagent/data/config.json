@@ -6,27 +6,50 @@
     "temperature": 0.7
   },
   "agent": {
-    "soft_limit": 4096,
+    "paging_limit": 4096,
     "hard_limit": 8192,
     "max_iterate": 9223372036854775807,
     "default_status": "thinking",
     "prompt": {
       "system": {
-        "output_format": "JSON",
-        "task": "Write a endless story",
+        "task": "Write a endless story"
+      },
+      "thinking": {
         "output_example1": {
-          "working_memory_add": {
-            "character_setting_bob": "male, 30 years old, cautious, enjoys reading"
+          "thinking_log": "I need to add a new character to the story. I need to think about the character's traits and background.",
+          "next_state": "thinking"
+        },
+        "output_example2": {
+          "thinking_log": "I need to remove a character from the story. Bob is not needed anymore.",
+          "next_state": "executing"
+        }
+      },
+      "paging": {},
+      "evaluating": {},
+      "executing": {
+        "output_example1": {
+          "action": {
+            "type": "working_memory_add",
+            "tags": [
+              "story",
+              "character",
+              "description"
+            ],
+            "value": "male, 30 years old, cautious, enjoys reading"
           }
         },
         "output_example2": {
-          "working_memory_remove": "character_setting_alice"
+          "action": {
+            "type": "working_memory_remove",
+            "tags": [
+              "story",
+              "character",
+              "description",
+              "bob"
+            ]
+          }
         }
-      },
-      "thinking": {},
-      "paging": {},
-      "evaluating": {},
-      "executing": {}
+      }
     }
   }
 }

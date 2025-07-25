@@ -108,7 +108,7 @@ typedef struct {
     string_t* llm_model;
     double llm_temperature;
 
-    uint64_t agent_soft_limit;
+    uint64_t agent_paging_limit;
     uint64_t agent_hard_limit;
     uint64_t agent_max_iterate;
     agent_status_t agent_default_status;
