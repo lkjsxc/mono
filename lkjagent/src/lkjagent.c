@@ -10,14 +10,11 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
     string_t* string;
-    if (string_create(&lkjagent->pool, &string) != RESULT_OK) {
+
+    if(string_create_str(&lkjagent->pool, &string, "Good Morning World!") != RESULT_OK) {
         RETURN_ERR("Failed to create string");
     }
-
-    if (string_copy_str(&lkjagent->pool, &string, "Good Morning World!") != RESULT_OK) {
-        RETURN_ERR("Failed to copy string");
-    }
-
+    
     printf("%s\n", string->data);
 
     if (pool_string_free(&lkjagent->pool, string) != RESULT_OK) {
