@@ -52,7 +52,7 @@ struct json_array_s {
 struct json_value_s {
     json_type_t type;
     union {
-        int bool_value;
+        uint64_t bool_value;
         double number_value;
         string_t* string_value;
         json_object_t* object_value;
