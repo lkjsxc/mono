@@ -30,6 +30,9 @@ result_t string_create_str(pool_t* pool, string_t** string, const char* str) {
 
 result_t string_copy_string(pool_t* pool, string_t** string1, const string_t* string2) {
     if (string2->size + 1 > (*string1)->capacity) {
+        if (pool_string_free(pool, *string1) != RESULT_OK) {
+            RETURN_ERR("Failed to free existing string");
+        }
         if (pool_string_alloc(pool, string1, string2->size + 1) != RESULT_OK) {
             RETURN_ERR("Failed to allocate string with sufficient capacity");
         }
@@ -42,6 +45,9 @@ result_t string_copy_string(pool_t* pool, string_t** string1, const string_t* st
 result_t string_copy_str(pool_t* pool, string_t** string, const char* str) {
     size_t len = strlen(str);
     if (len + 1 > (*string)->capacity) {
+        if (pool_string_free(pool, *string) != RESULT_OK) {
+            RETURN_ERR("Failed to free existing string");
+        }
         if (pool_string_alloc(pool, string, len + 1) != RESULT_OK) {
             RETURN_ERR("Failed to allocate string with sufficient capacity");
         }
