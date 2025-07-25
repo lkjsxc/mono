@@ -30,6 +30,7 @@ __attribute__((warn_unused_result)) result_t file_read(pool_t* pool, const char*
     size_t read_size = fread((*string)->data, 1, file_size, file);
     if (read_size != (uint64_t)file_size) {
         if (pool_string_free(pool, *string)) {
+            fclose(file);
             RETURN_ERR("Failed to free string after partial read");
         }
         fclose(file);
