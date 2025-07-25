@@ -9,12 +9,6 @@ typedef enum {
     RESULT_ERR = 1,
 } result_t;
 
-typedef struct {
-    char* data;
-    uint64_t size;
-    uint64_t capacity;
-} string_t;
-
 typedef enum {
     JSON_TYPE_NULL,
     JSON_TYPE_BOOL,
@@ -27,6 +21,12 @@ typedef enum {
 typedef struct json_value_s json_value_t;
 typedef struct json_object_s json_object_t;
 typedef struct json_array_s json_array_t;
+
+typedef struct {
+    char* data;
+    uint64_t capacity;
+    uint64_t size;
+} string_t;
 
 typedef struct json_object_element_s {
     string_t* key;
@@ -61,6 +61,10 @@ struct json_value_s {
 };
 
 typedef struct {
+    char pool_string16_data[POOL_STRING16_MAXCOUNT][16];
+    string_t pool_string16[POOL_STRING16_MAXCOUNT];
+    string_t* pool_string16_freelist_data[POOL_STRING16_MAXCOUNT];
+    uint64_t pool_string16_freelist_count;
     char pool_string256_data[POOL_STRING256_MAXCOUNT][256];
     string_t pool_string256[POOL_STRING256_MAXCOUNT];
     string_t* pool_string256_freelist_data[POOL_STRING256_MAXCOUNT];
