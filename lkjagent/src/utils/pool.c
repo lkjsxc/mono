@@ -96,6 +96,71 @@ result_t pool_string_realloc(pool_t* pool, string_t** string, uint64_t capacity)
     return RESULT_OK;
 }
 
+result_t pool_json_value_alloc(pool_t* pool, json_value_t** value) {
+    if (pool->json_value_freelist_count == 0) {
+        RETURN_ERR("No available json_value in pool");
+    }
+    *value = pool->json_value_freelist_data[--pool->json_value_freelist_count];
+    return RESULT_OK;
+}
+
+result_t pool_json_value_free(pool_t* pool, json_value_t* value) {
+    pool->json_value_freelist_data[pool->json_value_freelist_count++] = value;
+    return RESULT_OK;
+}
+
+result_t pool_json_object_alloc(pool_t* pool, json_object_t** object) {
+    if (pool->json_object_freelist_count == 0) {
+        RETURN_ERR("No available json_object in pool");
+    }
+    *object = pool->json_object_freelist_data[--pool->json_object_freelist_count];
+    return RESULT_OK;
+}
+
+result_t pool_json_object_free(pool_t* pool, json_object_t* object) {
+    pool->json_object_freelist_data[pool->json_object_freelist_count++] = object;
+    return RESULT_OK;
+}
+
+result_t pool_json_array_alloc(pool_t* pool, json_array_t** array) {
+    if (pool->json_array_freelist_count == 0) {
+        RETURN_ERR("No available json_array in pool");
+    }
+    *array = pool->json_array_freelist_data[--pool->json_array_freelist_count];
+    return RESULT_OK;
+}
+
+result_t pool_json_array_free(pool_t* pool, json_array_t* array) {
+    pool->json_array_freelist_data[pool->json_array_freelist_count++] = array;
+    return RESULT_OK;
+}
+
+result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** elem) {
+    if (pool->json_object_element_freelist_count == 0) {
+        RETURN_ERR("No available json_object_element in pool");
+    }
+    *elem = pool->json_object_element_freelist_data[--pool->json_object_element_freelist_count];
+    return RESULT_OK;
+}
+
+result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* elem) {
+    pool->json_object_element_freelist_data[pool->json_object_element_freelist_count++] = elem;
+    return RESULT_OK;
+}
+
+result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** elem) {
+    if (pool->json_array_element_freelist_count == 0) {
+        RETURN_ERR("No available json_array_element in pool");
+    }
+    *elem = pool->json_array_element_freelist_data[--pool->json_array_element_freelist_count];
+    return RESULT_OK;
+}
+
+result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* elem) {
+    pool->json_array_element_freelist_data[pool->json_array_element_freelist_count++] = elem;
+    return RESULT_OK;
+}
+
 result_t pool_init(pool_t* pool) {
     pool_string_init(pool->string16_data, pool->string16, pool->string16_freelist_data, &pool->string16_freelist_count, 16, POOL_STRING16_MAXCOUNT);
     pool_string_init(pool->string256_data, pool->string256, pool->string256_freelist_data, &pool->string256_freelist_count, 256, POOL_STRING256_MAXCOUNT);

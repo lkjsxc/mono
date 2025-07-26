@@ -10,54 +10,60 @@ typedef enum {
 } result_t;
 
 typedef enum {
-    JSON_TYPE_NULL,
-    JSON_TYPE_BOOL,
-    JSON_TYPE_NUMBER,
-    JSON_TYPE_STRING,
-    JSON_TYPE_ARRAY,
-    JSON_TYPE_OBJECT
+    JSON_NULL,
+    JSON_BOOL,
+    JSON_NUMBER,
+    JSON_STRING,
+    JSON_ARRAY,
+    JSON_OBJECT
 } json_type_t;
 
-typedef struct json_value_s json_value_t;
-typedef struct json_object_s json_object_t;
-typedef struct json_array_s json_array_t;
-
-typedef struct {
+typedef struct string_s {
     char* data;
     uint64_t capacity;
     uint64_t size;
 } string_t;
 
-typedef struct json_object_element_s {
+typedef struct json_value_s json_value_t;
+typedef struct json_object_element_s json_object_element_t;
+typedef struct json_array_element_s json_array_element_t;
+
+struct json_object_element_s {
     string_t* key;
     json_value_t* value;
     struct json_object_element_s* next;
-} json_object_element_t;
+};
 
-typedef struct json_array_element_s {
+struct json_array_element_s {
     json_value_t* value;
     struct json_array_element_s* next;
-} json_array_element_t;
-
-struct json_object_s {
-    json_object_element_t* head;
-    uint64_t length;
 };
 
-struct json_array_s {
-    json_array_element_t* head;
-    uint64_t length;
-};
+typedef struct {
+    json_object_element_t* elements;
+    uint64_t count;
+} json_object_t;
+
+typedef struct {
+    json_array_element_t* elements;
+    uint64_t count;
+} json_array_t;
 
 struct json_value_s {
     json_type_t type;
     union {
-        uint64_t bool_value;
+        int bool_value;
         double number_value;
         string_t* string_value;
-        json_object_t* object_value;
-        json_array_t* array_value;
-    } u;
+        struct {
+            json_object_element_t* elements;
+            uint64_t count;
+        } object;
+        struct {
+            json_array_element_t* elements;
+            uint64_t count;
+        } array;
+    };
 };
 
 typedef struct {

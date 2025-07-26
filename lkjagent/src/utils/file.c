@@ -1,6 +1,6 @@
 #include "utils/file.h"
 
-__attribute__((warn_unused_result)) result_t file_read(pool_t* pool, const char* path, string_t** string) {
+result_t file_read(pool_t* pool, const char* path, string_t** string) {
     FILE* file = fopen(path, "r");
     if (!file) {
         RETURN_ERR("Failed to open file for reading");
@@ -44,7 +44,7 @@ __attribute__((warn_unused_result)) result_t file_read(pool_t* pool, const char*
     return RESULT_OK;
 }
 
-__attribute__((warn_unused_result)) result_t file_write(const char* path, const string_t* string) {
+result_t file_write(const char* path, const string_t* string) {
     FILE* file = fopen(path, "w");
     if (!file) {
         RETURN_ERR("Failed to open file for writing");
