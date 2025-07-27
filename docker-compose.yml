@@ -1,0 +1,7 @@
+services:
+  lkjscript:
+    build: ./lkjscript
+    container_name: lkjscript
+    volumes:
+      - ./lkjscript/srv:/srv
+    restart: unless-stopped
