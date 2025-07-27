@@ -9,7 +9,7 @@ result_t json_create_null(pool_t* pool, json_value_t** dst) {
     return RESULT_OK;
 }
 
-result_t json_create_bool(pool_t* pool, int b, json_value_t** dst) {
+result_t json_create_bool(pool_t* pool, json_value_t** dst, int b) {
     if (pool_json_value_alloc(pool, dst) != RESULT_OK) {
         RETURN_ERR("Failed to allocate JSON value for boolean");
     }
@@ -18,7 +18,7 @@ result_t json_create_bool(pool_t* pool, int b, json_value_t** dst) {
     return RESULT_OK;
 }
 
-result_t json_create_number(pool_t* pool, double num, json_value_t** dst) {
+result_t json_create_number(pool_t* pool, json_value_t** dst, double num) {
     if (pool_json_value_alloc(pool, dst) != RESULT_OK) {
         RETURN_ERR("Failed to allocate JSON value for number");
     }
@@ -27,7 +27,7 @@ result_t json_create_number(pool_t* pool, double num, json_value_t** dst) {
     return RESULT_OK;
 }
 
-result_t json_create_string(pool_t* pool, const string_t* src, json_value_t** dst) {
+result_t json_create_string(pool_t* pool, json_value_t** dst, const string_t* src) {
     if (pool_json_value_alloc(pool, dst) != RESULT_OK) {
         RETURN_ERR("Failed to allocate JSON value for string");
     }
