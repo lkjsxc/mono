@@ -19,7 +19,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
         RETURN_ERR("Failed to read configuration file");
     }
 
-    printf("Configuration: %s\n", string->data);
+    printf("Configuration: %.*s\n", (int)string->size, string->data);
 
     if (string_destroy(&lkjagent->pool, string) != RESULT_OK) {
         RETURN_ERR("Failed to destroy string");

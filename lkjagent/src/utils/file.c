@@ -22,7 +22,7 @@ result_t file_read(pool_t* pool, const char* path, string_t** string) {
         RETURN_ERR("Failed to seek to start of file");
     }
 
-    if (pool_string_realloc(pool, string, file_size + 1) != RESULT_OK) {
+    if (pool_string_realloc(pool, string, file_size) != RESULT_OK) {
         fclose(file);
         RETURN_ERR("Failed to allocate string for file string");
     }
@@ -37,7 +37,6 @@ result_t file_read(pool_t* pool, const char* path, string_t** string) {
         RETURN_ERR("Failed to read entire file");
     }
 
-    (*string)->data[file_size] = '\0';
     (*string)->size = file_size;
 
     fclose(file);
