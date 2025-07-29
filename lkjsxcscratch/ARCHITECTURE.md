@@ -1,26 +1,39 @@
-# index
+# ARCHITECTURE
 
 ## global
+
+### register
 000000. null
 000001. zero
-000002. stack pointer
-000003. base pointer
-000004. object pointer
+000002. stack_pointer
+000003. base_pointer
+000004. object_pointer
+000005. undefined
+000006. undefined
+000007. undefined
 
-## node
-000008. node data
-000009. node freelist
+### node
+000008. node_data
+000009. node_freelist
 
-## object
-000010. object data
-000011. object freelist
+### object
+000010. object_data
+000011. object_freelist
 
-## tmp
-000016. tmp_vec1
-000017. tmp_vec2
-000018. tmp_vec3
-000019. tmp_vec4
-000020. tmp_vec5
-000021. tmp_vec6
-000022. tmp_vec7
-000023. tmp_vec8
+### clone
+000012. clone_data
+000013. clone_freelist
+
+### node_tmp
+
+## clone
+00. undefined
+01. undefined
+02. undefined
+03. undefined
+04. undefined
+05. undefined
+06. undefined
+07. undefined
+08. pos_x
+09. pos_y
