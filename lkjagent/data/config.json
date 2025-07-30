@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "llm": {
+    "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
+    "model": "qwen/qwen3-8b",
+    "temperature": 0.7
+  },
+  "agent": {
+    "paging_limit": {
+      "enabled": true,
+      "max_tokens": 4096
+    },
+    "hard_limit": {
+      "enabled": true,
+      "max_tokens": 8192
+    },
+    "iterate": {
+      "enabled": true,
+      "max_iterations": 1000
+    },
+    "default_status": "thinking",
+    "prompt": {
+      "base": {
+        "output_format": "JSON",
+        "task": "Write a endless story"
+      },
+      "thinking": {
+        "description": "next_state is thinking, executing, or paging",
+        "output_example1": {
+          "thinking_log": "I need to add a new character to the story. I need to think about the character's traits and background.",
+          "next_state": "thinking"
+        },
+        "output_example2": {
+          "thinking_log": "I need to remove a character from the story. Bob is not needed anymore.",
+          "next_state": "executing"
+        }
+      },
+      "paging": {},
+      "evaluating": {},
+      "executing": {
+        "output_example1": {
+          "action": {
+            "type": "working_memory_add",
+            "tags": [
+              "story",
+              "character",
+              "description"
+            ],
+            "value": "male, 30 years old, cautious, enjoys reading"
+          }
+        },
+        "output_example2": {
+          "action": {
+            "type": "working_memory_remove",
+            "tags": [
+              "story",
+              "character",
+              "description",
+              "bob"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
