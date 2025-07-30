@@ -1,0 +1,6 @@
+services:
+  lkjagent:
+    build: ./lkjagent
+    container_name: lkjagent
+    volumes:
+      - ./lkjagent/data:/data

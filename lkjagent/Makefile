@@ -2,7 +2,7 @@
 # Compiler and flags
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -O2 -g
-LDFLAGS =
+LDFLAGS = -static
 DEBUG_CFLAGS = -Wall -Wextra -std=c11 -O0 -g3 -DDEBUG
 RELEASE_CFLAGS = -Wall -Wextra -std=c11 -O2 -DNDEBUG -flto
 INCLUDES = -Isrc/include

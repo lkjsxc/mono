@@ -15,7 +15,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
         RETURN_ERR("Failed to create string");
     }
 
-    if (file_read(&lkjagent->pool, "data/config.json", &string) != RESULT_OK) {
+    if (file_read(&lkjagent->pool, "/data/config.json", &string) != RESULT_OK) {
         RETURN_ERR("Failed to read configuration file");
     }
 
