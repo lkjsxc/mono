@@ -3,5 +3,4 @@ services:
     build: ./lkjscript
     container_name: lkjscript
     volumes:
-      - ./lkjscript/srv:/srv
-    restart: unless-stopped
+      - ./lkjscript/data:/data
