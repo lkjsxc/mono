@@ -1,8 +1,4 @@
 services:
-  turingcomplete:
-    build: ./turingcomplete
-    volumes:
-      - ./turingcomplete/output:/app/output
   lkjscript:
     build: ./lkjscript
     container_name: lkjscript
@@ -13,3 +9,12 @@ services:
     container_name: lkjagent
     volumes:
       - ./lkjagent/data:/data
+  lkjvoxel:
+    build: ./lkjvoxel
+    container_name: lkjvoxel
+    volumes:
+      - ./lkjvoxel/data:/data
+  turingcomplete:
+    build: ./turingcomplete
+    volumes:
+      - ./turingcomplete/output:/app/output
