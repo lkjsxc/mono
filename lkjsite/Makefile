@@ -8,7 +8,7 @@ LIBS =
 
 # Directories
 SRC_DIR = src
-INCLUDE_DIR = src/include
+INCLUDE_DIR = src
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
