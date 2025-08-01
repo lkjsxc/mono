@@ -27,7 +27,7 @@
 ### node_tmp
 
 ## clone
-00. enabled
+00. enable
 01. undefined
 02. undefined
 03. undefined
