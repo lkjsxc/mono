@@ -37,3 +37,9 @@
 07. undefined
 08. pos_x
 09. pos_y
+10. undefined
+11. undefined
+12. undefined
+13. undefined
+14. undefined
+15. undefined
