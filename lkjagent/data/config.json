@@ -7,15 +7,15 @@
   },
   "agent": {
     "paging_limit": {
-      "enabled": true,
+      "enable": true,
       "max_tokens": 4096
     },
     "hard_limit": {
-      "enabled": true,
+      "enable": true,
       "max_tokens": 8192
     },
     "iterate": {
-      "enabled": true,
+      "enable": true,
       "max_iterations": 1000
     },
     "default_status": "thinking",
