@@ -9,5 +9,6 @@
 #include "utils/pool.h"
 #include "utils/string.h"
 #include "utils/object.h"
+#include "utils/http.h"
 
 #endif
