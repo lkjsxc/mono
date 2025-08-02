@@ -14,7 +14,6 @@ typedef enum {
     JSON_BOOL,
     JSON_NUMBER,
     JSON_STRING,
-    JSON_ARRAY,
     JSON_OBJECT
 } json_type_t;
 
@@ -26,7 +25,6 @@ typedef struct string_s {
 
 typedef struct json_value_s json_value_t;
 typedef struct json_object_element_s json_object_element_t;
-typedef struct json_array_element_s json_array_element_t;
 
 struct json_object_element_s {
     string_t* key;
@@ -34,20 +32,10 @@ struct json_object_element_s {
     struct json_object_element_s* next;
 };
 
-struct json_array_element_s {
-    json_value_t* value;
-    struct json_array_element_s* next;
-};
-
 typedef struct {
     json_object_element_t* elements;
     uint64_t count;
 } json_object_t;
-
-typedef struct {
-    json_array_element_t* elements;
-    uint64_t count;
-} json_array_t;
 
 struct json_value_s {
     json_type_t type;
@@ -59,10 +47,6 @@ struct json_value_s {
             json_object_element_t* elements;
             uint64_t count;
         } object;
-        struct {
-            json_array_element_t* elements;
-            uint64_t count;
-        } array;
     };
 };
 
@@ -93,15 +77,9 @@ typedef struct {
     json_object_t json_object[POOL_JSON_OBJECT_MAXCOUNT];
     json_object_t* json_object_freelist_data[POOL_JSON_OBJECT_MAXCOUNT];
     uint64_t json_object_freelist_count;
-    json_array_t json_array[POOL_JSON_ARRAY_MAXCOUNT];
-    json_array_t* json_array_freelist_data[POOL_JSON_ARRAY_MAXCOUNT];
-    uint64_t json_array_freelist_count;
     json_object_element_t json_object_element[POOL_JSON_OBJECT_ELEMENT_MAXCOUNT];
     json_object_element_t* json_object_element_freelist_data[POOL_JSON_OBJECT_ELEMENT_MAXCOUNT];
     uint64_t json_object_element_freelist_count;
-    json_array_element_t json_array_element[POOL_JSON_ARRAY_ELEMENT_MAXCOUNT];
-    json_array_element_t* json_array_element_freelist_data[POOL_JSON_ARRAY_ELEMENT_MAXCOUNT];
-    uint64_t json_array_element_freelist_count;
 } pool_t;
 
 typedef struct {

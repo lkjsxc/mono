@@ -122,19 +122,6 @@ result_t pool_json_object_free(pool_t* pool, json_object_t* object) {
     return RESULT_OK;
 }
 
-result_t pool_json_array_alloc(pool_t* pool, json_array_t** array) {
-    if (pool->json_array_freelist_count == 0) {
-        RETURN_ERR("No available json_array in pool");
-    }
-    *array = pool->json_array_freelist_data[--pool->json_array_freelist_count];
-    return RESULT_OK;
-}
-
-result_t pool_json_array_free(pool_t* pool, json_array_t* array) {
-    pool->json_array_freelist_data[pool->json_array_freelist_count++] = array;
-    return RESULT_OK;
-}
-
 result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** elem) {
     if (pool->json_object_element_freelist_count == 0) {
         RETURN_ERR("No available json_object_element in pool");
@@ -145,19 +132,6 @@ result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** el
 
 result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* elem) {
     pool->json_object_element_freelist_data[pool->json_object_element_freelist_count++] = elem;
-    return RESULT_OK;
-}
-
-result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** elem) {
-    if (pool->json_array_element_freelist_count == 0) {
-        RETURN_ERR("No available json_array_element in pool");
-    }
-    *elem = pool->json_array_element_freelist_data[--pool->json_array_element_freelist_count];
-    return RESULT_OK;
-}
-
-result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* elem) {
-    pool->json_array_element_freelist_data[pool->json_array_element_freelist_count++] = elem;
     return RESULT_OK;
 }
 
@@ -178,20 +152,10 @@ result_t pool_init(pool_t* pool) {
     }
     pool->json_object_freelist_count = POOL_JSON_OBJECT_MAXCOUNT;
 
-    for (uint64_t i = 0; i < POOL_JSON_ARRAY_MAXCOUNT; i++) {
-        pool->json_array_freelist_data[i] = &pool->json_array[i];
-    }
-    pool->json_array_freelist_count = POOL_JSON_ARRAY_MAXCOUNT;
-
     for (uint64_t i = 0; i < POOL_JSON_OBJECT_ELEMENT_MAXCOUNT; i++) {
         pool->json_object_element_freelist_data[i] = &pool->json_object_element[i];
     }
     pool->json_object_element_freelist_count = POOL_JSON_OBJECT_ELEMENT_MAXCOUNT;
-
-    for (uint64_t i = 0; i < POOL_JSON_ARRAY_ELEMENT_MAXCOUNT; i++) {
-        pool->json_array_element_freelist_data[i] = &pool->json_array_element[i];
-    }
-    pool->json_array_element_freelist_count = POOL_JSON_ARRAY_ELEMENT_MAXCOUNT;
 
     return RESULT_OK;
 }
