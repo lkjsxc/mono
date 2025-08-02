@@ -32,16 +32,8 @@ __attribute__((warn_unused_result)) result_t pool_json_object_alloc(pool_t* pool
 
 __attribute__((warn_unused_result)) result_t pool_json_object_free(pool_t* pool, json_object_t* object);
 
-__attribute__((warn_unused_result)) result_t pool_json_array_alloc(pool_t* pool, json_array_t** array);
-
-__attribute__((warn_unused_result)) result_t pool_json_array_free(pool_t* pool, json_array_t* array);
-
 __attribute__((warn_unused_result)) result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** elem);
 
 __attribute__((warn_unused_result)) result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* elem);
-
-__attribute__((warn_unused_result)) result_t pool_json_array_element_alloc(pool_t* pool, json_array_element_t** elem);
-
-__attribute__((warn_unused_result)) result_t pool_json_array_element_free(pool_t* pool, json_array_element_t* elem);
 
 #endif

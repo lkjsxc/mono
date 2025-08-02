@@ -41,23 +41,14 @@
         "output_example1": {
           "action": {
             "type": "working_memory_add",
-            "tags": [
-              "story",
-              "character",
-              "description"
-            ],
+            "tags": "character description story",
             "value": "male, 30 years old, cautious, enjoys reading"
           }
         },
         "output_example2": {
           "action": {
             "type": "working_memory_remove",
-            "tags": [
-              "story",
-              "character",
-              "description",
-              "bob"
-            ]
+            "tags": "bob character description story"
           }
         }
       }
