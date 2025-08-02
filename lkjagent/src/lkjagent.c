@@ -11,11 +11,11 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
 
     string_t* config_string;
-    json_value_t* config_json;
+    object_t* config_object;
 
     string_t* test_string;
     string_t* test_path;
-    json_value_t* test_json;
+    object_t* test_object;
 
     if(string_create(&lkjagent->pool, &config_string) != RESULT_OK) {
         RETURN_ERR("Failed to create config string");
@@ -31,12 +31,12 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
         RETURN_ERR("Failed to read config file");
     }
 
-    if(json_parse(&lkjagent->pool, &config_json, config_string) != RESULT_OK) {
+    if(object_parse_json(&lkjagent->pool, &config_object, config_string) != RESULT_OK) {
         RETURN_ERR("Failed to parse config JSON");
     }
 
-    if(json_object_get(&lkjagent->pool, &test_json, config_json, test_path) != RESULT_OK) {
-        RETURN_ERR("Failed to get JSON object from config");
+    if(object_get(&test_object, config_object, test_path) != RESULT_OK) {
+        RETURN_ERR("Failed to get object from config");
     }
 
     // Destroy and recreate the test_string to ensure it's clean
@@ -48,8 +48,8 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
         RETURN_ERR("Failed to recreate test string");
     }
 
-    if(json_to_string(&lkjagent->pool, &test_string, test_json) != RESULT_OK) {
-        RETURN_ERR("Failed to convert JSON object to string");
+    if(object_tostring_json(&lkjagent->pool, &test_string, test_object) != RESULT_OK) {
+        RETURN_ERR("Failed to convert object to JSON string");
     }
 
     printf("Test JSON: %.*s\n", (int)test_string->size, test_string->data);

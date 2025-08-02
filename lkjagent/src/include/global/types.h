@@ -49,6 +49,10 @@ typedef struct {
 
 typedef struct {
     object_t* data;
+} config_t;
+
+typedef struct {
+    object_t* data;
 } agent_t;
 
 typedef struct {
