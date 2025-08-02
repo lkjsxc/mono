@@ -9,54 +9,71 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
+
     string_t* config_string;
-    string_t* prompt_string;
-    string_t* prompt_path;
     json_value_t* config_json;
-    json_value_t* prompt_json;
 
+    string_t* test_string;
+    string_t* test_path;
+    json_value_t* test_json;
 
-    if (string_create(&lkjagent->pool, &config_string) != RESULT_OK) {
-        RETURN_ERR("Failed to create string");
+    if(string_create(&lkjagent->pool, &config_string) != RESULT_OK) {
+        RETURN_ERR("Failed to create config string");
+    }
+    if(string_create(&lkjagent->pool, &test_string) != RESULT_OK) {
+        RETURN_ERR("Failed to create test string");
+    }
+    if(string_create_str(&lkjagent->pool, &test_path, "agent.prompt.base") != RESULT_OK) {
+        RETURN_ERR("Failed to create test path string");
     }
 
-    if (string_create(&lkjagent->pool, &prompt_string) != RESULT_OK) {
-        RETURN_ERR("Failed to create prompt string");
+    if(file_read(&lkjagent->pool, CONFIG_PATH, &config_string) != RESULT_OK) {
+        RETURN_ERR("Failed to read config file");
     }
 
-    if (string_create_str(&lkjagent->pool, &prompt_path, "agent") != RESULT_OK) {
-        RETURN_ERR("Failed to create agent key string");
+    if(json_parse(&lkjagent->pool, &config_json, config_string) != RESULT_OK) {
+        RETURN_ERR("Failed to parse config JSON");
     }
 
-    if (file_read(&lkjagent->pool, "/data/config.json", &config_string) != RESULT_OK) {
-        RETURN_ERR("Failed to read configuration file");
+    if(json_object_get(&lkjagent->pool, &test_json, config_json, test_path) != RESULT_OK) {
+        RETURN_ERR("Failed to get JSON object from config");
     }
 
-    if (json_parse(&lkjagent->pool, &config_json, config_string) != RESULT_OK) {
-        RETURN_ERR("Failed to parse configuration JSON");
+    // Destroy and recreate the test_string to ensure it's clean
+    if(string_destroy(&lkjagent->pool, test_string) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy test string");
+    }
+    
+    if(string_create(&lkjagent->pool, &test_string) != RESULT_OK) {
+        RETURN_ERR("Failed to recreate test string");
     }
 
-    if (json_object_get(&prompt_json, config_json, prompt_path) != RESULT_OK) {
-        RETURN_ERR("Failed to get prompt from configuration JSON");
+    if(json_to_string(&lkjagent->pool, &test_string, test_json) != RESULT_OK) {
+        RETURN_ERR("Failed to convert JSON object to string");
     }
 
-    if (json_to_string_xml(&lkjagent->pool, &prompt_string, prompt_json) != RESULT_OK) {
-        RETURN_ERR("Failed to convert prompt JSON to string");
+    printf("Test JSON: %.*s\n", (int)test_string->size, test_string->data);
+    printf("String size: %llu\n", (unsigned long long)test_string->size);
+    printf("String capacity: %llu\n", (unsigned long long)test_string->capacity);
+    
+    // Debug: print first few bytes in hex
+    printf("First 10 bytes (hex): ");
+    for (int i = 0; i < 10 && i < (int)test_string->size; i++) {
+        printf("%02x ", (unsigned char)test_string->data[i]);
     }
-
-    printf("Prompt: %s\n", prompt_string->data);
-
-    if (string_destroy(&lkjagent->pool, config_string) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy string");
+    printf("\n");
+    
+    // Debug: print first few characters
+    printf("First 10 chars: ");
+    for (int i = 0; i < 10 && i < (int)test_string->size; i++) {
+        char c = test_string->data[i];
+        if (c >= 32 && c <= 126) {
+            printf("'%c' ", c);
+        } else {
+            printf("\\x%02x ", (unsigned char)c);
+        }
     }
-
-    if (string_destroy(&lkjagent->pool, prompt_path) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy agent key string");
-    }
-
-    if (json_destroy(&lkjagent->pool, config_json) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy JSON value");
-    }
+    printf("\n");
 
     return RESULT_OK;
 }

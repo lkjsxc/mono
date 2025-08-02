@@ -19,7 +19,7 @@ __attribute__((warn_unused_result)) result_t json_object_set(pool_t* pool, json_
 
 __attribute__((warn_unused_result)) result_t json_object_set_string(pool_t* pool, json_value_t* object, const string_t* path, const string_t* value);
 
-__attribute__((warn_unused_result)) result_t json_object_get(json_value_t** dst, const json_value_t* object, const string_t* path);
+__attribute__((warn_unused_result)) result_t json_object_get(pool_t* pool, json_value_t** dst, const json_value_t* object, const string_t* path);
 
 __attribute__((warn_unused_result)) result_t json_destroy(pool_t* pool, json_value_t* value);
 
