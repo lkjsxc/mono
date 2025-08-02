@@ -96,42 +96,16 @@ result_t pool_string_realloc(pool_t* pool, string_t** string, uint64_t capacity)
     return RESULT_OK;
 }
 
-result_t pool_json_value_alloc(pool_t* pool, json_value_t** value) {
-    if (pool->json_value_freelist_count == 0) {
-        RETURN_ERR("No available json_value in pool");
+result_t pool_object_alloc(pool_t* pool, object_t** object) {
+    if (pool->object_freelist_count == 0) {
+        RETURN_ERR("No available object in pool");
     }
-    *value = pool->json_value_freelist_data[--pool->json_value_freelist_count];
+    *object = pool->object_freelist_data[--pool->object_freelist_count];
     return RESULT_OK;
 }
 
-result_t pool_json_value_free(pool_t* pool, json_value_t* value) {
-    pool->json_value_freelist_data[pool->json_value_freelist_count++] = value;
-    return RESULT_OK;
-}
-
-result_t pool_json_object_alloc(pool_t* pool, json_object_t** object) {
-    if (pool->json_object_freelist_count == 0) {
-        RETURN_ERR("No available json_object in pool");
-    }
-    *object = pool->json_object_freelist_data[--pool->json_object_freelist_count];
-    return RESULT_OK;
-}
-
-result_t pool_json_object_free(pool_t* pool, json_object_t* object) {
-    pool->json_object_freelist_data[pool->json_object_freelist_count++] = object;
-    return RESULT_OK;
-}
-
-result_t pool_json_object_element_alloc(pool_t* pool, json_object_element_t** elem) {
-    if (pool->json_object_element_freelist_count == 0) {
-        RETURN_ERR("No available json_object_element in pool");
-    }
-    *elem = pool->json_object_element_freelist_data[--pool->json_object_element_freelist_count];
-    return RESULT_OK;
-}
-
-result_t pool_json_object_element_free(pool_t* pool, json_object_element_t* elem) {
-    pool->json_object_element_freelist_data[pool->json_object_element_freelist_count++] = elem;
+result_t pool_object_free(pool_t* pool, object_t* object) {
+    pool->object_freelist_data[pool->object_freelist_count++] = object;
     return RESULT_OK;
 }
 
@@ -142,20 +116,10 @@ result_t pool_init(pool_t* pool) {
     pool_string_init(pool->string65536_data, pool->string65536, pool->string65536_freelist_data, &pool->string65536_freelist_count, 65536, POOL_STRING65536_MAXCOUNT);
     pool_string_init(pool->string1048576_data, pool->string1048576, pool->string1048576_freelist_data, &pool->string1048576_freelist_count, 1048576, POOL_STRING1048576_MAXCOUNT);
 
-    for (uint64_t i = 0; i < POOL_JSON_VALUE_MAXCOUNT; i++) {
-        pool->json_value_freelist_data[i] = &pool->json_value[i];
+    for (uint64_t i = 0; i < POOL_OBJECT_MAXCOUNT; i++) {
+        pool->object_freelist_data[i] = &pool->object_data[i];
     }
-    pool->json_value_freelist_count = POOL_JSON_VALUE_MAXCOUNT;
-
-    for (uint64_t i = 0; i < POOL_JSON_OBJECT_MAXCOUNT; i++) {
-        pool->json_object_freelist_data[i] = &pool->json_object[i];
-    }
-    pool->json_object_freelist_count = POOL_JSON_OBJECT_MAXCOUNT;
-
-    for (uint64_t i = 0; i < POOL_JSON_OBJECT_ELEMENT_MAXCOUNT; i++) {
-        pool->json_object_element_freelist_data[i] = &pool->json_object_element[i];
-    }
-    pool->json_object_element_freelist_count = POOL_JSON_OBJECT_ELEMENT_MAXCOUNT;
+    pool->object_freelist_count = POOL_OBJECT_MAXCOUNT;
 
     return RESULT_OK;
 }

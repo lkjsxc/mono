@@ -6,8 +6,8 @@
 #include "global/std.h"
 #include "global/types.h"
 #include "utils/file.h"
-#include "utils/json.h"
 #include "utils/pool.h"
 #include "utils/string.h"
+#include "utils/object.h"
 
 #endif

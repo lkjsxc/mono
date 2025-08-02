@@ -9,46 +9,17 @@ typedef enum {
     RESULT_ERR = 1,
 } result_t;
 
-typedef enum {
-    JSON_NULL,
-    JSON_BOOL,
-    JSON_NUMBER,
-    JSON_STRING,
-    JSON_OBJECT
-} json_type_t;
-
 typedef struct string_s {
     char* data;
     uint64_t capacity;
     uint64_t size;
 } string_t;
 
-typedef struct json_value_s json_value_t;
-typedef struct json_object_element_s json_object_element_t;
-
-struct json_object_element_s {
-    string_t* key;
-    json_value_t* value;
-    struct json_object_element_s* next;
-};
-
-typedef struct {
-    json_object_element_t* elements;
-    uint64_t count;
-} json_object_t;
-
-struct json_value_s {
-    json_type_t type;
-    union {
-        int bool_value;
-        double number_value;
-        string_t* string_value;
-        struct {
-            json_object_element_t* elements;
-            uint64_t count;
-        } object;
-    };
-};
+typedef struct object_t {
+    string_t* string;
+    struct object_t* child;
+    struct object_t* next;
+} object_t;
 
 typedef struct {
     char string16_data[POOL_STRING16_MAXCOUNT * 16];
@@ -71,37 +42,13 @@ typedef struct {
     string_t string1048576[POOL_STRING1048576_MAXCOUNT];
     string_t* string1048576_freelist_data[POOL_STRING1048576_MAXCOUNT];
     uint64_t string1048576_freelist_count;
-    json_value_t json_value[POOL_JSON_VALUE_MAXCOUNT];
-    json_value_t* json_value_freelist_data[POOL_JSON_VALUE_MAXCOUNT];
-    uint64_t json_value_freelist_count;
-    json_object_t json_object[POOL_JSON_OBJECT_MAXCOUNT];
-    json_object_t* json_object_freelist_data[POOL_JSON_OBJECT_MAXCOUNT];
-    uint64_t json_object_freelist_count;
-    json_object_element_t json_object_element[POOL_JSON_OBJECT_ELEMENT_MAXCOUNT];
-    json_object_element_t* json_object_element_freelist_data[POOL_JSON_OBJECT_ELEMENT_MAXCOUNT];
-    uint64_t json_object_element_freelist_count;
+    object_t object_data[POOL_OBJECT_MAXCOUNT];
+    object_t* object_freelist_data[POOL_OBJECT_MAXCOUNT];
+    uint64_t object_freelist_count;
 } pool_t;
 
 typedef struct {
-    string_t* version;
-
-    string_t* llm_endpoint;
-    string_t* llm_model;
-    double llm_temperature;
-
-    uint64_t agent_paging_limit;
-    uint64_t agent_hard_limit;
-    uint64_t agent_max_iterate;
-    string_t* agent_default_state;
-    string_t* agent_prompt_system;
-    string_t* agent_prompt_thinking;
-    string_t* agent_prompt_paging;
-    string_t* agent_prompt_evaluating;
-    string_t* agent_prompt_executing;
-} config_t;
-
-typedef struct {
-    json_value_t* data;
+    object_t* data;
 } agent_t;
 
 typedef struct {
