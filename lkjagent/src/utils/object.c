@@ -1,4 +1,5 @@
 #include "utils/object.h"
+#include <ctype.h>
 
 // Helper function to recursively destroy an object tree
 static result_t object_destroy_recursive(pool_t* pool, object_t* object) {
@@ -111,8 +112,13 @@ static result_t parse_json_object(pool_t* pool, const char** json, const char* e
     object_t* first_child = NULL;
     object_t* last_child = NULL;
     
-    while (current < end && *current != '}') {
+    while (current < end) {
         current = skip_whitespace(current, end);
+        
+        // Check if we've reached the end of the object
+        if (current < end && *current == '}') {
+            break;
+        }
         
         // Parse key
         string_t* key;
@@ -160,7 +166,9 @@ static result_t parse_json_object(pool_t* pool, const char** json, const char* e
         if (current < end && *current == ',') {
             current++;
             current = skip_whitespace(current, end);
+            // Continue to next key-value pair
         } else if (current < end && *current == '}') {
+            // End of object
             break;
         } else {
             RETURN_ERR("Expected comma or closing brace in JSON object");
@@ -204,8 +212,13 @@ static result_t parse_json_array(pool_t* pool, const char** json, const char* en
     object_t* first_child = NULL;
     object_t* last_child = NULL;
     
-    while (current < end && *current != ']') {
+    while (current < end) {
         current = skip_whitespace(current, end);
+        
+        // Check if we've reached the end of the array
+        if (current < end && *current == ']') {
+            break;
+        }
         
         // Parse array element
         object_t* element;
@@ -228,7 +241,9 @@ static result_t parse_json_array(pool_t* pool, const char** json, const char* en
         if (current < end && *current == ',') {
             current++;
             current = skip_whitespace(current, end);
+            // Continue to next element
         } else if (current < end && *current == ']') {
+            // End of array
             break;
         } else {
             RETURN_ERR("Expected comma or closing bracket in JSON array");
@@ -258,20 +273,22 @@ static result_t parse_json_value(pool_t* pool, const char** json, const char* en
             RETURN_ERR("Failed to allocate object for string value");
         }
         
-        if (parse_json_string(pool, &current, end, &((*result)->string)) != RESULT_OK) {
+        *json = current;
+        if (parse_json_string(pool, json, end, &((*result)->string)) != RESULT_OK) {
             RETURN_ERR("Failed to parse JSON string value");
         }
         
         (*result)->child = NULL;
         (*result)->next = NULL;
-        *json = current;
         return RESULT_OK;
     } else if (*current == '{') {
         // Object value
-        return parse_json_object(pool, &current, end, result);
+        *json = current;
+        return parse_json_object(pool, json, end, result);
     } else if (*current == '[') {
         // Array value
-        return parse_json_array(pool, &current, end, result);
+        *json = current;
+        return parse_json_array(pool, json, end, result);
     } else {
         // Number, boolean, or null
         const char* start = current;
@@ -354,26 +371,42 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
     }
     
     if (src->string && !src->child) {
-        // Leaf node - just a value
-        if (string_append_char(pool, dst, '"') != RESULT_OK) {
-            RETURN_ERR("Failed to append quote");
+        // Leaf node - just a value (check if it's a number/boolean or string)
+        const char* data = src->string->data;
+        size_t size = src->string->size;
+        
+        // Check if it looks like a number, boolean, or null
+        if ((size >= 4 && strncmp(data, "true", 4) == 0) ||
+            (size >= 5 && strncmp(data, "false", 5) == 0) ||
+            (size >= 4 && strncmp(data, "null", 4) == 0) ||
+            (size > 0 && (isdigit(data[0]) || data[0] == '-'))) {
+            // Number, boolean, or null - don't quote
+            return string_append_string(pool, dst, src->string);
+        } else {
+            // String value - add quotes
+            if (string_append_char(pool, dst, '"') != RESULT_OK) {
+                RETURN_ERR("Failed to append quote");
+            }
+            if (string_append_string(pool, dst, src->string) != RESULT_OK) {
+                RETURN_ERR("Failed to append string value");
+            }
+            if (string_append_char(pool, dst, '"') != RESULT_OK) {
+                RETURN_ERR("Failed to append quote");
+            }
+            return RESULT_OK;
         }
-        if (string_append_string(pool, dst, src->string) != RESULT_OK) {
-            RETURN_ERR("Failed to append string value");
-        }
-        if (string_append_char(pool, dst, '"') != RESULT_OK) {
-            RETURN_ERR("Failed to append quote");
-        }
-        return RESULT_OK;
     } else if (src->child) {
-        // Object or array
-        if (src->string) {
+        // Check if this is an object (has key-value pairs) or array
+        object_t* first_child = src->child;
+        
+        // If the first child has a string (key), it's an object
+        if (first_child && first_child->string) {
             // Object with key-value pairs
             if (string_append_char(pool, dst, '{') != RESULT_OK) {
                 RETURN_ERR("Failed to append opening brace");
             }
             
-            object_t* child = src->child;
+            object_t* child = first_child;
             int first = 1;
             while (child) {
                 if (!first) {
@@ -411,7 +444,7 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
                 RETURN_ERR("Failed to append opening bracket");
             }
             
-            object_t* child = src->child;
+            object_t* child = first_child;
             int first = 1;
             while (child) {
                 if (!first) {
@@ -434,12 +467,8 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
         }
         return RESULT_OK;
     } else {
-        // Just a value without quotes (number, boolean, null)
-        if (src->string) {
-            return string_append_string(pool, dst, src->string);
-        } else {
-            return string_append_str(pool, dst, "null");
-        }
+        // Empty object or null
+        return string_append_str(pool, dst, "null");
     }
 }
 
