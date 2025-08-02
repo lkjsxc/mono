@@ -1,5 +1,4 @@
 #include "utils/object.h"
-#include <ctype.h>
 
 // Helper function to recursively destroy an object tree
 static result_t object_destroy_recursive(pool_t* pool, object_t* object) {
@@ -398,6 +397,8 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
     } else if (src->child) {
         // Check if this is an object (has key-value pairs) or array
         object_t* first_child = src->child;
+        
+        // Debug output
         
         // If the first child has a string (key), it's an object
         if (first_child && first_child->string) {

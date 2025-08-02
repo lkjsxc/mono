@@ -41,11 +41,13 @@ result_t string_create_str(pool_t* pool, string_t** string, const char* str) {
     return RESULT_OK;
 }
 
-result_t string_clean(pool_t* pool, string_t* string) {
-    if (pool_string_realloc(pool, &string, 16) != RESULT_OK) {
-        RETURN_ERR("Failed to reallocate string to clean it");
+result_t string_clean(pool_t* pool, string_t** string) {
+    if ((*string)->capacity != 16) {
+        if (pool_string_realloc(pool, string, 16) != RESULT_OK) {
+            RETURN_ERR("Failed to reallocate string to clean it");
+        }
     }
-    string->size = 0;
+    (*string)->size = 0;
     return RESULT_OK;
 }
 
@@ -72,31 +74,60 @@ result_t string_copy_str(pool_t* pool, string_t** string, const char* str) {
 
 result_t string_append_string(pool_t* pool, string_t** string1, const string_t* string2) {
     if ((*string1)->size + string2->size > (*string1)->capacity) {
-        if (pool_string_realloc(pool, string1, (*string1)->size + string2->size) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate string with sufficient capacity");
+        string_t* old_string = *string1;
+        string_t* new_string;
+        if (pool_string_alloc(pool, &new_string, old_string->size + string2->size) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate new string with sufficient capacity");
         }
+        new_string->size = old_string->size + string2->size;
+        memcpy(new_string->data, old_string->data, old_string->size);
+        memcpy(new_string->data + old_string->size, string2->data, string2->size);
+        *string1 = new_string;
+        if (pool_string_free(pool, old_string) != RESULT_OK) {
+            RETURN_ERR("Failed to free old string");
+        }
+    } else {
+        memcpy((*string1)->data + (*string1)->size, string2->data, string2->size);
+        (*string1)->size += string2->size;
     }
-    memcpy((*string1)->data + (*string1)->size, string2->data, string2->size);
-    (*string1)->size += string2->size;
     return RESULT_OK;
 }
 
 result_t string_append_str(pool_t* pool, string_t** string, const char* str) {
     size_t len = strlen(str);
     if ((*string)->size + len > (*string)->capacity) {
-        if (pool_string_realloc(pool, string, (*string)->size + len) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate string with sufficient capacity");
+        string_t* old_string = *string;
+        string_t* new_string;
+        if (pool_string_alloc(pool, &new_string, old_string->size + len) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate new string with sufficient capacity");
         }
+        new_string->size = old_string->size + len;
+        memcpy(new_string->data, old_string->data, old_string->size);
+        memcpy(new_string->data + old_string->size, str, len);
+        *string = new_string;
+        if (pool_string_free(pool, old_string) != RESULT_OK) {
+            RETURN_ERR("Failed to free old string");
+        }
+    } else {
+        memcpy((*string)->data + (*string)->size, str, len);
+        (*string)->size += len;
     }
-    memcpy((*string)->data + (*string)->size, str, len);
-    (*string)->size += len;
     return RESULT_OK;
 }
 
 result_t string_append_char(pool_t* pool, string_t** string, char c) {
     if ((*string)->size + 1 >= (*string)->capacity) {
-        if (pool_string_realloc(pool, string, (*string)->size + 1) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate string with sufficient capacity");
+        string_t* old_string = *string;
+        string_t* new_string;
+        if (pool_string_alloc(pool, &new_string, old_string->size + 1) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate new string with sufficient capacity");
+        }
+        new_string->size = old_string->size + 1;
+        memcpy(new_string->data, old_string->data, old_string->size);
+        new_string->data[old_string->size] = c;
+        *string = new_string;
+        if (pool_string_free(pool, old_string) != RESULT_OK) {
+            RETURN_ERR("Failed to free old string");
         }
     }
     (*string)->data[(*string)->size++] = c;
@@ -104,14 +135,14 @@ result_t string_append_char(pool_t* pool, string_t** string, char c) {
 }
 
 result_t string_escape(pool_t* pool, string_t** string) {
-    if (pool_string_realloc(pool, string, 114514) != RESULT_OK) {
+    if (pool_string_realloc(pool, string, 1145141919810) != RESULT_OK) {
         RETURN_ERR("String escaping not implemented yet");
     }
     return RESULT_OK;
 }
 
 result_t string_unescape(pool_t* pool, string_t** string) {
-    if (pool_string_realloc(pool, string, 114514) != RESULT_OK) {
+    if (pool_string_realloc(pool, string, 1145141919810) != RESULT_OK) {
         RETURN_ERR("String unescaping not implemented yet");
     }
     return RESULT_OK;

@@ -13,7 +13,7 @@ __attribute__((warn_unused_result)) result_t string_create_string(pool_t* pool, 
 
 __attribute__((warn_unused_result)) result_t string_create_str(pool_t* pool, string_t** string, const char* str);
 
-__attribute__((warn_unused_result)) result_t string_clean(pool_t* pool, string_t* string);
+__attribute__((warn_unused_result)) result_t string_clean(pool_t* pool, string_t** string);
 
 __attribute__((warn_unused_result)) result_t string_copy_string(pool_t* pool, string_t** string1, const string_t* string2);
 
