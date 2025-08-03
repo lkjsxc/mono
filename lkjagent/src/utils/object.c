@@ -656,12 +656,321 @@ result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src)
     return object_to_json_recursive(pool, dst, src, 0);
 }
 
+// Helper function to escape characters when serializing to XML
+static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t** output) {
+    // Estimate output size (worst case: every character needs escaping)
+    size_t estimated_size = input->size * 6 + 1; // &quot; is 6 chars
+    if (pool_string_alloc(pool, output, estimated_size) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate output string for XML escaping");
+    }
+
+    const char* src = input->data;
+    const char* src_end = input->data + input->size;
+    char* dst = (*output)->data;
+    size_t dst_pos = 0;
+
+    while (src < src_end) {
+        switch (*src) {
+            case '<':
+                // Expand to "&lt;"
+                memcpy(dst + dst_pos, "&lt;", 4);
+                dst_pos += 4;
+                break;
+            case '>':
+                // Expand to "&gt;"
+                memcpy(dst + dst_pos, "&gt;", 4);
+                dst_pos += 4;
+                break;
+            case '&':
+                // Expand to "&amp;"
+                memcpy(dst + dst_pos, "&amp;", 5);
+                dst_pos += 5;
+                break;
+            case '"':
+                // Expand to "&quot;"
+                memcpy(dst + dst_pos, "&quot;", 6);
+                dst_pos += 6;
+                break;
+            case '\'':
+                // Expand to "&apos;"
+                memcpy(dst + dst_pos, "&apos;", 6);
+                dst_pos += 6;
+                break;
+            default:
+                if (*src < 0x20 && *src != '\t' && *src != '\n' && *src != '\r') {
+                    // Control characters - skip them for XML safety
+                    break;
+                } else {
+                    // Regular character
+                    dst[dst_pos++] = *src;
+                }
+                break;
+        }
+        src++;
+    }
+
+    (*output)->size = dst_pos;
+    return RESULT_OK;
+}
+
+// Helper function to convert object to XML string recursively
+static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const object_t* src, int depth, const char* element_name) {
+    if (!src) {
+        // Null value - represent as empty element
+        if (string_append_str(pool, dst, "<") != RESULT_OK) {
+            RETURN_ERR("Failed to append opening tag for null");
+        }
+        if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+            RETURN_ERR("Failed to append element name for null");
+        }
+        if (string_append_str(pool, dst, "/>") != RESULT_OK) {
+            RETURN_ERR("Failed to append self-closing tag for null");
+        }
+        return RESULT_OK;
+    }
+
+    if (src->string && !src->child) {
+        // Leaf node - just a value
+        string_t* escaped_string;
+        if (escape_xml_string(pool, src->string, &escaped_string) != RESULT_OK) {
+            RETURN_ERR("Failed to escape string for XML output");
+        }
+
+        if (string_append_str(pool, dst, "<") != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append opening tag");
+        }
+        if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append element name");
+        }
+        if (string_append_str(pool, dst, ">") != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append closing bracket for opening tag");
+        }
+        if (string_append_string(pool, dst, escaped_string) != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append escaped string value");
+        }
+        if (string_append_str(pool, dst, "</") != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append opening of closing tag");
+        }
+        if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append element name for closing tag");
+        }
+        if (string_append_str(pool, dst, ">") != RESULT_OK) {
+            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy escaped string");
+            }
+            RETURN_ERR("Failed to append closing tag");
+        }
+
+        if (string_destroy(pool, escaped_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy escaped string");
+        }
+        return RESULT_OK;
+    } else if (src->child) {
+        object_t* first_child = src->child;
+
+        // Check if this is an object (has key-value pairs) or array
+        if (first_child && first_child->string) {
+            // Object with key-value pairs
+            if (string_append_str(pool, dst, "<") != RESULT_OK) {
+                RETURN_ERR("Failed to append opening tag for object");
+            }
+            if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+                RETURN_ERR("Failed to append element name for object");
+            }
+            if (string_append_str(pool, dst, ">") != RESULT_OK) {
+                RETURN_ERR("Failed to append closing bracket for object opening tag");
+            }
+
+            object_t* child = first_child;
+            while (child) {
+                if (child->string) {
+                    // Use the key as the element name
+                    string_t* key_escaped;
+                    if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to escape key for XML element name");
+                    }
+
+                    // Convert key to C string for element name
+                    char* key_cstr = malloc(key_escaped->size + 1);
+                    if (!key_cstr) {
+                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy escaped key");
+                        }
+                        RETURN_ERR("Failed to allocate memory for key string");
+                    }
+                    memcpy(key_cstr, key_escaped->data, key_escaped->size);
+                    key_cstr[key_escaped->size] = '\0';
+
+                    if (object_to_xml_recursive(pool, dst, child->child, depth + 1, key_cstr) != RESULT_OK) {
+                        free(key_cstr);
+                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy escaped key");
+                        }
+                        RETURN_ERR("Failed to convert child to XML");
+                    }
+
+                    free(key_cstr);
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                }
+
+                child = child->next;
+            }
+
+            if (string_append_str(pool, dst, "</") != RESULT_OK) {
+                RETURN_ERR("Failed to append opening of closing tag for object");
+            }
+            if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+                RETURN_ERR("Failed to append element name for object closing tag");
+            }
+            if (string_append_str(pool, dst, ">") != RESULT_OK) {
+                RETURN_ERR("Failed to append closing tag for object");
+            }
+        } else {
+            // Array - use numeric indices as element names
+            if (string_append_str(pool, dst, "<") != RESULT_OK) {
+                RETURN_ERR("Failed to append opening tag for array");
+            }
+            if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+                RETURN_ERR("Failed to append element name for array");
+            }
+            if (string_append_str(pool, dst, ">") != RESULT_OK) {
+                RETURN_ERR("Failed to append closing bracket for array opening tag");
+            }
+
+            object_t* child = first_child;
+            int index = 0;
+            while (child) {
+                char item_name[32];
+                snprintf(item_name, sizeof(item_name), "item%d", index);
+
+                if (object_to_xml_recursive(pool, dst, child, depth + 1, item_name) != RESULT_OK) {
+                    RETURN_ERR("Failed to convert array element to XML");
+                }
+
+                child = child->next;
+                index++;
+            }
+
+            if (string_append_str(pool, dst, "</") != RESULT_OK) {
+                RETURN_ERR("Failed to append opening of closing tag for array");
+            }
+            if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+                RETURN_ERR("Failed to append element name for array closing tag");
+            }
+            if (string_append_str(pool, dst, ">") != RESULT_OK) {
+                RETURN_ERR("Failed to append closing tag for array");
+            }
+        }
+        return RESULT_OK;
+    } else {
+        // Empty object or null
+        if (string_append_str(pool, dst, "<") != RESULT_OK) {
+            RETURN_ERR("Failed to append opening tag for empty");
+        }
+        if (string_append_str(pool, dst, element_name) != RESULT_OK) {
+            RETURN_ERR("Failed to append element name for empty");
+        }
+        if (string_append_str(pool, dst, "/>") != RESULT_OK) {
+            RETURN_ERR("Failed to append self-closing tag for empty");
+        }
+        return RESULT_OK;
+    }
+}
+
 result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) {
-    // XML serialization is complex and not implemented yet
-    if (!pool || !dst || !src) {
+    if (!pool || !dst) {
         RETURN_ERR("Invalid parameters for XML serialization");
     }
-    RETURN_ERR("XML serialization not implemented");
+
+    if (string_create(pool, dst) != RESULT_OK) {
+        RETURN_ERR("Failed to create destination string");
+    }
+
+    // For root level, handle objects/arrays differently to avoid wrapping tags
+    if (src && src->child) {
+        object_t* first_child = src->child;
+        
+        // Check if this is an object (has key-value pairs) or array
+        if (first_child && first_child->string) {
+            // Object with key-value pairs - output children directly
+            object_t* child = first_child;
+            while (child) {
+                if (child->string) {
+                    // Use the key as the element name
+                    string_t* key_escaped;
+                    if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to escape key for XML element name");
+                    }
+
+                    // Convert key to C string for element name
+                    char* key_cstr = malloc(key_escaped->size + 1);
+                    if (!key_cstr) {
+                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy escaped key");
+                        }
+                        RETURN_ERR("Failed to allocate memory for key string");
+                    }
+                    memcpy(key_cstr, key_escaped->data, key_escaped->size);
+                    key_cstr[key_escaped->size] = '\0';
+
+                    if (object_to_xml_recursive(pool, dst, child->child, 1, key_cstr) != RESULT_OK) {
+                        free(key_cstr);
+                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy escaped key");
+                        }
+                        RETURN_ERR("Failed to convert child to XML");
+                    }
+
+                    free(key_cstr);
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                }
+
+                child = child->next;
+            }
+            return RESULT_OK;
+        } else {
+            // Array - output items directly
+            object_t* child = first_child;
+            int index = 0;
+            while (child) {
+                char item_name[32];
+                snprintf(item_name, sizeof(item_name), "item%d", index);
+
+                if (object_to_xml_recursive(pool, dst, child, 1, item_name) != RESULT_OK) {
+                    RETURN_ERR("Failed to convert array element to XML");
+                }
+
+                child = child->next;
+                index++;
+            }
+            return RESULT_OK;
+        }
+    } else {
+        // Single value or null - use a default element name
+        return object_to_xml_recursive(pool, dst, src, 0, "value");
+    }
 }
 
 // Helper function to find an object by path

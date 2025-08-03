@@ -205,14 +205,14 @@ result_t string_escape(pool_t* pool, string_t** string) {
                     RETURN_ERR("Failed to append escaped form feed");
                 }
                 break;
-            case '/':
-                if (string_append_str(pool, &escaped, "\\/") != RESULT_OK) {
-                    if (string_destroy(pool, escaped) != RESULT_OK) {
-                        RETURN_ERR("Failed to destroy escaped string");
-                    }
-                    RETURN_ERR("Failed to append escaped forward slash");
-                }
-                break;
+            // case '/':
+            //     if (string_append_str(pool, &escaped, "\\/") != RESULT_OK) {
+            //         if (string_destroy(pool, escaped) != RESULT_OK) {
+            //             RETURN_ERR("Failed to destroy escaped string");
+            //         }
+            //         RETURN_ERR("Failed to append escaped forward slash");
+            //     }
+            //     break;
             default:
                 // For regular characters, just append them as-is
                 if (string_append_char(pool, &escaped, c) != RESULT_OK) {
@@ -238,9 +238,124 @@ result_t string_escape(pool_t* pool, string_t** string) {
 }
 
 result_t string_unescape(pool_t* pool, string_t** string) {
-    if (pool_string_realloc(pool, string, 1145141919810) != RESULT_OK) {
-        RETURN_ERR("String unescaping not implemented yet");
+    string_t* original = *string;
+    string_t* unescaped;
+
+    // Create a new string to hold the unescaped version
+    if (string_create(pool, &unescaped) != RESULT_OK) {
+        RETURN_ERR("Failed to create unescaped string");
     }
+
+    // Iterate through each character in the original string
+    for (uint64_t i = 0; i < original->size; i++) {
+        char c = original->data[i];
+
+        if (c == '\\' && i + 1 < original->size) {
+            // Handle escape sequence
+            char next = original->data[i + 1];
+            switch (next) {
+                case '"':
+                    if (string_append_char(pool, &unescaped, '"') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped quote");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case '\\':
+                    if (string_append_char(pool, &unescaped, '\\') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped backslash");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case 'n':
+                    if (string_append_char(pool, &unescaped, '\n') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped newline");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case 'r':
+                    if (string_append_char(pool, &unescaped, '\r') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped carriage return");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case 't':
+                    if (string_append_char(pool, &unescaped, '\t') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped tab");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case 'b':
+                    if (string_append_char(pool, &unescaped, '\b') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped backspace");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                case 'f':
+                    if (string_append_char(pool, &unescaped, '\f') != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append unescaped form feed");
+                    }
+                    i++;  // Skip the next character
+                    break;
+                // case '/':
+                //     if (string_append_char(pool, &unescaped, '/') != RESULT_OK) {
+                //         if (string_destroy(pool, unescaped) != RESULT_OK) {
+                //             RETURN_ERR("Failed to destroy unescaped string");
+                //         }
+                //         RETURN_ERR("Failed to append unescaped forward slash");
+                //     }
+                //     i++;  // Skip the next character
+                //     break;
+                default:
+                    // Unknown escape sequence, keep both characters
+                    if (string_append_char(pool, &unescaped, c) != RESULT_OK) {
+                        if (string_destroy(pool, unescaped) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy unescaped string");
+                        }
+                        RETURN_ERR("Failed to append backslash");
+                    }
+                    break;
+            }
+        } else {
+            // Regular character, just append it
+            if (string_append_char(pool, &unescaped, c) != RESULT_OK) {
+                if (string_destroy(pool, unescaped) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy unescaped string");
+                }
+                RETURN_ERR("Failed to append regular character");
+            }
+        }
+    }
+
+    // Replace the original string with the unescaped one
+    if (string_destroy(pool, original) != RESULT_OK) {
+        if (string_destroy(pool, unescaped) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy unescaped string");
+        }
+        RETURN_ERR("Failed to destroy original string");
+    }
+
+    *string = unescaped;
     return RESULT_OK;
 }
 

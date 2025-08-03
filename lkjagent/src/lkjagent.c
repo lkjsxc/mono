@@ -62,7 +62,8 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_makeprompt(po
     object_t* config_agent_state_base_prompt;
     object_t* config_agent_state_main;
     object_t* config_agent_state_main_prompt;
-    string_t* buf;
+    object_t* tmp_object;
+    string_t* tmp_string;
 
     if(object_provide_str(pool, &agent_workingmemory, agent->data, "working_memory") != RESULT_OK) {
         RETURN_ERR("Failed to get working memory from agent");
@@ -85,7 +86,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_makeprompt(po
     if(object_provide_str(pool, &config_agent_state_main_prompt, config_agent_state_main, "prompt") != RESULT_OK) {
         RETURN_ERR("Failed to get state prompt from agent configuration");
     }
-    if(string_create(pool, &buf) != RESULT_OK) {
+    if(string_create(pool, &tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to create buffer string");
     }
 
@@ -93,41 +94,65 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_makeprompt(po
         RETURN_ERR("Failed to copy initial prompt string");
     }
 
-    if(object_tostring_json(pool, &buf, config_agent_state_base_prompt) != RESULT_OK) {
+    if(object_tostring_xml(pool, &tmp_string, config_agent_state_base_prompt) != RESULT_OK) {
         RETURN_ERR("Failed to parse working memory JSON");
     }
-    if(string_escape(pool, &buf) != RESULT_OK) {
+    if(string_escape(pool, &tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to escape base prompt string");
     }
-    if(string_append_string(pool, dst, buf) != RESULT_OK) {
+    if(string_append_string(pool, dst, tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to append base prompt string");
     }
 
-    if(object_tostring_json(pool, &buf, config_agent_state_main_prompt) != RESULT_OK) {
+    if(object_tostring_xml(pool, &tmp_string, config_agent_state_main_prompt) != RESULT_OK) {
         RETURN_ERR("Failed to parse state prompt JSON");
     }
-    if(string_escape(pool, &buf) != RESULT_OK) {
+    if(string_escape(pool, &tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to escape base prompt string");
     }
-    if(string_append_string(pool, dst, buf) != RESULT_OK) {
+    if(string_append_string(pool, dst, tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to append state prompt string");
     }
 
-    if(object_tostring_json(pool, &buf, agent_workingmemory) != RESULT_OK) {
+    if(object_tostring_xml(pool, &tmp_string, agent_workingmemory) != RESULT_OK) {
         RETURN_ERR("Failed to parse working memory JSON");
     }
-    if(string_escape(pool, &buf) != RESULT_OK) {
+    if(string_escape(pool, &tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to escape base prompt string");
     }
-    if(string_append_string(pool, dst, buf) != RESULT_OK) {
+    if(string_append_str(pool, dst, "<working_memory>") != RESULT_OK) {
+        RETURN_ERR("Failed to append working memory opening tag");
+    }
+    if(string_append_string(pool, dst, tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to append working memory string");
     }
+    if(string_append_str(pool, dst, "</working_memory>") != RESULT_OK) {
+        RETURN_ERR("Failed to append working memory closing tag");
+    }
 
-    if(string_append_str(pool, dst, "\"}], \"model\":\"deepseek/deepseek-r1-0528-qwen3-8b\",\"temperature\":0.70,\"max_tokens\":-1,\"stream\":false}") != RESULT_OK) {
+    if(string_append_str(pool, dst, "\"}], \"model\":\"") != RESULT_OK) {
+        RETURN_ERR("Failed to append closing JSON string");
+    }
+    if(object_provide_str(pool, &tmp_object, config->data, "llm.model") != RESULT_OK) {
+        RETURN_ERR("Failed to get model from configuration");
+    }
+    if(string_append_string(pool, dst, tmp_object->string) != RESULT_OK) {
+        RETURN_ERR("Failed to append model string");
+    }
+    if(string_append_str(pool, dst, "\", \"temperature\":") != RESULT_OK) {
+        RETURN_ERR("Failed to append temperature string");
+    }
+    if(object_provide_str(pool, &tmp_object, config->data, "llm.temperature") != RESULT_OK) {
+        RETURN_ERR("Failed to get temperature from configuration");
+    }
+    if(string_append_string(pool, dst, tmp_object->string) != RESULT_OK) {
+        RETURN_ERR("Failed to append temperature string");
+    }
+    if(string_append_str(pool, dst, ", \"max_tokens\":-1,\"stream\":false}") != RESULT_OK) {
         RETURN_ERR("Failed to append closing JSON string");
     }
 
-    if(string_destroy(pool, buf) != RESULT_OK) {
+    if(string_destroy(pool, tmp_string) != RESULT_OK) {
         RETURN_ERR("Failed to destroy buffer string");
     }
 
