@@ -60,29 +60,6 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
         RETURN_ERR("Failed to convert object to JSON string");
     }
 
-    printf("Test JSON: %.*s\n", (int)test_string->size, test_string->data);
-    printf("String size: %llu\n", (unsigned long long)test_string->size);
-    printf("String capacity: %llu\n", (unsigned long long)test_string->capacity);
-    
-    // Debug: print first few bytes in hex
-    printf("First 10 bytes (hex): ");
-    for (int i = 0; i < 10 && i < (int)test_string->size; i++) {
-        printf("%02x ", (unsigned char)test_string->data[i]);
-    }
-    printf("\n");
-    
-    // Debug: print first few characters
-    printf("First 10 chars: ");
-    for (int i = 0; i < 10 && i < (int)test_string->size; i++) {
-        char c = test_string->data[i];
-        if (c >= 32 && c <= 126) {
-            printf("'%c' ", c);
-        } else {
-            printf("\\x%02x ", (unsigned char)c);
-        }
-    }
-    printf("\n");
-
     // Now demonstrate LM Studio integration
     printf("\n=== LM Studio Integration Test ===\n");
 

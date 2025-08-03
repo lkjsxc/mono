@@ -398,8 +398,6 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
         // Check if this is an object (has key-value pairs) or array
         object_t* first_child = src->child;
         
-        // Debug output
-        
         // If the first child has a string (key), it's an object
         if (first_child && first_child->string) {
             // Object with key-value pairs

@@ -281,6 +281,16 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
         RETURN_ERR("Failed to parse URL");
     }
     
+    // WORKAROUND: Memory pool bug is corrupting method string during URL parsing
+    // Re-create the method string to ensure it stays "POST"
+    if (request->method) {
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, request->method));
+    }
+    if (string_create_str(pool, &request->method, "POST") != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        RETURN_ERR("Failed to restore POST method");
+    }
+    
     // Create socket connection
     if (create_socket_connection(url->host, url->port, &sock_fd) != RESULT_OK) {
         CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
@@ -363,7 +373,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
             RETURN_ERR("Failed to add request body");
         }
     }
-    
+
     // Send request
     ssize_t bytes_sent = send(sock_fd, http_request_str->data, http_request_str->size, 0);
     if (bytes_sent != (ssize_t)http_request_str->size) {
@@ -623,9 +633,9 @@ result_t lmstudio_create_chat_request(pool_t* pool, const string_t* model, const
         RETURN_ERR("Failed to create temperature pair");
     }
     
-    // Create max_tokens pair (use 1000 instead of -1)
+    // Create max_tokens pair (use -1 as in the example)
     object_t* max_tokens_pair;
-    if (create_kv_number_pair(pool, "max_tokens", 1000, &max_tokens_pair) != RESULT_OK) {
+    if (create_kv_number_pair(pool, "max_tokens", -1, &max_tokens_pair) != RESULT_OK) {
         RETURN_ERR("Failed to create max_tokens pair");
     }
     
@@ -656,9 +666,6 @@ result_t lmstudio_chat_completion(pool_t* pool, const string_t* endpoint, const 
     if (object_tostring_json(pool, &json_request, request_data) != RESULT_OK) {
         RETURN_ERR("Failed to convert request to JSON");
     }
-    
-    // Debug: print the JSON request
-    printf("JSON Request: %.*s\n", (int)json_request->size, json_request->data);
     
     // Set content type
     if (string_create_str(pool, &content_type, "application/json") != RESULT_OK) {
