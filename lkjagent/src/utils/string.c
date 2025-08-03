@@ -129,8 +129,9 @@ result_t string_append_char(pool_t* pool, string_t** string, char c) {
         if (pool_string_free(pool, old_string) != RESULT_OK) {
             RETURN_ERR("Failed to free old string");
         }
+    } else {
+        (*string)->data[(*string)->size++] = c;
     }
-    (*string)->data[(*string)->size++] = c;
     return RESULT_OK;
 }
 

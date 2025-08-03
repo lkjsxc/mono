@@ -64,8 +64,6 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
         RETURN_ERR("Failed to send HTTP POST request");
     }
 
-    printf("HTTP Response: %.*s\n", (int)recv_http_string->size, recv_http_string->data);
-
     if(object_parse_json(pool, &recv_http_object, recv_http_string) != RESULT_OK) {
         RETURN_ERR("Failed to parse HTTP response JSON");
     }
@@ -73,6 +71,8 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
     if(object_provide_str(pool, &recv_content_object, recv_http_object, "choices.[0].message.content") != RESULT_OK) {
         RETURN_ERR("Failed to get content from HTTP response");
     }
+
+    printf("Content: \n%.*s\n", (int)recv_content_object->string->size, recv_content_object->string->data);
 
     return RESULT_OK;
 }

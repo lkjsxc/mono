@@ -307,23 +307,20 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, string_t
 
     char buffer[4096];
     ssize_t bytes_read;
-    while ((bytes_read = recv(sock_fd, buffer, sizeof(buffer), 0)) > 0) {
-        for (ssize_t i = 0; i < bytes_read; i++) {
-            if (string_append_char(pool, &response_data, buffer[i]) != RESULT_OK) {
-                close(sock_fd);
-                if (string_destroy(pool, http_request_str) != RESULT_OK) {
-                    RETURN_ERR("Failed to append response data");
-                }
-                if (string_destroy(pool, response_data) != RESULT_OK) {
-                    RETURN_ERR("Failed to append response data");
-                }
-                url_destroy(pool, &url);
+    while ((bytes_read = recv(sock_fd, buffer, sizeof(buffer) - 1, 0)) > 0) {
+        buffer[bytes_read] = '\0';
+        if(string_append_str(pool, &response_data, buffer) != RESULT_OK) {
+            close(sock_fd);
+            if (string_destroy(pool, http_request_str) != RESULT_OK) {
                 RETURN_ERR("Failed to append response data");
             }
+            if (string_destroy(pool, response_data) != RESULT_OK) {
+                RETURN_ERR("Failed to append response data");
+            }
+            url_destroy(pool, &url);
+            RETURN_ERR("Failed to append response data");
         }
     }
-
-    printf("HTTP Response: %.*s\n\n", (int)response_data->size, response_data->data);
 
     close(sock_fd);
 
@@ -409,33 +406,18 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, string_t
     // Extract just the body content
     size_t body_len = end - body_start;
     if (body_len > 0) {
-        if (string_create(pool, response) != RESULT_OK) {
+        if(pool_string_alloc(pool, response, body_len) != RESULT_OK) {
             if (string_destroy(pool, response_data) != RESULT_OK) {
-                RETURN_ERR("Failed to create response body string");
+                RETURN_ERR("Failed to allocate response string");
             }
             if (string_destroy(pool, http_request_str) != RESULT_OK) {
-                RETURN_ERR("Failed to create response body string");
+                RETURN_ERR("Failed to allocate response string");
             }
             url_destroy(pool, &url);
-            RETURN_ERR("Failed to create response body string");
+            RETURN_ERR("Failed to allocate response string");
         }
-        
-        // Copy body data
-        for (size_t i = 0; i < body_len; i++) {
-            if (string_append_char(pool, response, body_start[i]) != RESULT_OK) {
-                if (string_destroy(pool, *response) != RESULT_OK) {
-                    RETURN_ERR("Failed to copy response body");
-                }
-                if (string_destroy(pool, response_data) != RESULT_OK) {
-                    RETURN_ERR("Failed to copy response body");
-                }
-                if (string_destroy(pool, http_request_str) != RESULT_OK) {
-                    RETURN_ERR("Failed to copy response body");
-                }
-                url_destroy(pool, &url);
-                RETURN_ERR("Failed to copy response body");
-            }
-        }
+        memcpy((*response)->data, body_start, body_len);
+        (*response)->size = body_len;
     } else {
         // Empty body
         if (string_create(pool, response) != RESULT_OK) {
