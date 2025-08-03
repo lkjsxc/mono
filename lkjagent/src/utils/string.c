@@ -116,7 +116,7 @@ result_t string_append_str(pool_t* pool, string_t** string, const char* str) {
 }
 
 result_t string_append_char(pool_t* pool, string_t** string, char c) {
-    if ((*string)->size + 1 >= (*string)->capacity) {
+    if ((*string)->size + 1 > (*string)->capacity) {
         string_t* old_string = *string;
         string_t* new_string;
         if (pool_string_alloc(pool, &new_string, old_string->size + 1) != RESULT_OK) {

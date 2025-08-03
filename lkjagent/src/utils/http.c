@@ -323,6 +323,8 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, string_t
         }
     }
 
+    printf("HTTP Response: %.*s\n\n", (int)response_data->size, response_data->data);
+
     close(sock_fd);
 
     // Parse HTTP response to check status code and extract body

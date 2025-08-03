@@ -74,8 +74,6 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
         RETURN_ERR("Failed to get content from HTTP response");
     }
 
-    printf("Response: \n%.*s\n", (int)recv_content_object->string->size, recv_content_object->string->data);
-
     return RESULT_OK;
 }
 
