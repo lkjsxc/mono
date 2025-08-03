@@ -360,6 +360,9 @@ result_t object_parse_json(pool_t* pool, object_t** dst, const string_t* src) {
 
 result_t object_parse_xml(pool_t* pool, object_t** dst, const string_t* src) {
     // XML parsing is complex and not implemented yet
+    if(!pool || !dst || !src) {
+        RETURN_ERR("Invalid parameters for XML parsing");
+    }
     RETURN_ERR("XML parsing not implemented");
 }
 
@@ -481,6 +484,9 @@ result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src)
 
 result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) {
     // XML serialization is complex and not implemented yet
+    if (!pool || !dst || !src) {
+        RETURN_ERR("Invalid parameters for XML serialization");
+    }
     RETURN_ERR("XML serialization not implemented");
 }
 
@@ -530,6 +536,9 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
 
 result_t object_set(pool_t* pool, object_t* object, const string_t* path, object_t* value) {
     // Setting objects by path is complex and requires path parsing and tree manipulation
+    if (!pool || !object || !path || !value) {
+        RETURN_ERR("Invalid parameters for object set");
+    }
     RETURN_ERR("Object set by path not implemented yet");
 }
 

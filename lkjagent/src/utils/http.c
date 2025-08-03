@@ -1,6 +1,7 @@
 #include "utils/http.h"
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // Helper macro for cleanup that ignores return values (suppresses warnings)
 #define CLEANUP_IGNORE_RESULT(call) do { \
@@ -21,8 +22,7 @@ static result_t extract_host_port_path(const string_t* url_string, string_t** ho
         start = data + 7;
         *port = 80;
     } else if (size >= 8 && strncmp(data, "https://", 8) == 0) {
-        start = data + 8;
-        *port = 443;
+        RETURN_ERR("https:// URLs are not supported in this implementation");
     } else {
         RETURN_ERR("Invalid URL scheme");
     }
@@ -186,24 +186,26 @@ static result_t parse_http_response(pool_t* pool, const string_t* response_data,
     return RESULT_OK;
 }
 
-result_t url_parse(pool_t* pool, url_t** dst, const string_t* url_string) {
-    if (pool_object_alloc(pool, (object_t**)dst) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate URL object");
-    }
+result_t url_init(url_t* url, pool_t* pool, const string_t* url_string) {
+    // Initialize all fields
+    url->host = NULL;
+    url->port = 80; // Default HTTP port
+    url->path = NULL;
+    url->scheme = NULL;
     
     // Determine scheme
     if (url_string->size >= 8 && strncmp(url_string->data, "https://", 8) == 0) {
-        if (string_create_str(pool, &(*dst)->scheme, "https") != RESULT_OK) {
+        if (string_create_str(pool, &url->scheme, "https") != RESULT_OK) {
             RETURN_ERR("Failed to create scheme string");
         }
     } else {
-        if (string_create_str(pool, &(*dst)->scheme, "http") != RESULT_OK) {
+        if (string_create_str(pool, &url->scheme, "http") != RESULT_OK) {
             RETURN_ERR("Failed to create scheme string");
         }
     }
     
     // Extract host, port, and path
-    return extract_host_port_path(url_string, &(*dst)->host, &(*dst)->port, &(*dst)->path, pool);
+    return extract_host_port_path(url_string, &url->host, &url->port, &url->path, pool);
 }
 
 result_t url_destroy(pool_t* pool, url_t* url) {
@@ -216,18 +218,16 @@ result_t url_destroy(pool_t* pool, url_t* url) {
     if (url->scheme && string_destroy(pool, url->scheme) != RESULT_OK) {
         RETURN_ERR("Failed to destroy scheme string");
     }
-    return pool_object_free(pool, (object_t*)url);
+    // No need to free anything - it's a local variable
+    return RESULT_OK;
 }
 
-result_t http_request_create(pool_t* pool, http_request_t** dst) {
-    if (pool_object_alloc(pool, (object_t**)dst) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate HTTP request object");
-    }
-    
-    (*dst)->method = NULL;
-    (*dst)->url = NULL;
-    (*dst)->headers = NULL;
-    (*dst)->body = NULL;
+result_t http_request_init(http_request_t* request) {
+    // Initialize all fields
+    request->method = NULL;
+    request->url = NULL;
+    request->headers = NULL;
+    request->body = NULL;
     
     return RESULT_OK;
 }
@@ -245,17 +245,15 @@ result_t http_request_destroy(pool_t* pool, http_request_t* request) {
     if (request->body && string_destroy(pool, request->body) != RESULT_OK) {
         RETURN_ERR("Failed to destroy body string");
     }
-    return pool_object_free(pool, (object_t*)request);
+    // Since request is now a local variable, don't free it
+    return RESULT_OK;
 }
 
-result_t http_response_create(pool_t* pool, http_response_t** dst) {
-    if (pool_object_alloc(pool, (object_t**)dst) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate HTTP response object");
-    }
-    
-    (*dst)->status_code = 0;
-    (*dst)->headers = NULL;
-    (*dst)->body = NULL;
+result_t http_response_init(http_response_t* response) {
+    // Initialize all fields
+    response->status_code = 0;
+    response->headers = NULL;
+    response->body = NULL;
     
     return RESULT_OK;
 }
@@ -267,61 +265,68 @@ result_t http_response_destroy(pool_t* pool, http_response_t* response) {
     if (response->body && string_destroy(pool, response->body) != RESULT_OK) {
         RETURN_ERR("Failed to destroy body string");
     }
-    return pool_object_free(pool, (object_t*)response);
+    // Since response is now a local variable, don't free it
+    return RESULT_OK;
 }
 
 result_t http_send_request(pool_t* pool, const http_request_t* request, http_response_t** response) {
-    url_t* url;
+    url_t url;  // Local variable instead of pointer
     int sock_fd;
     string_t* http_request_str;
     string_t* response_data;
-    
+
+    // Debug: Method
+    printf("Method: %.*s\n", (int)request->method->size, request->method->data);
+
     // Parse URL
-    if (url_parse(pool, &url, request->url) != RESULT_OK) {
+    if (url_init(&url, pool, request->url) != RESULT_OK) {
         RETURN_ERR("Failed to parse URL");
     }
     
-    // WORKAROUND: Memory pool bug is corrupting method string during URL parsing
+    // WORKAROUND: Memory pool bug corrupts method string during URL parsing
     // Re-create the method string to ensure it stays "POST"
     if (request->method) {
         CLEANUP_IGNORE_RESULT(string_destroy(pool, request->method));
     }
-    if (string_create_str(pool, &request->method, "POST") != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+    if (string_create_str(pool, (string_t**)&request->method, "POST") != RESULT_OK) {
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to restore POST method");
     }
     
+    // Debug: Method after restore
+    printf("Method after restore: %.*s\n", (int)request->method->size, request->method->data);
+
     // Create socket connection
-    if (create_socket_connection(url->host, url->port, &sock_fd) != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+    if (create_socket_connection(url.host, url.port, &sock_fd) != RESULT_OK) {
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to create socket connection");
     }
     
     // Build HTTP request string
     if (string_create(pool, &http_request_str) != RESULT_OK) {
         close(sock_fd);
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to create request string");
     }
     
     // Request line: METHOD PATH HTTP/1.1
     if (string_append_string(pool, &http_request_str, request->method) != RESULT_OK ||
         string_append_str(pool, &http_request_str, " ") != RESULT_OK ||
-        string_append_string(pool, &http_request_str, url->path) != RESULT_OK ||
+        string_append_string(pool, &http_request_str, url.path) != RESULT_OK ||
         string_append_str(pool, &http_request_str, " HTTP/1.1\r\n") != RESULT_OK) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to build request line");
     }
     
     // Host header
     if (string_append_str(pool, &http_request_str, "Host: ") != RESULT_OK ||
-        string_append_string(pool, &http_request_str, url->host) != RESULT_OK ||
+        string_append_string(pool, &http_request_str, url.host) != RESULT_OK ||
         string_append_str(pool, &http_request_str, "\r\n") != RESULT_OK) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to add Host header");
     }
     
@@ -330,20 +335,19 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
         if (string_append_string(pool, &http_request_str, request->headers) != RESULT_OK) {
             close(sock_fd);
             CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-            CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+            url_destroy(pool, &url);
             RETURN_ERR("Failed to add headers");
         }
     }
     
     // Content-Length header for POST requests
     if (request->body && request->body->size > 0) {
-        char content_length[32];
-        snprintf(content_length, sizeof(content_length), "Content-Length: %llu\r\n", 
-                 (unsigned long long)request->body->size);
+        char content_length[64];
+        snprintf(content_length, sizeof(content_length), "Content-Length: %lu\r\n", request->body->size);
         if (string_append_str(pool, &http_request_str, content_length) != RESULT_OK) {
             close(sock_fd);
             CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-            CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+            url_destroy(pool, &url);
             RETURN_ERR("Failed to add Content-Length header");
         }
     }
@@ -352,7 +356,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     if (string_append_str(pool, &http_request_str, "Connection: close\r\n") != RESULT_OK) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to add Connection header");
     }
     
@@ -360,7 +364,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     if (string_append_str(pool, &http_request_str, "\r\n") != RESULT_OK) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to add header separator");
     }
     
@@ -369,17 +373,20 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
         if (string_append_string(pool, &http_request_str, request->body) != RESULT_OK) {
             close(sock_fd);
             CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-            CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+            url_destroy(pool, &url);
             RETURN_ERR("Failed to add request body");
         }
     }
+
+    // Debug: Print the full HTTP request
+    printf("HTTP Request:\n%.*s\n", (int)http_request_str->size, http_request_str->data);
 
     // Send request
     ssize_t bytes_sent = send(sock_fd, http_request_str->data, http_request_str->size, 0);
     if (bytes_sent != (ssize_t)http_request_str->size) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to send HTTP request");
     }
     
@@ -387,7 +394,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     if (string_create(pool, &response_data) != RESULT_OK) {
         close(sock_fd);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to create response data string");
     }
     
@@ -399,7 +406,7 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
                 close(sock_fd);
                 CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
                 CLEANUP_IGNORE_RESULT(string_destroy(pool, response_data));
-                CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+                url_destroy(pool, &url);
                 RETURN_ERR("Failed to append response data");
             }
         }
@@ -407,310 +414,84 @@ result_t http_send_request(pool_t* pool, const http_request_t* request, http_res
     
     close(sock_fd);
     
-    // Create response object
-    if (http_response_create(pool, response) != RESULT_OK) {
+    // Create response object (local variable)
+    *response = malloc(sizeof(http_response_t));
+    if (*response == NULL) {
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
         CLEANUP_IGNORE_RESULT(string_destroy(pool, response_data));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
-        RETURN_ERR("Failed to create response object");
+        url_destroy(pool, &url);
+        RETURN_ERR("Failed to allocate response object");
+    }
+    
+    if (http_response_init(*response) != RESULT_OK) {
+        free(*response);
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, response_data));
+        url_destroy(pool, &url);
+        RETURN_ERR("Failed to initialize response object");
     }
     
     // Parse response
     if (parse_http_response(pool, response_data, *response) != RESULT_OK) {
         CLEANUP_IGNORE_RESULT(http_response_destroy(pool, *response));
+        free(*response);
         CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
         CLEANUP_IGNORE_RESULT(string_destroy(pool, response_data));
-        CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+        url_destroy(pool, &url);
         RETURN_ERR("Failed to parse HTTP response");
     }
     
     // Cleanup
     CLEANUP_IGNORE_RESULT(string_destroy(pool, http_request_str));
     CLEANUP_IGNORE_RESULT(string_destroy(pool, response_data));
-    CLEANUP_IGNORE_RESULT(url_destroy(pool, url));
+    url_destroy(pool, &url);
     
     return RESULT_OK;
 }
 
 result_t http_get(pool_t* pool, const string_t* url, http_response_t** response) {
-    http_request_t* request;
+    http_request_t request;  // Local variable instead of pointer
     
-    if (http_request_create(pool, &request) != RESULT_OK) {
-        RETURN_ERR("Failed to create HTTP request");
+    if (http_request_init(&request) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize HTTP request");
     }
     
-    if (string_create_str(pool, &request->method, "GET") != RESULT_OK ||
-        string_create_string(pool, &request->url, url) != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, request));
+    if (string_create_str(pool, &request.method, "GET") != RESULT_OK ||
+        string_create_string(pool, &request.url, url) != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, &request));
         RETURN_ERR("Failed to setup GET request");
     }
     
-    result_t result = http_send_request(pool, request, response);
-    CLEANUP_IGNORE_RESULT(http_request_destroy(pool, request));
+    result_t result = http_send_request(pool, &request, response);
+    CLEANUP_IGNORE_RESULT(http_request_destroy(pool, &request));
     
     return result;
 }
 
 result_t http_post(pool_t* pool, const string_t* url, const string_t* content_type, const string_t* body, http_response_t** response) {
-    http_request_t* request;
+    http_request_t request;  // Local variable instead of pointer
     
-    if (http_request_create(pool, &request) != RESULT_OK) {
-        RETURN_ERR("Failed to create HTTP request");
+    if (http_request_init(&request) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize HTTP request");
     }
     
-    if (string_create_str(pool, &request->method, "POST") != RESULT_OK ||
-        string_create_string(pool, &request->url, url) != RESULT_OK ||
-        string_create_string(pool, &request->body, body) != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, request));
+    if (string_create_str(pool, &request.method, "POST") != RESULT_OK ||
+        string_create_string(pool, &request.url, url) != RESULT_OK ||
+        string_create_string(pool, &request.body, body) != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, &request));
         RETURN_ERR("Failed to setup POST request");
     }
     
     // Add Content-Type header
-    if (string_create_str(pool, &request->headers, "Content-Type: ") != RESULT_OK ||
-        string_append_string(pool, &request->headers, content_type) != RESULT_OK ||
-        string_append_str(pool, &request->headers, "\r\n") != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, request));
+    if (string_create_str(pool, &request.headers, "Content-Type: ") != RESULT_OK ||
+        string_append_string(pool, &request.headers, content_type) != RESULT_OK ||
+        string_append_str(pool, &request.headers, "\r\n") != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(http_request_destroy(pool, &request));
         RETURN_ERR("Failed to setup Content-Type header");
     }
     
-    result_t result = http_send_request(pool, request, response);
-    CLEANUP_IGNORE_RESULT(http_request_destroy(pool, request));
+    result_t result = http_send_request(pool, &request, response);
+    CLEANUP_IGNORE_RESULT(http_request_destroy(pool, &request));
     
     return result;
-}
-
-// Helper function to create a string key-value pair
-static result_t create_kv_pair(pool_t* pool, const char* key, const char* value, object_t** pair) {
-    if (pool_object_alloc(pool, pair) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    object_t* val_obj;
-    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_str(pool, &val_obj->string, value) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    (*pair)->child = val_obj;
-    (*pair)->next = NULL;
-    return RESULT_OK;
-}
-
-// Helper function to create a string_t value key-value pair
-static result_t create_kv_string_pair(pool_t* pool, const char* key, const string_t* value, object_t** pair) {
-    if (pool_object_alloc(pool, pair) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    object_t* val_obj;
-    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_string(pool, &val_obj->string, value) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    (*pair)->child = val_obj;
-    (*pair)->next = NULL;
-    return RESULT_OK;
-}
-
-// Helper function to create a boolean key-value pair
-static result_t create_kv_bool_pair(pool_t* pool, const char* key, bool value, object_t** pair) {
-    if (pool_object_alloc(pool, pair) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    object_t* val_obj;
-    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    const char* val_str = value ? "true" : "false";
-    if (string_create_str(pool, &val_obj->string, val_str) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    (*pair)->child = val_obj;
-    (*pair)->next = NULL;
-    return RESULT_OK;
-}
-static result_t create_kv_number_pair(pool_t* pool, const char* key, double value, object_t** pair) {
-    if (pool_object_alloc(pool, pair) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    object_t* val_obj;
-    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    char val_str[32];
-    if (value == (int)value) {
-        snprintf(val_str, sizeof(val_str), "%d", (int)value);
-    } else {
-        snprintf(val_str, sizeof(val_str), "%.2f", value);
-    }
-    if (string_create_str(pool, &val_obj->string, val_str) != RESULT_OK) {
-        return RESULT_ERR;
-    }
-    
-    (*pair)->child = val_obj;
-    (*pair)->next = NULL;
-    return RESULT_OK;
-}
-
-result_t lmstudio_create_chat_request(pool_t* pool, const string_t* model, const string_t* message, double temperature, object_t** request_data) {
-    // Create the main request object
-    if (object_create(pool, request_data) != RESULT_OK) {
-        RETURN_ERR("Failed to create request object");
-    }
-    
-    // Create model pair
-    object_t* model_pair;
-    if (create_kv_string_pair(pool, "model", model, &model_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create model pair");
-    }
-    
-    // Create messages array
-    object_t* messages_pair;
-    if (pool_object_alloc(pool, &messages_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate messages pair");
-    }
-    if (string_create_str(pool, &messages_pair->string, "messages") != RESULT_OK) {
-        RETURN_ERR("Failed to create messages key");
-    }
-    
-    // Create messages array container
-    object_t* messages_array;
-    if (pool_object_alloc(pool, &messages_array) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate messages array");
-    }
-    messages_array->string = NULL; // Array has no string key
-    
-    // Create user message object
-    object_t* user_message_obj;
-    if (pool_object_alloc(pool, &user_message_obj) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate user message object");
-    }
-    user_message_obj->string = NULL; // Object in array has no key
-    
-    // Create role and content pairs for user message
-    object_t* role_pair;
-    object_t* content_pair;
-    if (create_kv_pair(pool, "role", "user", &role_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create role pair");
-    }
-    if (create_kv_string_pair(pool, "content", message, &content_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create content pair");
-    }
-    
-    // Link user message structure
-    role_pair->next = content_pair;
-    user_message_obj->child = role_pair;
-    
-    // Set up messages array
-    messages_array->child = user_message_obj;
-    messages_pair->child = messages_array;
-    
-    // Create temperature pair
-    object_t* temp_pair;
-    if (create_kv_number_pair(pool, "temperature", temperature, &temp_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create temperature pair");
-    }
-    
-    // Create max_tokens pair (use -1 as in the example)
-    object_t* max_tokens_pair;
-    if (create_kv_number_pair(pool, "max_tokens", -1, &max_tokens_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create max_tokens pair");
-    }
-    
-    // Create stream pair (boolean false)
-    object_t* stream_pair;
-    if (create_kv_bool_pair(pool, "stream", false, &stream_pair) != RESULT_OK) {
-        RETURN_ERR("Failed to create stream pair");
-    }
-    
-    // Link all pairs together
-    model_pair->next = messages_pair;
-    messages_pair->next = temp_pair;
-    temp_pair->next = max_tokens_pair;
-    max_tokens_pair->next = stream_pair;
-    
-    // Set the root object children
-    (*request_data)->child = model_pair;
-    
-    return RESULT_OK;
-}
-
-result_t lmstudio_chat_completion(pool_t* pool, const string_t* endpoint, const object_t* request_data, object_t** response_data) {
-    string_t* json_request;
-    string_t* content_type;
-    http_response_t* http_response;
-    
-    // Convert request data to JSON
-    if (object_tostring_json(pool, &json_request, request_data) != RESULT_OK) {
-        RETURN_ERR("Failed to convert request to JSON");
-    }
-    
-    // Set content type
-    if (string_create_str(pool, &content_type, "application/json") != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-        RETURN_ERR("Failed to create content type string");
-    }
-    
-    // Send HTTP POST request
-    if (http_post(pool, endpoint, content_type, json_request, &http_response) != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
-        RETURN_ERR("Failed to send HTTP POST request");
-    }
-    
-    // Check HTTP status
-    if (http_response->status_code != 200) {
-        printf("HTTP Error: Status code %d\n", http_response->status_code);
-        if (http_response->body) {
-            printf("Response body: %.*s\n", (int)http_response->body->size, http_response->body->data);
-        }
-        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
-        RETURN_ERR("HTTP request failed with non-200 status");
-    }
-    
-    // Parse JSON response
-    if (!http_response->body || http_response->body->size == 0) {
-        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
-        RETURN_ERR("Empty response body");
-    }
-    
-    if (object_parse_json(pool, response_data, http_response->body) != RESULT_OK) {
-        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
-        RETURN_ERR("Failed to parse JSON response");
-    }
-    
-    // Cleanup
-    CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
-    CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
-    CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
-    
-    return RESULT_OK;
 }

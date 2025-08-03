@@ -1,4 +1,253 @@
 #include "lkjagent.h"
+#include <stdbool.h>
+
+// Helper macro for cleanup that ignores return values (suppresses warnings)
+#define CLEANUP_IGNORE_RESULT(call) do { \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wunused-result\"") \
+    call; \
+    _Pragma("GCC diagnostic pop") \
+} while(0)
+
+// Helper function to create a string key-value pair
+static result_t create_kv_pair(pool_t* pool, const char* key, const char* value, object_t** pair) {
+    if (pool_object_alloc(pool, pair) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    object_t* val_obj;
+    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_str(pool, &val_obj->string, value) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    (*pair)->child = val_obj;
+    (*pair)->next = NULL;
+    return RESULT_OK;
+}
+
+// Helper function to create a string_t value key-value pair
+static result_t create_kv_string_pair(pool_t* pool, const char* key, const string_t* value, object_t** pair) {
+    if (pool_object_alloc(pool, pair) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    object_t* val_obj;
+    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_string(pool, &val_obj->string, value) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    (*pair)->child = val_obj;
+    (*pair)->next = NULL;
+    return RESULT_OK;
+}
+
+// Helper function to create a boolean key-value pair
+static result_t create_kv_bool_pair(pool_t* pool, const char* key, bool value, object_t** pair) {
+    if (pool_object_alloc(pool, pair) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    object_t* val_obj;
+    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    const char* val_str = value ? "true" : "false";
+    if (string_create_str(pool, &val_obj->string, val_str) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    (*pair)->child = val_obj;
+    (*pair)->next = NULL;
+    return RESULT_OK;
+}
+
+// Helper function to create a numeric key-value pair
+static result_t create_kv_number_pair(pool_t* pool, const char* key, double value, object_t** pair) {
+    if (pool_object_alloc(pool, pair) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    if (string_create_str(pool, &(*pair)->string, key) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    object_t* val_obj;
+    if (pool_object_alloc(pool, &val_obj) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    char val_str[32];
+    if (value == (int)value) {
+        snprintf(val_str, sizeof(val_str), "%d", (int)value);
+    } else {
+        snprintf(val_str, sizeof(val_str), "%.2f", value);
+    }
+    if (string_create_str(pool, &val_obj->string, val_str) != RESULT_OK) {
+        return RESULT_ERR;
+    }
+    
+    (*pair)->child = val_obj;
+    (*pair)->next = NULL;
+    return RESULT_OK;
+}
+
+// LM Studio specific function to create chat request
+static result_t lmstudio_create_chat_request(pool_t* pool, const string_t* model, const string_t* message, double temperature, object_t** request_data) {
+    // Create the main request object
+    if (object_create(pool, request_data) != RESULT_OK) {
+        RETURN_ERR("Failed to create request object");
+    }
+    
+    // Create model pair
+    object_t* model_pair;
+    if (create_kv_string_pair(pool, "model", model, &model_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create model pair");
+    }
+    
+    // Create messages array
+    object_t* messages_pair;
+    if (pool_object_alloc(pool, &messages_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate messages pair");
+    }
+    if (string_create_str(pool, &messages_pair->string, "messages") != RESULT_OK) {
+        RETURN_ERR("Failed to create messages key");
+    }
+    
+    // Create messages array container
+    object_t* messages_array;
+    if (pool_object_alloc(pool, &messages_array) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate messages array");
+    }
+    messages_array->string = NULL; // Array has no string key
+    
+    // Create user message object
+    object_t* user_message_obj;
+    if (pool_object_alloc(pool, &user_message_obj) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate user message object");
+    }
+    user_message_obj->string = NULL; // Object in array has no key
+    
+    // Create role and content pairs for user message
+    object_t* role_pair;
+    object_t* content_pair;
+    if (create_kv_pair(pool, "role", "user", &role_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create role pair");
+    }
+    if (create_kv_string_pair(pool, "content", message, &content_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create content pair");
+    }
+    
+    // Link user message structure
+    role_pair->next = content_pair;
+    user_message_obj->child = role_pair;
+    
+    // Set up messages array
+    messages_array->child = user_message_obj;
+    messages_pair->child = messages_array;
+    
+    // Create temperature pair
+    object_t* temp_pair;
+    if (create_kv_number_pair(pool, "temperature", temperature, &temp_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create temperature pair");
+    }
+    
+    // Create max_tokens pair (use -1 as in the example)
+    object_t* max_tokens_pair;
+    if (create_kv_number_pair(pool, "max_tokens", -1, &max_tokens_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create max_tokens pair");
+    }
+    
+    // Create stream pair (boolean false)
+    object_t* stream_pair;
+    if (create_kv_bool_pair(pool, "stream", false, &stream_pair) != RESULT_OK) {
+        RETURN_ERR("Failed to create stream pair");
+    }
+    
+    // Link all pairs together
+    model_pair->next = messages_pair;
+    messages_pair->next = temp_pair;
+    temp_pair->next = max_tokens_pair;
+    max_tokens_pair->next = stream_pair;
+    
+    // Set the root object children
+    (*request_data)->child = model_pair;
+    
+    return RESULT_OK;
+}
+
+// LM Studio specific function to handle chat completion
+static result_t lmstudio_chat_completion(pool_t* pool, const string_t* endpoint, const object_t* request_data, object_t** response_data) {
+    string_t* json_request;
+    string_t* content_type;
+    http_response_t* http_response;
+    
+    // Convert request data to JSON
+    if (object_tostring_json(pool, &json_request, request_data) != RESULT_OK) {
+        RETURN_ERR("Failed to convert request to JSON");
+    }
+    
+    // Set content type
+    if (string_create_str(pool, &content_type, "application/json") != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+        RETURN_ERR("Failed to create content type string");
+    }
+    
+    // Send HTTP POST request
+    if (http_post(pool, endpoint, content_type, json_request, &http_response) != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
+        RETURN_ERR("Failed to send HTTP POST request");
+    }
+    
+    // Check HTTP status
+    if (http_response->status_code != 200) {
+        printf("HTTP Error: Status code %d\n", http_response->status_code);
+        if (http_response->body) {
+            printf("Response body: %.*s\n", (int)http_response->body->size, http_response->body->data);
+        }
+        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
+        RETURN_ERR("HTTP request failed with non-200 status");
+    }
+    
+    // Parse JSON response
+    if (!http_response->body || http_response->body->size == 0) {
+        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
+        RETURN_ERR("Empty response body");
+    }
+    
+    if (object_parse_json(pool, response_data, http_response->body) != RESULT_OK) {
+        CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+        CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
+        RETURN_ERR("Failed to parse JSON response");
+    }
+    
+    // Cleanup
+    CLEANUP_IGNORE_RESULT(http_response_destroy(pool, http_response));
+    CLEANUP_IGNORE_RESULT(string_destroy(pool, json_request));
+    CLEANUP_IGNORE_RESULT(string_destroy(pool, content_type));
+    
+    return RESULT_OK;
+}
 
 static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lkjagent) {
     if (pool_init(&lkjagent->pool) != RESULT_OK) {

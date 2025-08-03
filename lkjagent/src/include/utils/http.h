@@ -13,7 +13,7 @@ typedef struct {
     string_t* host;
     uint16_t port;
     string_t* path;
-    string_t* scheme; // "http" or "https"
+    string_t* scheme; // "http"
 } url_t;
 
 typedef struct {
@@ -30,22 +30,17 @@ typedef struct {
 } http_response_t;
 
 // URL parsing
-__attribute__((warn_unused_result)) result_t url_parse(pool_t* pool, url_t** dst, const string_t* url_string);
-__attribute__((warn_unused_result)) result_t url_destroy(pool_t* pool, url_t* url);
+__attribute__((warn_unused_result)) result_t url_init(url_t* url, pool_t* pool, const string_t* url_string);
 
 // HTTP request/response management
-__attribute__((warn_unused_result)) result_t http_request_create(pool_t* pool, http_request_t** dst);
+__attribute__((warn_unused_result)) result_t http_request_init(http_request_t* request);
 __attribute__((warn_unused_result)) result_t http_request_destroy(pool_t* pool, http_request_t* request);
-__attribute__((warn_unused_result)) result_t http_response_create(pool_t* pool, http_response_t** dst);
+__attribute__((warn_unused_result)) result_t http_response_init(http_response_t* response);
 __attribute__((warn_unused_result)) result_t http_response_destroy(pool_t* pool, http_response_t* response);
 
 // HTTP client functions
 __attribute__((warn_unused_result)) result_t http_send_request(pool_t* pool, const http_request_t* request, http_response_t** response);
 __attribute__((warn_unused_result)) result_t http_get(pool_t* pool, const string_t* url, http_response_t** response);
 __attribute__((warn_unused_result)) result_t http_post(pool_t* pool, const string_t* url, const string_t* content_type, const string_t* body, http_response_t** response);
-
-// LM Studio specific functions
-__attribute__((warn_unused_result)) result_t lmstudio_chat_completion(pool_t* pool, const string_t* endpoint, const object_t* request_data, object_t** response_data);
-__attribute__((warn_unused_result)) result_t lmstudio_create_chat_request(pool_t* pool, const string_t* model, const string_t* message, double temperature, object_t** request_data);
 
 #endif
