@@ -18,40 +18,44 @@
       "enable": true,
       "max_iterations": 1000
     },
-    "default_status": "thinking",
-    "prompt": {
+    "state": {
       "base": {
-        "output_format": "JSON",
-        "task": "Write a endless story"
+        "prompt": {
+          "output_format": "JSON",
+          "task": "Generate a endless story"
+        }
       },
       "thinking": {
-        "description": "next_state is thinking, executing, or paging",
-        "output_example1": {
-          "thinking_log": "I need to add a new character to the story. I need to think about the character's traits and background.",
-          "next_state": "thinking"
-        },
-        "output_example2": {
-          "thinking_log": "I need to remove a character from the story. Bob is not needed anymore.",
-          "next_state": "executing"
+        "prompt": {
+          "description": "next_state is thinking or executing",
+          "output_example1": {
+            "thinking_log": "I need to add a new character to the story. I need to think about the character's traits and background.",
+            "next_state": "thinking"
+          },
+          "output_example2": {
+            "thinking_log": "I need to remove a character from the story. Bob is not needed anymore.",
+            "next_state": "executing"
+          }
         }
       },
-      "paging": {},
-      "evaluating": {},
       "executing": {
-        "output_example1": {
-          "action": {
-            "type": "working_memory_add",
-            "tags": "character description story",
-            "value": "male, 30 years old, cautious, enjoys reading"
-          }
-        },
-        "output_example2": {
-          "action": {
-            "type": "working_memory_remove",
-            "tags": "bob character description story"
+        "prompt": {
+          "output_example1": {
+            "action": {
+              "type": "working_memory_add",
+              "tags": "character description story",
+              "value": "male, 30 years old, cautious, enjoys reading"
+            }
+          },
+          "output_example2": {
+            "action": {
+              "type": "working_memory_remove",
+              "tags": "bob character description story"
+            }
           }
         }
-      }
+      },
+      "paging": {}
     }
   }
 }

@@ -9,5 +9,6 @@
 #define POOL_STRING1048576_MAXCOUNT (16)
 #define POOL_OBJECT_MAXCOUNT (65536)
 #define CONFIG_PATH "data/config.json"
+#define MEMORY_PATH "data/memory.json"
 
 #endif

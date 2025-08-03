@@ -41,7 +41,7 @@ result_t string_create_str(pool_t* pool, string_t** string, const char* str) {
     return RESULT_OK;
 }
 
-result_t string_clean(pool_t* pool, string_t** string) {
+result_t string_clear(pool_t* pool, string_t** string) {
     if ((*string)->capacity != 16) {
         if (pool_string_realloc(pool, string, 16) != RESULT_OK) {
             RETURN_ERR("Failed to reallocate string to clean it");
@@ -136,9 +136,104 @@ result_t string_append_char(pool_t* pool, string_t** string, char c) {
 }
 
 result_t string_escape(pool_t* pool, string_t** string) {
-    if (pool_string_realloc(pool, string, 1145141919810) != RESULT_OK) {
-        RETURN_ERR("String escaping not implemented yet");
+    string_t* original = *string;
+    string_t* escaped;
+
+    // Create a new string to hold the escaped version
+    if (string_create(pool, &escaped) != RESULT_OK) {
+        RETURN_ERR("Failed to create escaped string");
     }
+
+    // Iterate through each character in the original string
+    for (uint64_t i = 0; i < original->size; i++) {
+        char c = original->data[i];
+
+        switch (c) {
+            case '"':
+                if (string_append_str(pool, &escaped, "\\\"") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped quote");
+                }
+                break;
+            case '\\':
+                if (string_append_str(pool, &escaped, "\\\\") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped backslash");
+                }
+                break;
+            case '\n':
+                if (string_append_str(pool, &escaped, "\\n") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped newline");
+                }
+                break;
+            case '\r':
+                if (string_append_str(pool, &escaped, "\\r") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped carriage return");
+                }
+                break;
+            case '\t':
+                if (string_append_str(pool, &escaped, "\\t") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped tab");
+                }
+                break;
+            case '\b':
+                if (string_append_str(pool, &escaped, "\\b") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped backspace");
+                }
+                break;
+            case '\f':
+                if (string_append_str(pool, &escaped, "\\f") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped form feed");
+                }
+                break;
+            case '/':
+                if (string_append_str(pool, &escaped, "\\/") != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append escaped forward slash");
+                }
+                break;
+            default:
+                // For regular characters, just append them as-is
+                if (string_append_char(pool, &escaped, c) != RESULT_OK) {
+                    if (string_destroy(pool, escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped string");
+                    }
+                    RETURN_ERR("Failed to append regular character");
+                }
+                break;
+        }
+    }
+
+    // Replace the original string with the escaped one
+    if (string_destroy(pool, original) != RESULT_OK) {
+        if (string_destroy(pool, escaped) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy escaped string");
+        }
+        RETURN_ERR("Failed to destroy original string");
+    }
+
+    *string = escaped;
     return RESULT_OK;
 }
 
