@@ -23,24 +23,17 @@ typedef struct {
     string_t* body;     // Request body
 } http_request_t;
 
-typedef struct {
-    uint16_t status_code;
-    string_t* headers;
-    string_t* body;
-} http_response_t;
-
 // URL parsing
 __attribute__((warn_unused_result)) result_t url_init(url_t* url, pool_t* pool, const string_t* url_string);
+result_t url_destroy(pool_t* pool, url_t* url);
 
-// HTTP request/response management
+// HTTP request management
 __attribute__((warn_unused_result)) result_t http_request_init(http_request_t* request);
 __attribute__((warn_unused_result)) result_t http_request_destroy(pool_t* pool, http_request_t* request);
-__attribute__((warn_unused_result)) result_t http_response_init(http_response_t* response);
-__attribute__((warn_unused_result)) result_t http_response_destroy(pool_t* pool, http_response_t* response);
 
 // HTTP client functions
-__attribute__((warn_unused_result)) result_t http_send_request(pool_t* pool, const http_request_t* request, http_response_t** response);
-__attribute__((warn_unused_result)) result_t http_get(pool_t* pool, const string_t* url, http_response_t** response);
-__attribute__((warn_unused_result)) result_t http_post(pool_t* pool, const string_t* url, const string_t* content_type, const string_t* body, http_response_t** response);
+__attribute__((warn_unused_result)) result_t http_send_request(pool_t* pool, const http_request_t* request, string_t** response);
+__attribute__((warn_unused_result)) result_t http_get(pool_t* pool, const string_t* url, string_t** response);
+__attribute__((warn_unused_result)) result_t http_post(pool_t* pool, const string_t* url, const string_t* content_type, const string_t* body, string_t** response);
 
 #endif
