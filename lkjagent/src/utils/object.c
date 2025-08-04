@@ -649,7 +649,7 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
 }
 
 result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src) {
-    if (string_create(pool, dst) != RESULT_OK) {
+    if (string_clear(pool, dst) != RESULT_OK) {
         RETURN_ERR("Failed to create destination string");
     }
 
@@ -902,7 +902,7 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
         RETURN_ERR("Invalid parameters for XML serialization");
     }
 
-    if (string_create(pool, dst) != RESULT_OK) {
+    if (string_clear(pool, dst) != RESULT_OK) {
         RETURN_ERR("Failed to create destination string");
     }
 
