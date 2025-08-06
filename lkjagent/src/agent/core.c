@@ -798,7 +798,16 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_
         RETURN_ERR("Failed to parse LLM response");
     }
 
-    printf("test: %.*s\n", (int)response_obj->string->size, response_obj->string->data);
+    // Debug
+    string_t* debug_string;
+    if (string_create(pool, &debug_string) != RESULT_OK) {
+        RETURN_ERR("Failed to create debug string for LLM response");
+    }
+    if(object_tostring_json(pool, &debug_string, response_obj) != RESULT_OK) {
+        printf("Failed to convert response object to JSON string");
+    }
+    printf("test2:\n%.*s\n", (int)debug_string->size, debug_string->data);
+    fflush(stdout);
 
     // Phase 2: Extract agent response
     if (object_provide_str(pool, &agent_response, response_obj, "agent") != RESULT_OK) {

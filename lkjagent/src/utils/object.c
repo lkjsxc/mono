@@ -496,12 +496,361 @@ result_t object_parse_json(pool_t* pool, object_t** dst, const string_t* src) {
     return RESULT_OK;
 }
 
+// Helper function to skip whitespace in XML parsing
+static const char* skip_xml_whitespace(const char* xml, const char* end) {
+    while (xml < end && (*xml == ' ' || *xml == '\t' || *xml == '\n' || *xml == '\r')) {
+        xml++;
+    }
+    return xml;
+}
+
+// Helper function to parse XML tag name
+static result_t parse_xml_tag_name(pool_t* pool, const char** xml, const char* end, string_t** result) {
+    const char* start = *xml;
+    const char* current = start;
+
+    // Tag name starts with letter or underscore, followed by alphanumeric, hyphens, underscores, or periods
+    if (current >= end || (!isalpha(*current) && *current != '_')) {
+        RETURN_ERR("Invalid XML tag name start");
+    }
+
+    while (current < end && (isalnum(*current) || *current == '-' || *current == '_' || *current == '.' || *current == ':')) {
+        current++;
+    }
+
+    size_t length = current - start;
+    if (length == 0) {
+        RETURN_ERR("Empty XML tag name");
+    }
+
+    if (pool_string_alloc(pool, result, length + 1) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate string for XML tag name");
+    }
+
+    (*result)->size = length;
+    memcpy((*result)->data, start, length);
+
+    *xml = current;
+    return RESULT_OK;
+}
+
+// Helper function to parse XML text content (between tags)
+static result_t parse_xml_text_content(pool_t* pool, const char** xml, const char* end, string_t** result) {
+    const char* start = *xml;
+    const char* current = start;
+
+    // Find the next '<' or end of input
+    while (current < end && *current != '<') {
+        current++;
+    }
+
+    size_t length = current - start;
+
+    // Trim whitespace from both ends
+    while (length > 0 && (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r')) {
+        start++;
+        length--;
+    }
+    while (length > 0 && (start[length - 1] == ' ' || start[length - 1] == '\t' || start[length - 1] == '\n' || start[length - 1] == '\r')) {
+        length--;
+    }
+
+    if (length == 0) {
+        *result = NULL;
+        *xml = current;
+        return RESULT_OK;
+    }
+
+    if (pool_string_alloc(pool, result, length + 1) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate string for XML text content");
+    }
+
+    (*result)->size = length;
+    memcpy((*result)->data, start, length);
+
+    *xml = current;
+    return RESULT_OK;
+}
+
+// Forward declaration for recursive parsing
+static result_t parse_xml_element(pool_t* pool, const char** xml, const char* end, object_t** result);
+
+// Helper function to parse XML attributes and child elements
+static result_t parse_xml_content(pool_t* pool, const char** xml, const char* end, const string_t* tag_name, object_t** result) {
+    const char* current = *xml;
+    current = skip_xml_whitespace(current, end);
+
+    // Check for self-closing tag
+    if (current < end && *current == '/') {
+        current++;
+        current = skip_xml_whitespace(current, end);
+        if (current >= end || *current != '>') {
+            RETURN_ERR("Expected '>' after '/' in self-closing XML tag");
+        }
+        *xml = current + 1;
+        return RESULT_OK;
+    }
+
+    // Expect '>'
+    if (current >= end || *current != '>') {
+        RETURN_ERR("Expected '>' after XML tag name");
+    }
+    current++;
+
+    object_t* first_child = NULL;
+    object_t* last_child = NULL;
+    string_t* text_accumulator = NULL;
+
+    while (current < end) {
+        current = skip_xml_whitespace(current, end);
+
+        if (current >= end) {
+            RETURN_ERR("Unexpected end of XML input");
+        }
+
+        if (*current == '<') {
+            current++;
+            if (current < end && *current == '/') {
+                // End tag
+                current++;
+                current = skip_xml_whitespace(current, end);
+
+                // Parse closing tag name
+                string_t* closing_tag;
+                if (parse_xml_tag_name(pool, &current, end, &closing_tag) != RESULT_OK) {
+                    RETURN_ERR("Failed to parse XML closing tag name");
+                }
+
+                // Verify tag names match
+                if (!string_equal_string(tag_name, closing_tag)) {
+                    if (string_destroy(pool, closing_tag) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy closing tag string");
+                    }
+                    RETURN_ERR("XML closing tag does not match opening tag");
+                }
+
+                if (string_destroy(pool, closing_tag) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy closing tag string");
+                }
+
+                current = skip_xml_whitespace(current, end);
+                if (current >= end || *current != '>') {
+                    RETURN_ERR("Expected '>' after XML closing tag name");
+                }
+                current++;
+                break;
+            } else {
+                // Child element
+                current--; // Back up to include the '<'
+                object_t* child;
+                if (parse_xml_element(pool, &current, end, &child) != RESULT_OK) {
+                    RETURN_ERR("Failed to parse XML child element");
+                }
+
+                if (!first_child) {
+                    first_child = child;
+                    last_child = child;
+                } else {
+                    last_child->next = child;
+                    last_child = child;
+                }
+            }
+        } else {
+            // Text content
+            string_t* text_content;
+            if (parse_xml_text_content(pool, &current, end, &text_content) != RESULT_OK) {
+                RETURN_ERR("Failed to parse XML text content");
+            }
+
+            if (text_content && text_content->size > 0) {
+                if (!text_accumulator) {
+                    text_accumulator = text_content;
+                } else {
+                    // Append to existing text
+                    if (string_append_string(pool, &text_accumulator, text_content) != RESULT_OK) {
+                        if (string_destroy(pool, text_content) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy text content string");
+                        }
+                        RETURN_ERR("Failed to append text content");
+                    }
+                    if (string_destroy(pool, text_content) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy appended text content string");
+                    }
+                }
+            } else if (text_content) {
+                if (string_destroy(pool, text_content) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy empty text content string");
+                }
+            }
+        }
+    }
+
+    // Handle mixed content: if we have both text and child elements
+    if (text_accumulator && first_child) {
+        RETURN_ERR("Mixed content (text and elements) not supported in this XML parser");
+    } else if (text_accumulator) {
+        // Only text content - store directly in the result
+        (*result)->string = text_accumulator;
+    } else if (first_child) {
+        // Only child elements - store as children
+        (*result)->child = first_child;
+    }
+    // Empty element case is handled by having neither string nor child
+
+    *xml = current;
+    return RESULT_OK;
+}
+
+// Helper function to parse a complete XML element
+static result_t parse_xml_element(pool_t* pool, const char** xml, const char* end, object_t** result) {
+    const char* current = *xml;
+    current = skip_xml_whitespace(current, end);
+
+    if (current >= end || *current != '<') {
+        RETURN_ERR("Expected '<' at start of XML element");
+    }
+
+    current++;
+
+    // Parse tag name
+    string_t* tag_name;
+    if (parse_xml_tag_name(pool, &current, end, &tag_name) != RESULT_OK) {
+        RETURN_ERR("Failed to parse XML tag name");
+    }
+
+    // Create object for element content
+    object_t* element_content;
+    if (pool_object_alloc(pool, &element_content) != RESULT_OK) {
+        if (string_destroy(pool, tag_name) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy tag name string");
+        }
+        RETURN_ERR("Failed to allocate object for XML element content");
+    }
+
+    element_content->string = NULL;
+    element_content->child = NULL;
+    element_content->next = NULL;
+
+    // Parse content (attributes and children)
+    if (parse_xml_content(pool, &current, end, tag_name, &element_content) != RESULT_OK) {
+        RETURN_ERR("Failed to parse XML element content");
+    }
+
+    // Create key-value pair object (like JSON objects)
+    if (pool_object_alloc(pool, result) != RESULT_OK) {
+        if (string_destroy(pool, tag_name) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy tag name string");
+        }
+        RETURN_ERR("Failed to allocate object for XML key-value pair");
+    }
+
+    (*result)->string = tag_name;  // Tag name is the key
+    (*result)->child = element_content;  // Content is the value
+    (*result)->next = NULL;
+
+    *xml = current;
+    return RESULT_OK;
+}
+
 result_t object_parse_xml(pool_t* pool, object_t** dst, const string_t* src) {
-    // XML parsing is complex and not implemented yet
     if (!pool || !dst || !src) {
         RETURN_ERR("Invalid parameters for XML parsing");
     }
-    RETURN_ERR("XML parsing not implemented");
+
+    if (src->size == 0) {
+        RETURN_ERR("Empty XML string");
+    }
+
+    const char* xml = src->data;
+    const char* end = src->data + src->size;
+    const char* current = skip_xml_whitespace(xml, end);
+
+    // Skip XML declaration if present
+    if (current < end && *current == '<') {
+        if (current + 1 < end && current[1] == '?') {
+            // Skip XML declaration
+            while (current < end && !(current[0] == '?' && current + 1 < end && current[1] == '>')) {
+                current++;
+            }
+            if (current < end) {
+                current += 2;  // Skip "?>"
+            }
+            current = skip_xml_whitespace(current, end);
+        }
+    }
+
+    // Create a root container object to hold all parsed XML elements
+    if (pool_object_alloc(pool, dst) != RESULT_OK) {
+        RETURN_ERR("Failed to allocate root object for XML");
+    }
+
+    (*dst)->string = NULL;
+    (*dst)->child = NULL;
+    (*dst)->next = NULL;
+
+    // Parse all root-level XML elements
+    object_t* first_child = NULL;
+    object_t* last_child = NULL;
+
+    while (current < end) {
+        current = skip_xml_whitespace(current, end);
+        
+        // Check if we've reached the end
+        if (current >= end) {
+            break;
+        }
+
+        // Parse XML element if we encounter a '<'
+        if (*current == '<') {
+            // Skip comments and processing instructions
+            if (current + 1 < end && current[1] == '!') {
+                // Skip comment <!-- ... -->
+                if (current + 4 < end && strncmp(current, "<!--", 4) == 0) {
+                    current += 4;
+                    while (current + 2 < end && strncmp(current, "-->", 3) != 0) {
+                        current++;
+                    }
+                    if (current + 2 < end) {
+                        current += 3; // Skip "-->"
+                    }
+                } else {
+                    // Skip other declarations like <!DOCTYPE>
+                    while (current < end && *current != '>') {
+                        current++;
+                    }
+                    if (current < end) {
+                        current++; // Skip '>'
+                    }
+                }
+                continue;
+            }
+
+            // Parse XML element
+            object_t* element;
+            if (parse_xml_element(pool, &current, end, &element) != RESULT_OK) {
+                RETURN_ERR("Failed to parse XML element");
+            }
+
+            // Add to children list
+            if (!first_child) {
+                first_child = element;
+                last_child = element;
+            } else {
+                last_child->next = element;
+                last_child = element;
+            }
+        } else {
+            // Skip any text content at root level (whitespace, etc.)
+            while (current < end && *current != '<') {
+                current++;
+            }
+        }
+    }
+
+    // Set the parsed elements as children of the root container
+    (*dst)->child = first_child;
+
+    return RESULT_OK;
 }
 
 // Helper function to convert object to JSON string recursively
@@ -659,7 +1008,7 @@ result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src)
 // Helper function to escape characters when serializing to XML
 static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t** output) {
     // Estimate output size (worst case: every character needs escaping)
-    size_t estimated_size = input->size * 6 + 1; // &quot; is 6 chars
+    size_t estimated_size = input->size * 6 + 1;  // &quot; is 6 chars
     if (pool_string_alloc(pool, output, estimated_size) != RESULT_OK) {
         RETURN_ERR("Failed to allocate output string for XML escaping");
     }
@@ -737,43 +1086,43 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
         }
 
         if (string_append_str(pool, dst, "<") != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append opening tag");
         }
         if (string_append_str(pool, dst, element_name) != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append element name");
         }
         if (string_append_str(pool, dst, ">") != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append closing bracket for opening tag");
         }
         if (string_append_string(pool, dst, escaped_string) != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append escaped string value");
         }
         if (string_append_str(pool, dst, "</") != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append opening of closing tag");
         }
         if (string_append_str(pool, dst, element_name) != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append element name for closing tag");
         }
         if (string_append_str(pool, dst, ">") != RESULT_OK) {
-            if(string_destroy(pool, escaped_string) != RESULT_OK) {
+            if (string_destroy(pool, escaped_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy escaped string");
             }
             RETURN_ERR("Failed to append closing tag");
@@ -811,7 +1160,7 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
                     // Convert key to C string for element name
                     char* key_cstr = malloc(key_escaped->size + 1);
                     if (!key_cstr) {
-                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
                             RETURN_ERR("Failed to destroy escaped key");
                         }
                         RETURN_ERR("Failed to allocate memory for key string");
@@ -821,7 +1170,7 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
 
                     if (object_to_xml_recursive(pool, dst, child->child, depth + 1, key_cstr) != RESULT_OK) {
                         free(key_cstr);
-                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
                             RETURN_ERR("Failed to destroy escaped key");
                         }
                         RETURN_ERR("Failed to convert child to XML");
@@ -909,7 +1258,7 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
     // For root level, handle objects/arrays differently to avoid wrapping tags
     if (src && src->child) {
         object_t* first_child = src->child;
-        
+
         // Check if this is an object (has key-value pairs) or array
         if (first_child && first_child->string) {
             // Object with key-value pairs - output children directly
@@ -925,7 +1274,7 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
                     // Convert key to C string for element name
                     char* key_cstr = malloc(key_escaped->size + 1);
                     if (!key_cstr) {
-                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
                             RETURN_ERR("Failed to destroy escaped key");
                         }
                         RETURN_ERR("Failed to allocate memory for key string");
@@ -935,7 +1284,7 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
 
                     if (object_to_xml_recursive(pool, dst, child->child, 1, key_cstr) != RESULT_OK) {
                         free(key_cstr);
-                        if(string_destroy(pool, key_escaped) != RESULT_OK) {
+                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
                             RETURN_ERR("Failed to destroy escaped key");
                         }
                         RETURN_ERR("Failed to convert child to XML");
@@ -978,12 +1327,12 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
     if (!object || !path || path->size == 0) {
         return NULL;
     }
-    
+
     const char* path_data = path->data;
     size_t path_len = path->size;
     size_t current_pos = 0;
     const object_t* current_obj = object;
-    
+
     while (current_pos < path_len && current_obj) {
         // Find the next delimiter (. or [)
         size_t segment_start = current_pos;
@@ -997,7 +1346,7 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
             }
             segment_end++;
         }
-        
+
         // Check if this is an array access
         if (segment_end < path_len && path_data[segment_end] == '[') {
             // Find the closing bracket
@@ -1006,41 +1355,41 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
             while (bracket_end < path_len && path_data[bracket_end] != ']') {
                 bracket_end++;
             }
-            
+
             if (bracket_end >= path_len) {
-                return NULL; // Malformed path - no closing bracket
+                return NULL;  // Malformed path - no closing bracket
             }
-            
+
             // Parse the array index
             int index = 0;
             for (size_t i = bracket_start; i < bracket_end; i++) {
                 char c = path_data[i];
                 if (c < '0' || c > '9') {
-                    return NULL; // Invalid array index
+                    return NULL;  // Invalid array index
                 }
                 index = index * 10 + (c - '0');
             }
-            
+
             // Navigate to the array element
-            current_obj = current_obj->child; // Enter the array
+            current_obj = current_obj->child;  // Enter the array
             for (int i = 0; i < index && current_obj; i++) {
                 current_obj = current_obj->next;
             }
-            
+
             // Move past the bracket notation
             current_pos = bracket_end + 1;
         } else {
             // Object property access
             if (segment_end == segment_start) {
-                return NULL; // Empty segment
+                return NULL;  // Empty segment
             }
-            
+
             // Create a temporary string for comparison
             object_t* found_child = NULL;
             object_t* child = current_obj->child;
-            
+
             while (child) {
-                if (child->string && 
+                if (child->string &&
                     child->string->size == (segment_end - segment_start) &&
                     memcmp(child->string->data, path_data + segment_start, segment_end - segment_start) == 0) {
                     found_child = child;
@@ -1048,24 +1397,24 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
                 }
                 child = child->next;
             }
-            
+
             if (!found_child) {
-                return NULL; // Property not found
+                return NULL;  // Property not found
             }
-            
-            current_obj = found_child->child; // Navigate to the property value
+
+            current_obj = found_child->child;  // Navigate to the property value
             current_pos = segment_end;
         }
-        
+
         // Skip the delimiter if we're not at the end
         if (current_pos < path_len && (path_data[current_pos] == '.' || path_data[current_pos] == '[')) {
             if (path_data[current_pos] == '.') {
-                current_pos++; // Skip the dot
+                current_pos++;  // Skip the dot
             }
             // For '[', we handle it in the next iteration
         }
     }
-    
+
     return (object_t*)current_obj;
 }
 
@@ -1073,12 +1422,12 @@ result_t object_get(object_t** dst, const object_t* object, const string_t* path
     if (!dst || !object || !path) {
         RETURN_ERR("Invalid parameters for object get");
     }
-    
+
     *dst = find_object_by_path(object, path);
     if (*dst == NULL) {
         RETURN_ERR("Object not found at specified path");
     }
-    
+
     return RESULT_OK;
 }
 
