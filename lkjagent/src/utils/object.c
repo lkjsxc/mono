@@ -1432,11 +1432,169 @@ result_t object_get(object_t** dst, const object_t* object, const string_t* path
 }
 
 result_t object_set(pool_t* pool, object_t* object, const string_t* path, object_t* value) {
-    // Setting objects by path is complex and requires path parsing and tree manipulation
     if (!pool || !object || !path || !value) {
         RETURN_ERR("Invalid parameters for object set");
     }
-    RETURN_ERR("Object set by path not implemented yet");
+
+    if (path->size == 0) {
+        RETURN_ERR("Empty path in object set");
+    }
+
+    const char* path_data = path->data;
+    size_t path_len = path->size;
+    size_t current_pos = 0;
+    object_t* current_obj = object;
+
+    // Navigate to the parent of the target location
+    while (current_pos < path_len) {
+        // Find the next delimiter
+        size_t segment_start = current_pos;
+        size_t segment_end = current_pos;
+
+        while (segment_end < path_len && path_data[segment_end] != '.') {
+            segment_end++;
+        }
+
+        // Check if this is the last segment
+        bool is_last_segment = (segment_end == path_len);
+
+        if (segment_end == segment_start) {
+            RETURN_ERR("Empty segment in path");
+        }
+
+        // Look for existing child with this key
+        object_t* found_child = NULL;
+        object_t* child = current_obj->child;
+
+        while (child) {
+            if (child->string &&
+                child->string->size == (segment_end - segment_start) &&
+                memcmp(child->string->data, path_data + segment_start, segment_end - segment_start) == 0) {
+                found_child = child;
+                break;
+            }
+            child = child->next;
+        }
+
+        if (is_last_segment) {
+            // This is the target key - set the value
+            if (found_child) {
+                // Update existing value
+                if (found_child->child) {
+                    if (object_destroy(pool, found_child->child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy existing value");
+                    }
+                }
+                found_child->child = value;
+            } else {
+                // Create new key-value pair
+                object_t* new_child;
+                if (object_create(pool, &new_child) != RESULT_OK) {
+                    RETURN_ERR("Failed to create new child object");
+                }
+
+                // Set the key name by creating a temporary null-terminated string
+                char temp_key[256];
+                size_t key_len = segment_end - segment_start;
+                if (key_len >= sizeof(temp_key)) {
+                    if (object_destroy(pool, new_child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy new_child after key name too long error");
+                    }
+                    RETURN_ERR("Key name too long");
+                }
+                memcpy(temp_key, path_data + segment_start, key_len);
+                temp_key[key_len] = '\0';
+
+                if (string_create_str(pool, &new_child->string, temp_key) != RESULT_OK) {
+                    if (object_destroy(pool, new_child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy new_child after key string creation failure");
+                    }
+                    RETURN_ERR("Failed to create key string");
+                }
+
+                // Set the value
+                new_child->child = value;
+
+                // Add to parent's children
+                if (!current_obj->child) {
+                    current_obj->child = new_child;
+                } else {
+                    // Find the last child and append
+                    object_t* last_child = current_obj->child;
+                    while (last_child->next) {
+                        last_child = last_child->next;
+                    }
+                    last_child->next = new_child;
+                }
+            }
+            return RESULT_OK;
+        } else {
+            // Not the last segment - navigate deeper
+            if (!found_child) {
+                // Create intermediate object
+                object_t* new_child;
+                if (object_create(pool, &new_child) != RESULT_OK) {
+                    RETURN_ERR("Failed to create intermediate object");
+                }
+
+                // Set the key name
+                char temp_key[256];
+                size_t key_len = segment_end - segment_start;
+                if (key_len >= sizeof(temp_key)) {
+                    if (object_destroy(pool, new_child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy new_child after intermediate key name too long error");
+                    }
+                    RETURN_ERR("Intermediate key name too long");
+                }
+                memcpy(temp_key, path_data + segment_start, key_len);
+                temp_key[key_len] = '\0';
+
+                if (string_create_str(pool, &new_child->string, temp_key) != RESULT_OK) {
+                    if (object_destroy(pool, new_child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy new_child after intermediate key string creation failure");
+                    }
+                    RETURN_ERR("Failed to create intermediate key string");
+                }
+
+                // Create container object for the intermediate level
+                object_t* container;
+                if (object_create(pool, &container) != RESULT_OK) {
+                    if (object_destroy(pool, new_child) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy new_child after intermediate container creation failure");
+                    }
+                    RETURN_ERR("Failed to create intermediate container");
+                }
+
+                new_child->child = container;
+
+                // Add to parent's children
+                if (!current_obj->child) {
+                    current_obj->child = new_child;
+                } else {
+                    object_t* last_child = current_obj->child;
+                    while (last_child->next) {
+                        last_child = last_child->next;
+                    }
+                    last_child->next = new_child;
+                }
+
+                current_obj = container;
+            } else {
+                // Navigate to existing child
+                if (!found_child->child) {
+                    // Create container if it doesn't exist
+                    if (object_create(pool, &found_child->child) != RESULT_OK) {
+                        RETURN_ERR("Failed to create container for existing key");
+                    }
+                }
+                current_obj = found_child->child;
+            }
+
+            current_pos = segment_end + 1; // Skip the dot
+        }
+    }
+
+    return RESULT_OK;
 }
 
 result_t object_set_string(pool_t* pool, object_t* object, const string_t* path, const string_t* value) {
@@ -1447,6 +1605,9 @@ result_t object_set_string(pool_t* pool, object_t* object, const string_t* path,
     }
 
     if (string_create_string(pool, &(value_object->string), value) != RESULT_OK) {
+        if (object_destroy(pool, value_object) != RESULT_OK) {
+            // Log error but continue
+        }
         RETURN_ERR("Failed to create value string");
     }
 
@@ -1469,8 +1630,10 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
 
     result_t result = object_provide_string(dst, object, path_str);
 
+    // Always try to destroy the path string, but don't let cleanup failures cascade
     if (string_destroy(pool, path_str) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy path string");
+        // Log the cleanup failure but don't propagate it
+        printf("Warning: Failed to destroy temporary path string for '%s'\n", path);
     }
 
     if (result != RESULT_OK) {

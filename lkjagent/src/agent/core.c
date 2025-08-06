@@ -293,9 +293,29 @@ static __attribute__((warn_unused_result)) result_t create_http_request_resource
 
 // Helper function to extract content from LLM response
 static __attribute__((warn_unused_result)) result_t extract_llm_response_content(pool_t* pool, object_t* recv_http_object, object_t** recv_content_object) {
-    if (object_provide_str(pool, recv_content_object, recv_http_object, "choices.[0].message.content") != RESULT_OK) {
-        RETURN_ERR("Failed to get content from HTTP response");
+    object_t* choices_obj;
+    object_t* first_choice_obj;
+    object_t* message_obj;
+    
+    // Navigate the JSON structure step by step: choices -> first element -> message -> content
+    if (object_provide_str(pool, &choices_obj, recv_http_object, "choices") != RESULT_OK) {
+        RETURN_ERR("Failed to get choices array from HTTP response");
     }
+    
+    // Get the first choice (assuming it's named "0" or just use the first child)
+    if (choices_obj->child == NULL) {
+        RETURN_ERR("Choices array is empty");
+    }
+    first_choice_obj = choices_obj->child;
+    
+    if (object_provide_str(pool, &message_obj, first_choice_obj, "message") != RESULT_OK) {
+        RETURN_ERR("Failed to get message from first choice");
+    }
+    
+    if (object_provide_str(pool, recv_content_object, message_obj, "content") != RESULT_OK) {
+        RETURN_ERR("Failed to get content from message");
+    }
+    
     return RESULT_OK;
 }
 
@@ -399,31 +419,13 @@ result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
 // Helper function to add thinking log entry to working memory with rotation
 static __attribute__((warn_unused_result)) result_t add_thinking_log_entry(pool_t* pool, agent_t* agent, const string_t* thinking_log) {
     object_t* working_memory;
-    object_t* config_thinking_log;
-    object_t* max_entries_obj;
     string_t* key_string;
     char key_buffer[64];
-    uint64_t max_entries = 10;  // default
+    uint64_t max_entries = 10;  // default, could be made configurable later
 
     // Get working memory
     if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
         RETURN_ERR("Failed to get working memory from agent");
-    }
-
-    // Try to get max_entries from config (optional)
-    if (object_provide_str(pool, &config_thinking_log, agent->data, "config.agent.thinking_log") == RESULT_OK) {
-        if (object_provide_str(pool, &max_entries_obj, config_thinking_log, "max_entries") == RESULT_OK) {
-            // Convert string to number (simple implementation)
-            max_entries = 0;
-            for (uint64_t i = 0; i < max_entries_obj->string->size; i++) {
-                char c = max_entries_obj->string->data[i];
-                if (c >= '0' && c <= '9') {
-                    max_entries = max_entries * 10 + (c - '0');
-                }
-            }
-            if (max_entries == 0)
-                max_entries = 10;  // fallback
-        }
     }
 
     // Find next available thinking log slot (rotate if needed)
@@ -441,14 +443,15 @@ static __attribute__((warn_unused_result)) result_t add_thinking_log_entry(pool_
                 if (string_destroy(pool, key_string) != RESULT_OK) {
                     RETURN_ERR("Failed to destroy key string after set failure");
                 }
-                RETURN_ERR("Failed to add thinking log entry");
+                RETURN_ERR("Failed to set thinking log entry");
             }
+
+            printf("Added thinking log [%s]: %.*s\n", key_buffer,
+                   (int)thinking_log->size, thinking_log->data);
 
             if (string_destroy(pool, key_string) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy key string");
+                RETURN_ERR("Failed to destroy key string after successful set");
             }
-
-            printf("Added thinking log [%s]: %.*s\n", key_buffer, (int)thinking_log->size, thinking_log->data);
             return RESULT_OK;
         }
 
@@ -457,24 +460,26 @@ static __attribute__((warn_unused_result)) result_t add_thinking_log_entry(pool_
         }
     }
 
-    // All slots full, rotate by overwriting the first one
-    snprintf(key_buffer, sizeof(key_buffer), "thinking_log_00");
+    // All slots are full, rotate (overwrite oldest entry, which is slot 0)
+    snprintf(key_buffer, sizeof(key_buffer), "thinking_log_%02d", 0);
     if (string_create_str(pool, &key_string, key_buffer) != RESULT_OK) {
-        RETURN_ERR("Failed to create thinking log rotation key string");
+        RETURN_ERR("Failed to create rotation key string");
     }
 
     if (object_set_string(pool, working_memory, key_string, thinking_log) != RESULT_OK) {
         if (string_destroy(pool, key_string) != RESULT_OK) {
             RETURN_ERR("Failed to destroy rotation key string after set failure");
         }
-        RETURN_ERR("Failed to rotate thinking log entry");
+        RETURN_ERR("Failed to set rotated thinking log entry");
     }
+
+    printf("Rotated thinking log [%s]: %.*s\n", key_buffer,
+           (int)thinking_log->size, thinking_log->data);
 
     if (string_destroy(pool, key_string) != RESULT_OK) {
         RETURN_ERR("Failed to destroy rotation key string");
     }
 
-    printf("Rotated thinking log [%s]: %.*s\n", key_buffer, (int)thinking_log->size, thinking_log->data);
     return RESULT_OK;
 }
 
@@ -768,7 +773,8 @@ static __attribute__((warn_unused_result)) result_t save_agent_memory(pool_t* po
 
     // Convert agent data to JSON string
     if (object_tostring_json(pool, &json_output, agent->data) != RESULT_OK) {
-        RETURN_ERR("Failed to convert agent data to JSON");
+        printf("Warning: Failed to convert agent data to JSON, skipping save (agent still functional)\n");
+        return RESULT_OK; // Continue execution despite save failure
     }
 
     // Write to memory file

@@ -21,7 +21,7 @@
     },
     "iterate": {
       "enable": true,
-      "max_iterations": 1000
+      "max_iterations": 10000
     },
     "state": {
       "base": {
