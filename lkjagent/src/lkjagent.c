@@ -167,8 +167,8 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
     string_t* send_string = NULL;
     string_t* content_type = NULL;
     string_t* recv_http_string = NULL;
-    // object_t* recv_http_object = NULL;
-    // object_t* recv_content_object;
+    object_t* recv_http_object = NULL;
+    object_t* recv_content_object;
     object_t* url_object;
 
     // Create send string
@@ -263,10 +263,10 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
 
     printf("Content: \n%.*s\n", (int)recv_content_object->string->size, recv_content_object->string->data);
 
-    if(lkjagent_agent_execute(pool, agent, recv_content_object->string) != RESULT_OK) {
-        // Add proper cleanup here when this is implemented
-        RETURN_ERR("Failed to execute agent with received content");
-    }
+    // if(lkjagent_agent_execute(pool, agent, recv_content_object->string) != RESULT_OK) {
+    //     // Add proper cleanup here when this is implemented
+    //     RETURN_ERR("Failed to execute agent with received content");
+    // }
 
     // Clean up all allocated resources
     if (string_destroy(pool, send_string) != RESULT_OK) {
