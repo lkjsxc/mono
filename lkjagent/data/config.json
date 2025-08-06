@@ -6,6 +6,11 @@
     "temperature": 0.7
   },
   "agent": {
+    "thinking_log": {
+      "enable": true,
+      "max_entries": 10,
+      "key_prefix": "thinking_log_"
+    },
     "paging_limit": {
       "enable": true,
       "max_tokens": 4096
@@ -21,14 +26,15 @@
     "state": {
       "base": {
         "prompt": {
-          "role": "An AI state machine that utilizes a finite working memory to output both next_state and thinking_log, while managing infinite storage. so the ultimate, librarian-like system."
+          "role": "An AI state machine that utilizes a finite working memory to output both next_state and thinking_log, while managing infinite storage. You are the ultimate librarian-like system that manages information intelligently.",
+          "instructions": "Always respond with valid XML containing an 'agent' tag. In thinking state, provide 'next_state' and 'thinking_log'. In executing state, provide 'action' with 'type', 'tags', and optionally 'value'."
         }
       },
       "thinking": {
         "prompt": {
-          "state": {
-            "thinking": "gradually stacking thinking_log.",
-            "executing": "perform actions based on the thinking_log. Actions include searching for storage, loading storage, and storing storage."
+          "state_description": {
+            "thinking": "Build reasoning chains and accumulate thinking_log entries. Analyze information and decide next actions.",
+            "executing": "Perform concrete actions: working_memory_add, working_memory_remove, storage_load, storage_save"
           },
           "output_example_case1": {
             "agent": {
@@ -52,12 +58,18 @@
       },
       "executing": {
         "prompt": {
+          "available_actions": {
+            "working_memory_add": "Add new information to working memory with tags and value",
+            "working_memory_remove": "Remove information from working memory using tags",
+            "storage_load": "Load information from persistent storage to working memory using tags",
+            "storage_save": "Save information from working memory to persistent storage using tags and value"
+          },
           "output_example_case1": {
             "agent": {
               "action": {
                 "type": "working_memory_add",
-                "tags": "character description story",
-                "value": "male, 30 years old, cautious, enjoys reading"
+                "tags": "character_david_personality",
+                "value": "introverted programmer, 28 years old, passionate about AI, prefers working alone"
               }
             }
           },
@@ -65,13 +77,44 @@
             "agent": {
               "action": {
                 "type": "working_memory_remove",
-                "tags": "bob character description story"
+                "tags": "character_bob_old_description"
+              }
+            }
+          },
+          "output_example_case3": {
+            "agent": {
+              "action": {
+                "type": "storage_load",
+                "tags": "character_alice_background"
+              }
+            }
+          },
+          "output_example_case4": {
+            "agent": {
+              "action": {
+                "type": "storage_save",
+                "tags": "story_plot_chapter1",
+                "value": "Alice discovers the mysterious letter in her grandmother's attic, setting the stage for her adventure"
+              }
+            }
+          },
+          "output_example_case5": {
+            "agent": {
+              "action": {
+                "type": "storage_save",
+                "tags": "relationship_alice_bob",
+                "value": "childhood friends, grew apart in college, recently reconnected through mutual interest in hiking"
               }
             }
           }
         }
       },
-      "paging": {}
+      "paging": {
+        "prompt": {
+          "purpose": "Manage memory overflow by intelligent context switching",
+          "strategy": "Preserve important information, archive less critical data to storage"
+        }
+      }
     }
   }
 }
