@@ -10,5 +10,6 @@
 #include "utils/object.h"
 #include "utils/pool.h"
 #include "utils/string.h"
+#include "agent/core.h"
 
 #endif

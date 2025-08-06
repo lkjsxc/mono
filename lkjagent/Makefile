@@ -4,12 +4,12 @@ CC = gcc
 # Enhanced type checking and argument validation flags
 CFLAGS = -Werror -Wall -Wextra -std=c11 -O2 -g
 LDFLAGS = -static
-INCLUDES = -Isrc/include
+INCLUDES = -Isrc/
 LIBS = 
 
 # Directories
 SRC_DIR = src
-INCLUDE_DIR = src/include
+INCLUDE_DIR = src/
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
