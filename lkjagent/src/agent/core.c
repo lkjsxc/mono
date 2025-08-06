@@ -21,7 +21,7 @@ static __attribute__((warn_unused_result)) result_t extract_llm_response_content
 static __attribute__((warn_unused_result)) result_t cleanup_http_resources(pool_t* pool, string_t* send_string, string_t* content_type, string_t* recv_http_string, object_t* recv_http_object);
 
 // Execute function declarations
-static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_t* pool, agent_t* agent, const string_t* recv);
+static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, const string_t* recv);
 
 static __attribute__((warn_unused_result)) result_t parse_llm_response(pool_t* pool, const string_t* recv, object_t** response_obj);
 
@@ -38,6 +38,119 @@ static __attribute__((warn_unused_result)) result_t update_agent_state_and_think
 static __attribute__((warn_unused_result)) result_t save_agent_memory(pool_t* pool, agent_t* agent);
 
 static __attribute__((warn_unused_result)) result_t add_thinking_log_entry(pool_t* pool, agent_t* agent, const string_t* thinking_log);
+
+// Helper function to estimate token count for working memory
+static size_t estimate_token_count(const object_t* working_memory) {
+    if (!working_memory)
+        return 0;
+
+    size_t total_tokens = 0;
+    object_t* child = working_memory->child;
+
+    while (child) {
+        if (child->string) {
+            // Rough estimation: ~4 characters per token
+            total_tokens += (child->string->size / 4) + 1;
+        }
+        if (child->child && child->child->string) {
+            // Add value tokens
+            total_tokens += (child->child->string->size / 4) + 1;
+        }
+        child = child->next;
+    }
+
+    return total_tokens;
+}
+
+// Helper function to automatically transition state after action execution
+static __attribute__((warn_unused_result)) result_t auto_transition_state(pool_t* pool, config_t* config, agent_t* agent) {
+    object_t* working_memory;
+    object_t* paging_limit_config;
+    object_t* hard_limit_config;
+    object_t* max_tokens_obj;
+    string_t* state_path;
+
+    // Get working memory
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
+        RETURN_ERR("Failed to get working memory for state transition");
+    }
+
+    // Estimate current token count
+    size_t current_tokens = estimate_token_count(working_memory);
+
+    // Get paging and hard limits from config
+    uint64_t paging_limit = 4096;  // Default
+    uint64_t hard_limit = 8192;    // Default
+
+    if (object_provide_str(pool, &paging_limit_config, config->data, "agent.paging_limit") == RESULT_OK) {
+        if (object_provide_str(pool, &max_tokens_obj, paging_limit_config, "max_tokens") == RESULT_OK) {
+            if (max_tokens_obj->string && max_tokens_obj->string->data) {
+                paging_limit = strtoull(max_tokens_obj->string->data, NULL, 10);
+            }
+        }
+    }
+
+    if (object_provide_str(pool, &hard_limit_config, config->data, "agent.hard_limit") == RESULT_OK) {
+        if (object_provide_str(pool, &max_tokens_obj, hard_limit_config, "max_tokens") == RESULT_OK) {
+            if (max_tokens_obj->string && max_tokens_obj->string->data) {
+                hard_limit = strtoull(max_tokens_obj->string->data, NULL, 10);
+            }
+        }
+    }
+
+    // Create path string for state update
+    if (string_create_str(pool, &state_path, "state") != RESULT_OK) {
+        RETURN_ERR("Failed to create state path string");
+    }
+
+    // Determine next state based on token count
+    const char* next_state;
+    if (current_tokens >= hard_limit) {
+        next_state = "paging";
+        printf("Auto-transition: executing -> paging (tokens: %zu >= hard_limit: %lu)\n",
+               current_tokens, hard_limit);
+    } else if (current_tokens >= paging_limit) {
+        next_state = "paging";
+        printf("Auto-transition: executing -> paging (tokens: %zu >= paging_limit: %lu)\n",
+               current_tokens, paging_limit);
+    } else {
+        next_state = "thinking";
+        printf("Auto-transition: executing -> thinking (tokens: %zu < paging_limit: %lu)\n",
+               current_tokens, paging_limit);
+    }
+
+    // Set the new state
+    string_t* next_state_str;
+    if (string_create_str(pool, &next_state_str, next_state) != RESULT_OK) {
+        if (string_destroy(pool, state_path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy state path string");
+        }
+        RETURN_ERR("Failed to create next state string");
+    }
+
+    if (object_set_string(pool, agent->data, state_path, next_state_str) != RESULT_OK) {
+        if (string_destroy(pool, next_state_str) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy next state string");
+        }
+        if (string_destroy(pool, state_path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy state path string");
+        }
+        RETURN_ERR("Failed to set new agent state");
+    }
+
+    if (string_destroy(pool, next_state_str) != RESULT_OK) {
+        if (string_destroy(pool, state_path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy state path string");
+        }
+        RETURN_ERR("Failed to destroy next state string");
+    }
+
+    if (string_destroy(pool, state_path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy state path string");
+    }
+
+    return RESULT_OK;
+}
 
 // Helper function to extract and validate configuration objects
 static __attribute__((warn_unused_result)) result_t extract_config_objects(pool_t* pool, config_t* config, agent_t* agent, object_t** agent_workingmemory, object_t** agent_state, object_t** config_agent_state, object_t** config_agent_state_base, object_t** config_agent_state_base_prompt, object_t** config_agent_state_main, object_t** config_agent_state_main_prompt) {
@@ -296,26 +409,26 @@ static __attribute__((warn_unused_result)) result_t extract_llm_response_content
     object_t* choices_obj;
     object_t* first_choice_obj;
     object_t* message_obj;
-    
+
     // Navigate the JSON structure step by step: choices -> first element -> message -> content
     if (object_provide_str(pool, &choices_obj, recv_http_object, "choices") != RESULT_OK) {
         RETURN_ERR("Failed to get choices array from HTTP response");
     }
-    
+
     // Get the first choice (assuming it's named "0" or just use the first child)
     if (choices_obj->child == NULL) {
         RETURN_ERR("Choices array is empty");
     }
     first_choice_obj = choices_obj->child;
-    
+
     if (object_provide_str(pool, &message_obj, first_choice_obj, "message") != RESULT_OK) {
         RETURN_ERR("Failed to get message from first choice");
     }
-    
+
     if (object_provide_str(pool, recv_content_object, message_obj, "content") != RESULT_OK) {
         RETURN_ERR("Failed to get content from message");
     }
-    
+
     return RESULT_OK;
 }
 
@@ -397,7 +510,7 @@ result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
     printf("Content: \n%.*s\n", (int)recv_content_object->string->size, recv_content_object->string->data);
 
     // Phase 7: Execute agent actions based on LLM response
-    if (lkjagent_agent_execute(pool, agent, recv_content_object->string) != RESULT_OK) {
+    if (lkjagent_agent_execute(pool, config, agent, recv_content_object->string) != RESULT_OK) {
         if (cleanup_http_resources(pool, send_string, content_type, recv_http_string, recv_http_object) != RESULT_OK) {
             RETURN_ERR("Failed to cleanup HTTP resources after agent execution failure");
         }
@@ -774,7 +887,7 @@ static __attribute__((warn_unused_result)) result_t save_agent_memory(pool_t* po
     // Convert agent data to JSON string
     if (object_tostring_json(pool, &json_output, agent->data) != RESULT_OK) {
         printf("Warning: Failed to convert agent data to JSON, skipping save (agent still functional)\n");
-        return RESULT_OK; // Continue execution despite save failure
+        return RESULT_OK;  // Continue execution despite save failure
     }
 
     // Write to memory file
@@ -793,7 +906,7 @@ static __attribute__((warn_unused_result)) result_t save_agent_memory(pool_t* po
 }
 
 // Main execution function that processes LLM responses and executes agent actions
-static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_t* pool, agent_t* agent, const string_t* recv) {
+static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, const string_t* recv) {
     object_t* response_obj = NULL;
     object_t* agent_response = NULL;
     object_t* action_obj = NULL;
@@ -809,7 +922,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_
     if (string_create(pool, &debug_string) != RESULT_OK) {
         RETURN_ERR("Failed to create debug string for LLM response");
     }
-    if(object_tostring_json(pool, &debug_string, response_obj) != RESULT_OK) {
+    if (object_tostring_json(pool, &debug_string, response_obj) != RESULT_OK) {
         printf("Failed to convert response object to JSON string");
     }
     printf("test2:\n%.*s\n", (int)debug_string->size, debug_string->data);
@@ -865,6 +978,14 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_execute(pool_
         } else {
             printf("Unknown action type: %.*s\n",
                    (int)action_type_obj->string->size, action_type_obj->string->data);
+        }
+
+        // After executing any action, automatically transition state
+        if (auto_transition_state(pool, config, agent) != RESULT_OK) {
+            if (object_destroy(pool, response_obj) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy response object after auto transition failure");
+            }
+            RETURN_ERR("Failed to automatically transition state after action execution");
         }
     } else {
         // This might be a state transition - handle it

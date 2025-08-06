@@ -74,6 +74,113 @@ static result_t process_escape_sequences(pool_t* pool, const char* input, size_t
     return RESULT_OK;
 }
 
+// Helper function to determine if a string represents a JSON primitive (number, boolean, null)
+// Returns true if the value should NOT be quoted in JSON output
+static bool is_json_primitive(const string_t* str) {
+    if (!str || str->size == 0) {
+        return false;
+    }
+
+    const char* data = str->data;
+    size_t size = str->size;
+
+    // Check for null
+    if (size == 4 && memcmp(data, "null", 4) == 0) {
+        return true;
+    }
+
+    // Check for boolean values
+    if ((size == 4 && memcmp(data, "true", 4) == 0) ||
+        (size == 5 && memcmp(data, "false", 5) == 0)) {
+        return true;
+    }
+
+    // Check for numbers (integer or floating point)
+    size_t i = 0;
+    
+    // Optional negative sign
+    if (data[i] == '-') {
+        i++;
+    }
+    
+    if (i >= size) {
+        return false;  // Just a minus sign
+    }
+    
+    // Must have at least one digit
+    if (data[i] < '0' || data[i] > '9') {
+        return false;
+    }
+    
+    // Handle integer part
+    if (data[i] == '0') {
+        i++;  // Single zero
+    } else {
+        // Non-zero digit followed by optional digits
+        while (i < size && data[i] >= '0' && data[i] <= '9') {
+            i++;
+        }
+    }
+    
+    // Optional decimal part
+    if (i < size && data[i] == '.') {
+        i++;
+        if (i >= size || data[i] < '0' || data[i] > '9') {
+            return false;  // Decimal point must be followed by digits
+        }
+        while (i < size && data[i] >= '0' && data[i] <= '9') {
+            i++;
+        }
+    }
+    
+    // Optional exponent part
+    if (i < size && (data[i] == 'e' || data[i] == 'E')) {
+        i++;
+        if (i < size && (data[i] == '+' || data[i] == '-')) {
+            i++;
+        }
+        if (i >= size || data[i] < '0' || data[i] > '9') {
+            return false;  // Exponent must have digits
+        }
+        while (i < size && data[i] >= '0' && data[i] <= '9') {
+            i++;
+        }
+    }
+    
+    // Must have consumed the entire string
+    return (i == size);
+}
+
+// Helper function to validate object integrity before JSON generation
+// Returns true if the object has valid structure for JSON serialization
+static bool validate_object_for_json(const object_t* obj) {
+    if (!obj) {
+        return true;  // NULL objects are valid (will be serialized as "null")
+    }
+
+    // If object has a string, ensure it's properly allocated and null-terminated
+    if (obj->string) {
+        if (!obj->string->data) {
+            return false;  // String data pointer is NULL
+        }
+        // Check that the string data is null-terminated (defensive check)
+        if (obj->string->size > 0 && obj->string->data[obj->string->size] != '\0') {
+            return false;  // String is not properly null-terminated
+        }
+    }
+
+    // Recursively check children
+    const object_t* child = obj->child;
+    while (child) {
+        if (!validate_object_for_json(child)) {
+            return false;
+        }
+        child = child->next;
+    }
+
+    return true;
+}
+
 // Helper function to escape characters when serializing to JSON
 static result_t escape_json_string(pool_t* pool, const string_t* input, string_t** output) {
     // Estimate output size (worst case: every character needs escaping)
@@ -452,6 +559,7 @@ static result_t parse_json_value(pool_t* pool, const char** json, const char* en
 
         (*result)->string->size = length;
         memcpy((*result)->string->data, start, length);
+        (*result)->string->data[length] = '\0';  // Null-terminate the string
         (*result)->child = NULL;
         (*result)->next = NULL;
 
@@ -860,15 +968,8 @@ static result_t object_to_json_recursive(pool_t* pool, string_t** dst, const obj
     }
 
     if (src->string && !src->child) {
-        // Leaf node - just a value (check if it's a number/boolean or string)
-        const char* data = src->string->data;
-        size_t size = src->string->size;
-
-        // Check if it looks like a number, boolean, or null
-        if ((size >= 4 && strncmp(data, "true", 4) == 0) ||
-            (size >= 5 && strncmp(data, "false", 5) == 0) ||
-            (size >= 4 && strncmp(data, "null", 4) == 0) ||
-            (size > 0 && (isdigit(data[0]) || data[0] == '-'))) {
+        // Leaf node - just a value (check if it's a primitive or string)
+        if (is_json_primitive(src->string)) {
             // Number, boolean, or null - don't quote
             return string_append_string(pool, dst, src->string);
         } else {
@@ -1002,13 +1103,18 @@ result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src)
         RETURN_ERR("Failed to create destination string");
     }
 
+    // Validate object integrity before JSON generation
+    if (!validate_object_for_json(src)) {
+        RETURN_ERR("Object contains invalid data that cannot be safely serialized to JSON");
+    }
+
     return object_to_json_recursive(pool, dst, src, 0);
 }
 
 // Helper function to escape characters when serializing to XML
 static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t** output) {
-    // Estimate output size (worst case: every character needs escaping)
-    size_t estimated_size = input->size * 6 + 1;  // &quot; is 6 chars
+    // Estimate output size (worst case: every character needs escaping with spaces)
+    size_t estimated_size = input->size * 8 + 1;  // " &quot; " is 8 chars
     if (pool_string_alloc(pool, output, estimated_size) != RESULT_OK) {
         RETURN_ERR("Failed to allocate output string for XML escaping");
     }
@@ -1021,29 +1127,29 @@ static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t*
     while (src < src_end) {
         switch (*src) {
             case '<':
-                // Expand to "&lt;"
-                memcpy(dst + dst_pos, "&lt;", 4);
-                dst_pos += 4;
+                // Expand to " &lt; "
+                memcpy(dst + dst_pos, " &lt; ", 6);
+                dst_pos += 6;
                 break;
             case '>':
-                // Expand to "&gt;"
-                memcpy(dst + dst_pos, "&gt;", 4);
-                dst_pos += 4;
+                // Expand to " &gt; "
+                memcpy(dst + dst_pos, " &gt; ", 6);
+                dst_pos += 6;
                 break;
             case '&':
-                // Expand to "&amp;"
-                memcpy(dst + dst_pos, "&amp;", 5);
-                dst_pos += 5;
+                // Expand to " &amp; "
+                memcpy(dst + dst_pos, " &amp; ", 7);
+                dst_pos += 7;
                 break;
             case '"':
-                // Expand to "&quot;"
-                memcpy(dst + dst_pos, "&quot;", 6);
-                dst_pos += 6;
+                // Expand to " &quot; "
+                memcpy(dst + dst_pos, " &quot; ", 8);
+                dst_pos += 8;
                 break;
             case '\'':
-                // Expand to "&apos;"
-                memcpy(dst + dst_pos, "&apos;", 6);
-                dst_pos += 6;
+                // Expand to " &apos; "
+                memcpy(dst + dst_pos, " &apos; ", 8);
+                dst_pos += 8;
                 break;
             default:
                 if (*src < 0x20 && *src != '\t' && *src != '\n' && *src != '\r') {
@@ -1060,6 +1166,88 @@ static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t*
 
     (*output)->size = dst_pos;
     return RESULT_OK;
+}
+
+// Helper structure to hold children for sorting
+typedef struct {
+    object_t* child;
+    char* key;
+} sorted_child_t;
+
+// Comparison function for sorting children by key name
+static int compare_children(const void* a, const void* b) {
+    const sorted_child_t* child_a = (const sorted_child_t*)a;
+    const sorted_child_t* child_b = (const sorted_child_t*)b;
+    return strcmp(child_a->key, child_b->key);
+}
+
+// Helper function to collect and sort children by their keys
+static result_t collect_and_sort_children(const object_t* parent, sorted_child_t** sorted_children, size_t* count) {
+    if (!parent || !parent->child) {
+        *sorted_children = NULL;
+        *count = 0;
+        return RESULT_OK;
+    }
+
+    // First pass: count children
+    *count = 0;
+    object_t* child = parent->child;
+    while (child) {
+        if (child->string) {
+            (*count)++;
+        }
+        child = child->next;
+    }
+
+    if (*count == 0) {
+        *sorted_children = NULL;
+        return RESULT_OK;
+    }
+
+    // Allocate array for sorted children
+    *sorted_children = malloc(*count * sizeof(sorted_child_t));
+    if (!*sorted_children) {
+        RETURN_ERR("Failed to allocate memory for sorted children array");
+    }
+
+    // Second pass: collect children and their keys
+    size_t i = 0;
+    child = parent->child;
+    while (child && i < *count) {
+        if (child->string) {
+            (*sorted_children)[i].child = child;
+            
+            // Convert key to C string for sorting
+            (*sorted_children)[i].key = malloc(child->string->size + 1);
+            if (!(*sorted_children)[i].key) {
+                // Clean up allocated keys
+                for (size_t j = 0; j < i; j++) {
+                    free((*sorted_children)[j].key);
+                }
+                free(*sorted_children);
+                RETURN_ERR("Failed to allocate memory for child key");
+            }
+            memcpy((*sorted_children)[i].key, child->string->data, child->string->size);
+            (*sorted_children)[i].key[child->string->size] = '\0';
+            i++;
+        }
+        child = child->next;
+    }
+
+    // Sort the children by key name
+    qsort(*sorted_children, *count, sizeof(sorted_child_t), compare_children);
+
+    return RESULT_OK;
+}
+
+// Helper function to free sorted children array
+static void free_sorted_children(sorted_child_t* sorted_children, size_t count) {
+    if (sorted_children) {
+        for (size_t i = 0; i < count; i++) {
+            free(sorted_children[i].key);
+        }
+        free(sorted_children);
+    }
 }
 
 // Helper function to convert object to XML string recursively
@@ -1148,12 +1336,21 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
                 RETURN_ERR("Failed to append closing bracket for object opening tag");
             }
 
-            object_t* child = first_child;
-            while (child) {
+            // Collect and sort children by their keys
+            sorted_child_t* sorted_children;
+            size_t child_count;
+            if (collect_and_sort_children(src, &sorted_children, &child_count) != RESULT_OK) {
+                RETURN_ERR("Failed to collect and sort children");
+            }
+
+            // Process children in sorted order
+            for (size_t i = 0; i < child_count; i++) {
+                object_t* child = sorted_children[i].child;
                 if (child->string) {
                     // Use the key as the element name
                     string_t* key_escaped;
                     if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to escape key for XML element name");
                     }
 
@@ -1161,8 +1358,10 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
                     char* key_cstr = malloc(key_escaped->size + 1);
                     if (!key_cstr) {
                         if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                            free_sorted_children(sorted_children, child_count);
                             RETURN_ERR("Failed to destroy escaped key");
                         }
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to allocate memory for key string");
                     }
                     memcpy(key_cstr, key_escaped->data, key_escaped->size);
@@ -1171,19 +1370,23 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
                     if (object_to_xml_recursive(pool, dst, child->child, depth + 1, key_cstr) != RESULT_OK) {
                         free(key_cstr);
                         if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                            free_sorted_children(sorted_children, child_count);
                             RETURN_ERR("Failed to destroy escaped key");
                         }
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to convert child to XML");
                     }
 
                     free(key_cstr);
                     if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to destroy escaped key");
                     }
                 }
-
-                child = child->next;
             }
+
+            // Clean up sorted children array
+            free_sorted_children(sorted_children, child_count);
 
             if (string_append_str(pool, dst, "</") != RESULT_OK) {
                 RETURN_ERR("Failed to append opening of closing tag for object");
@@ -1261,13 +1464,21 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
 
         // Check if this is an object (has key-value pairs) or array
         if (first_child && first_child->string) {
-            // Object with key-value pairs - output children directly
-            object_t* child = first_child;
-            while (child) {
+            // Object with key-value pairs - output children directly in sorted order
+            sorted_child_t* sorted_children;
+            size_t child_count;
+            if (collect_and_sort_children(src, &sorted_children, &child_count) != RESULT_OK) {
+                RETURN_ERR("Failed to collect and sort root-level children");
+            }
+
+            // Process children in sorted order
+            for (size_t i = 0; i < child_count; i++) {
+                object_t* child = sorted_children[i].child;
                 if (child->string) {
                     // Use the key as the element name
                     string_t* key_escaped;
                     if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to escape key for XML element name");
                     }
 
@@ -1275,8 +1486,10 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
                     char* key_cstr = malloc(key_escaped->size + 1);
                     if (!key_cstr) {
                         if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                            free_sorted_children(sorted_children, child_count);
                             RETURN_ERR("Failed to destroy escaped key");
                         }
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to allocate memory for key string");
                     }
                     memcpy(key_cstr, key_escaped->data, key_escaped->size);
@@ -1285,19 +1498,23 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
                     if (object_to_xml_recursive(pool, dst, child->child, 1, key_cstr) != RESULT_OK) {
                         free(key_cstr);
                         if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                            free_sorted_children(sorted_children, child_count);
                             RETURN_ERR("Failed to destroy escaped key");
                         }
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to convert child to XML");
                     }
 
                     free(key_cstr);
                     if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        free_sorted_children(sorted_children, child_count);
                         RETURN_ERR("Failed to destroy escaped key");
                     }
                 }
-
-                child = child->next;
             }
+
+            // Clean up sorted children array
+            free_sorted_children(sorted_children, child_count);
             return RESULT_OK;
         } else {
             // Array - output items directly

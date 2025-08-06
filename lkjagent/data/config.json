@@ -8,16 +8,16 @@
   "agent": {
     "thinking_log": {
       "enable": true,
-      "max_entries": 10,
+      "max_entries": 4,
       "key_prefix": "thinking_log_"
     },
     "paging_limit": {
       "enable": true,
-      "max_tokens": 4096
+      "max_tokens": 1024
     },
     "hard_limit": {
       "enable": true,
-      "max_tokens": 8192
+      "max_tokens": 2048
     },
     "iterate": {
       "enable": true,
@@ -111,9 +111,98 @@
       },
       "paging": {
         "prompt": {
-          "purpose": "Manage memory overflow by intelligent context switching",
-          "strategy": "Preserve important information, archive less critical data to storage"
+          "purpose": "Intelligently manage memory overflow by analyzing working_memory contents and selecting items to archive",
+          "strategy": "Examine each item in working_memory, evaluate its importance and relevance, then selectively move less critical items to storage while preserving essential information",
+          "instructions": "When in paging mode: 1) Analyze all items currently in working_memory, 2) Identify which items are less critical or can be summarized, 3) Use storage_save to archive selected items with descriptive tags, 4) Use working_memory_remove to clean up archived items, 5) Keep only the most relevant and active information in working_memory. Always respond with valid XML containing an 'agent' tag with 'action' for memory management operations.",
+          "state_description": {
+            "paging": "Examine working_memory contents and intelligently select items to archive to storage. Prioritize keeping recent, active, and task-relevant information while archiving older thinking logs, completed subtasks, and reference data."
+          },
+          "selection_criteria": {
+            "keep_in_memory": ["current todo items", "active character information", "recent thinking logs", "ongoing tasks", "immediate context"],
+            "archive_to_storage": ["old thinking logs (>3 entries ago)", "completed subtasks", "reference information", "historical context", "processed data"]
+          },
+          "output_example_case1": {
+            "comment": "LLM examines working_memory and decides to archive old thinking logs",
+            "agent": {
+              "action": {
+                "type": "storage_save",
+                "tags": "archived_thinking_session_001",
+                "value": "Early thinking logs: Initial character setup for Alice (adventurous, nature-loving), brainstormed story directions, considered adding more characters to reach goal of 10."
+              }
+            }
+          },
+          "output_example_case2": {
+            "comment": "LLM removes the archived item from working memory",
+            "agent": {
+              "action": {
+                "type": "working_memory_remove",
+                "tags": "thinking_log_00"
+              }
+            }
+          },
+          "output_example_case3": {
+            "comment": "LLM archives character details that are now stable",
+            "agent": {
+              "action": {
+                "type": "storage_save",
+                "tags": "character_profiles_established",
+                "value": "Alice: female, 25, adventurous, loves nature. Charlie: male, 28, easygoing, enjoys hiking. Both characters now have established backgrounds."
+              }
+            }
+          },
+          "output_example_case4": {
+            "comment": "LLM preserves current todo while archiving completed analysis",
+            "agent": {
+              "action": {
+                "type": "storage_save",
+                "tags": "completed_character_analysis",
+                "value": "Analyzed existing characters Alice and Charlie. Determined need for additional characters to meet 'Add characters until 10' requirement. Character development strategy established."
+              }
+            }
+          },
+          "output_example_case5": {
+            "comment": "LLM adds a summary of cleanup actions taken",
+            "agent": {
+              "action": {
+                "type": "working_memory_add",
+                "tags": "paging_summary",
+                "value": "Memory cleanup completed. Archived old thinking logs and character analysis. Working memory now optimized for continuing character development task."
+              }
+            }
+          }
         }
+      }
+    }
+  },
+  "documentation": {
+    "paging_system": {
+      "description": "LLM-driven memory management system that activates when working memory approaches token limits",
+      "trigger_conditions": {
+        "paging_limit_reached": "When estimated tokens >= paging_limit (1024), system transitions to paging mode",
+        "hard_limit_reached": "When estimated tokens >= hard_limit (2048), system forces paging mode immediately"
+      },
+      "llm_driven_approach": {
+        "analysis_phase": "LLM examines all items currently in working_memory",
+        "decision_making": "LLM evaluates importance, relevance, and recency of each item",
+        "selection_process": "LLM chooses which items to archive based on context and task requirements",
+        "intelligent_summarization": "LLM creates meaningful summaries when archiving multiple related items"
+      },
+      "paging_strategies": {
+        "contextual_analysis": "LLM analyzes working memory content to understand current context",
+        "smart_selection": "LLM selects items to archive based on importance and relevance",
+        "intelligent_summarization": "LLM combines related items into coherent summaries before archiving",
+        "preserve_context": "LLM maintains task continuity by keeping essential information active"
+      },
+      "example_workflow": {
+        "step1": "Working memory reaches 1024+ tokens",
+        "step2": "System auto-transitions from 'executing' to 'paging'",
+        "step3": "LLM analyzes working memory: todo, character_alice_about, thinking_log_00, thinking_log_01",
+        "step4": "LLM decides: keep 'todo' (current task), archive old thinking logs",
+        "step5": "LLM creates summary: 'Early session focused on Alice character development'",
+        "step6": "LLM saves summary to storage with descriptive tag",
+        "step7": "LLM removes archived items from working memory",
+        "step8": "System auto-transitions back to 'thinking' mode",
+        "step9": "LLM continues with optimized working memory"
       }
     }
   }
