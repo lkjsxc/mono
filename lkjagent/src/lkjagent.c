@@ -166,7 +166,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_makeprompt(po
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, config_t* config, agent_t* agent) {
     string_t* send_string;
     string_t* content_type;
-    
+
     string_t* recv_http_string;
     object_t* recv_http_object;
 
@@ -241,18 +241,20 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
-    if (lkjagent_step(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
-        RETURN_ERR("Failed to run lkjagent step");
+    for (int i = 0; i < 5; i++) {
+        if (lkjagent_step(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
+            RETURN_ERR("Failed to run lkjagent step");
+        }
     }
 
     return RESULT_OK;
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_deinit(lkjagent_t* lkjagent) {
-    if(object_destroy(&lkjagent->pool, lkjagent->agent.data) != RESULT_OK) {
+    if (object_destroy(&lkjagent->pool, lkjagent->agent.data) != RESULT_OK) {
         RETURN_ERR("Failed to destroy agent data");
     }
-    if(object_destroy(&lkjagent->pool, lkjagent->config.data) != RESULT_OK) {
+    if (object_destroy(&lkjagent->pool, lkjagent->config.data) != RESULT_OK) {
         RETURN_ERR("Failed to destroy config data");
     }
     printf("string16 freelist: %lu\n", lkjagent->pool.string16_freelist_count);
@@ -279,7 +281,7 @@ int main() {
         RETURN_ERR("Failed to run lkjagent");
     }
 
-    if(lkjagent_deinit(lkjagent) != RESULT_OK) {
+    if (lkjagent_deinit(lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to deinitialize lkjagent");
     }
 
