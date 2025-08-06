@@ -188,8 +188,8 @@ static result_t extract_response_body(pool_t* pool, const string_t* raw_response
             body_start += 2;
         } else {
             // No body separator found - return empty body
-            if (string_create(pool, body) != RESULT_OK) {
-                RETURN_ERR("Failed to create empty response body");
+            if (string_clear(pool, body) != RESULT_OK) {
+                RETURN_ERR("Failed to clear empty response body");
             }
             return RESULT_OK;
         }
@@ -225,6 +225,9 @@ static result_t extract_response_body(pool_t* pool, const string_t* raw_response
     // Extract body content
     size_t body_len = end - body_start;
     if (body_len > 0) {
+        if(pool_string_free(pool, *body) != RESULT_OK) {
+            RETURN_ERR("Failed to free existing body string");
+        }
         if (pool_string_alloc(pool, body, body_len + 1) != RESULT_OK) {
             RETURN_ERR("Failed to allocate response body string");
         }
@@ -233,8 +236,8 @@ static result_t extract_response_body(pool_t* pool, const string_t* raw_response
         (*body)->size = body_len;
     } else {
         // Empty body
-        if (string_create(pool, body) != RESULT_OK) {
-            RETURN_ERR("Failed to create empty response body");
+        if (string_clear(pool, body) != RESULT_OK) {
+            RETURN_ERR("Failed to clear empty response body");
         }
     }
 
