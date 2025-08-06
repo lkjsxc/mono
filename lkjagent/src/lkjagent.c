@@ -164,50 +164,111 @@ static __attribute__((warn_unused_result)) result_t lkjagent_agent_makeprompt(po
 // }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, config_t* config, agent_t* agent) {
-    string_t* send_string;
-    string_t* content_type;
-
-    string_t* recv_http_string;
-    object_t* recv_http_object;
-
+    string_t* send_string = NULL;
+    string_t* content_type = NULL;
+    string_t* recv_http_string = NULL;
+    object_t* recv_http_object = NULL;
     object_t* recv_content_object;
     object_t* url_object;
 
+    // Create send string
     if (string_create(pool, &send_string) != RESULT_OK) {
         RETURN_ERR("Failed to create send string");
     }
+
+    // Generate prompt
     if (lkjagent_agent_makeprompt(pool, config, agent, &send_string) != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after makeprompt failure");
+        }
         RETURN_ERR("Failed to create prompt for agent");
     }
+
     printf("Send: \n%.*s\n", (int)send_string->size, send_string->data);
+
+    // Create content type string
     if (string_create_str(pool, &content_type, "application/json") != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after content_type failure");
+        }
         RETURN_ERR("Failed to create content type string");
     }
+
+    // Get URL from config
     if (object_provide_str(pool, &url_object, config->data, "llm.endpoint") != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after URL failure");
+        }
+        if (string_destroy(pool, content_type) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy content type after URL failure");
+        }
         RETURN_ERR("Failed to get URL from config");
     }
+
+    // Create response string
     if (string_create(pool, &recv_http_string) != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after response creation failure");
+        }
+        if (string_destroy(pool, content_type) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy content type after response creation failure");
+        }
         RETURN_ERR("Failed to create response string");
     }
 
+    // Send HTTP POST request
     if (http_post(pool, url_object->string, content_type, send_string, &recv_http_string) != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after HTTP failure");
+        }
+        if (string_destroy(pool, content_type) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy content type after HTTP failure");
+        }
+        if (string_destroy(pool, recv_http_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy response string after HTTP failure");
+        }
         RETURN_ERR("Failed to send HTTP POST request");
     }
 
+    // Parse JSON response
     if (object_parse_json(pool, &recv_http_object, recv_http_string) != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after JSON parse failure");
+        }
+        if (string_destroy(pool, content_type) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy content type after JSON parse failure");
+        }
+        if (string_destroy(pool, recv_http_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy response string after JSON parse failure");
+        }
         RETURN_ERR("Failed to parse HTTP response JSON");
     }
 
+    // Extract content from response
     if (object_provide_str(pool, &recv_content_object, recv_http_object, "choices.[0].message.content") != RESULT_OK) {
+        if (string_destroy(pool, send_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy send string after content extraction failure");
+        }
+        if (string_destroy(pool, content_type) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy content type after content extraction failure");
+        }
+        if (string_destroy(pool, recv_http_string) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy response string after content extraction failure");
+        }
+        if (object_destroy(pool, recv_http_object) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy response object after content extraction failure");
+        }
         RETURN_ERR("Failed to get content from HTTP response");
     }
 
     printf("Content: \n%.*s\n", (int)recv_content_object->string->size, recv_content_object->string->data);
 
     // if(lkjagent_agent_execute(pool, agent, recv_content_object->string) != RESULT_OK) {
+    //     // Add proper cleanup here when this is implemented
     //     RETURN_ERR("Failed to execute agent with received content");
     // }
 
+    // Clean up all allocated resources
     if (string_destroy(pool, send_string) != RESULT_OK) {
         RETURN_ERR("Failed to destroy send string");
     }

@@ -250,16 +250,21 @@ result_t http_get(pool_t* pool, const string_t* url, string_t** response) {
     string_t* raw_response = NULL;
     uint16_t port;
     int sock_fd = -1;
-    result_t result = RESULT_ERR;
 
     // Parse URL components
     if (extract_url_components(url, &host, &port, &path, pool) != RESULT_OK) {
-        goto cleanup;
+        RETURN_ERR("Failed to extract URL components");
     }
 
     // Create HTTP GET request
     if (string_create(pool, &request) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request creation failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request creation failure");
+        }
+        RETURN_ERR("Failed to create HTTP request string");
     }
 
     // Build request: "GET /path HTTP/1.1\r\nHost: hostname\r\nConnection: close\r\n\r\n"
@@ -268,44 +273,82 @@ result_t http_get(pool_t* pool, const string_t* url, string_t** response) {
         string_append_str(pool, &request, " HTTP/1.1\r\nHost: ") != RESULT_OK ||
         string_append_string(pool, &request, host) != RESULT_OK ||
         string_append_str(pool, &request, "\r\nConnection: close\r\n\r\n") != RESULT_OK) {
-        goto cleanup;
+        
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request build failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request build failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after request build failure");
+        }
+        RETURN_ERR("Failed to build HTTP GET request");
     }
 
     // Create connection
     if (create_connection(host, port, &sock_fd) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after connection failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after connection failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after connection failure");
+        }
+        RETURN_ERR("Failed to create connection");
     }
 
     // Send request and receive response
     if (send_http_request(pool, sock_fd, request, &raw_response) != RESULT_OK) {
-        goto cleanup;
+        close(sock_fd);
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request send failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request send failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after request send failure");
+        }
+        RETURN_ERR("Failed to send HTTP request and receive response");
     }
 
     // Extract response body
     if (extract_response_body(pool, raw_response, response) != RESULT_OK) {
-        goto cleanup;
-    }
-
-    result = RESULT_OK;
-
-cleanup:
-    if (sock_fd >= 0) {
         close(sock_fd);
-    }
-    if (host && string_destroy(pool, host) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (path && string_destroy(pool, path) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (request && string_destroy(pool, request) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (raw_response && string_destroy(pool, raw_response) != RESULT_OK) {
-        result = RESULT_ERR;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after body extraction failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after body extraction failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after body extraction failure");
+        }
+        if (string_destroy(pool, raw_response) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy raw response string after body extraction failure");
+        }
+        RETURN_ERR("Failed to extract response body");
     }
 
-    return result;
+    // Clean up all resources
+    close(sock_fd);
+    if (string_destroy(pool, host) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy host string");
+    }
+    if (string_destroy(pool, path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy path string");
+    }
+    if (string_destroy(pool, request) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy request string");
+    }
+    if (string_destroy(pool, raw_response) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy raw response string");
+    }
+
+    return RESULT_OK;
 }
 
 result_t http_post(pool_t* pool, const string_t* url, const string_t* content_type, const string_t* body, string_t** response) {
@@ -315,89 +358,179 @@ result_t http_post(pool_t* pool, const string_t* url, const string_t* content_ty
     string_t* raw_response = NULL;
     uint16_t port;
     int sock_fd = -1;
-    result_t result = RESULT_ERR;
 
     // Parse URL components
     if (extract_url_components(url, &host, &port, &path, pool) != RESULT_OK) {
-        goto cleanup;
+        RETURN_ERR("Failed to extract URL components");
     }
 
     // Create HTTP POST request
     if (string_create(pool, &request) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request creation failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request creation failure");
+        }
+        RETURN_ERR("Failed to create HTTP request string");
     }
 
     // Build request line
     if (string_append_str(pool, &request, "POST ") != RESULT_OK ||
         string_append_string(pool, &request, path) != RESULT_OK ||
         string_append_str(pool, &request, " HTTP/1.1\r\n") != RESULT_OK) {
-        goto cleanup;
+        
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request line build failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request line build failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after request line build failure");
+        }
+        RETURN_ERR("Failed to build HTTP POST request line");
     }
 
     // Add Host header
     if (string_append_str(pool, &request, "Host: ") != RESULT_OK ||
         string_append_string(pool, &request, host) != RESULT_OK ||
         string_append_str(pool, &request, "\r\n") != RESULT_OK) {
-        goto cleanup;
+        
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after host header failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after host header failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after host header failure");
+        }
+        RETURN_ERR("Failed to add Host header");
     }
 
     // Add Content-Type header
     if (string_append_str(pool, &request, "Content-Type: ") != RESULT_OK ||
         string_append_string(pool, &request, content_type) != RESULT_OK ||
         string_append_str(pool, &request, "\r\n") != RESULT_OK) {
-        goto cleanup;
+        
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after content type header failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after content type header failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after content type header failure");
+        }
+        RETURN_ERR("Failed to add Content-Type header");
     }
 
     // Add Content-Length header
     char content_length[64];
     snprintf(content_length, sizeof(content_length), "Content-Length: %lu\r\n", body->size);
     if (string_append_str(pool, &request, content_length) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after content length header failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after content length header failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after content length header failure");
+        }
+        RETURN_ERR("Failed to add Content-Length header");
     }
 
     // Add Connection header and end headers
     if (string_append_str(pool, &request, "Connection: close\r\n\r\n") != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after connection header failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after connection header failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after connection header failure");
+        }
+        RETURN_ERR("Failed to add Connection header");
     }
 
     // Add body
     if (string_append_string(pool, &request, body) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after body append failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after body append failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after body append failure");
+        }
+        RETURN_ERR("Failed to add request body");
     }
 
     // Create connection
     if (create_connection(host, port, &sock_fd) != RESULT_OK) {
-        goto cleanup;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after connection failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after connection failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after connection failure");
+        }
+        RETURN_ERR("Failed to create connection");
     }
 
     // Send request and receive response
     if (send_http_request(pool, sock_fd, request, &raw_response) != RESULT_OK) {
-        goto cleanup;
+        close(sock_fd);
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after request send failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after request send failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after request send failure");
+        }
+        RETURN_ERR("Failed to send HTTP request and receive response");
     }
 
     // Extract response body
     if (extract_response_body(pool, raw_response, response) != RESULT_OK) {
-        goto cleanup;
-    }
-
-    result = RESULT_OK;
-
-cleanup:
-    if (sock_fd >= 0) {
         close(sock_fd);
-    }
-    if (host && string_destroy(pool, host) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (path && string_destroy(pool, path) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (request && string_destroy(pool, request) != RESULT_OK) {
-        result = RESULT_ERR;
-    }
-    if (raw_response && string_destroy(pool, raw_response) != RESULT_OK) {
-        result = RESULT_ERR;
+        if (string_destroy(pool, host) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy host string after body extraction failure");
+        }
+        if (string_destroy(pool, path) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy path string after body extraction failure");
+        }
+        if (string_destroy(pool, request) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy request string after body extraction failure");
+        }
+        if (string_destroy(pool, raw_response) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy raw response string after body extraction failure");
+        }
+        RETURN_ERR("Failed to extract response body");
     }
 
-    return result;
+    // Clean up all resources
+    close(sock_fd);
+    if (string_destroy(pool, host) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy host string");
+    }
+    if (string_destroy(pool, path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy path string");
+    }
+    if (string_destroy(pool, request) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy request string");
+    }
+    if (string_destroy(pool, raw_response) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy raw response string");
+    }
+
+    return RESULT_OK;
 }
