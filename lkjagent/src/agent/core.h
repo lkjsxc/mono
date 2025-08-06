@@ -10,6 +10,7 @@
 #include "utils/object.h"
 #include "utils/http.h"
 
-__attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, config_t* config, agent_t* agent);
+// Main agent processing function - orchestrates the full LLM interaction cycle
+__attribute__((warn_unused_result)) result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent);
 
 #endif

@@ -72,7 +72,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(lkjagent_t* lk
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkjagent) {
     for (int i = 0; i < 5; i++) {
-        if (lkjagent_step(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
+        if (lkjagent_agent(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
             RETURN_ERR("Failed to run lkjagent step");
         }
     }
