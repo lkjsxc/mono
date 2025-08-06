@@ -175,45 +175,45 @@ static result_t send_http_request(pool_t* pool, int sock_fd, const string_t* req
 
 // Helper function to extract HTTP response body
 static result_t extract_response_body(pool_t* pool, const string_t* raw_response, string_t** body) {
-    const char* data = raw_response->data;
-    const char* end = data + raw_response->size;
-
     // Find the end of headers (double CRLF or double LF)
-    const char* body_start = strstr(data, "\r\n\r\n");
-    if (body_start) {
-        body_start += 4;
+    int64_t body_start_crlf = string_find_str(raw_response, "\r\n\r\n", 0);
+    int64_t body_start_lf = string_find_str(raw_response, "\n\n", 0);
+    int64_t body_start = -1;
+    int header_separator_len = 0;
+    
+    if (body_start_crlf >= 0) {
+        body_start = body_start_crlf + 4;
+        header_separator_len = 4;
+    } else if (body_start_lf >= 0) {
+        body_start = body_start_lf + 2;
+        header_separator_len = 2;
     } else {
-        body_start = strstr(data, "\n\n");
-        if (body_start) {
-            body_start += 2;
-        } else {
-            // No body separator found - return empty body
-            if (string_clear(pool, body) != RESULT_OK) {
-                RETURN_ERR("Failed to clear empty response body");
-            }
-            return RESULT_OK;
+        // No body separator found - return empty body
+        if (string_clear(pool, body) != RESULT_OK) {
+            RETURN_ERR("Failed to clear empty response body");
         }
+        return RESULT_OK;
     }
 
     // Check status code before extracting body
-    if (strncmp(data, "HTTP/", 5) != 0) {
+    if (raw_response->size < 5 || strncmp(raw_response->data, "HTTP/", 5) != 0) {
         RETURN_ERR("Invalid HTTP response format");
     }
 
-    // Skip to status code
-    const char* status_pos = data;
-    while (status_pos < end && *status_pos != ' ') {
-        status_pos++;
+    // Find first space (after HTTP version) to locate status code
+    int64_t first_space = string_find_char(raw_response, ' ', 0);
+    if (first_space < 0 || first_space + 4 >= (int64_t)raw_response->size) {
+        RETURN_ERR("Invalid HTTP response - no status code found");
     }
-    if (status_pos >= end) {
-        RETURN_ERR("Invalid HTTP response - no status code");
-    }
-    status_pos++; // Skip space
 
-    // Parse status code
+    // Extract and parse status code (3 digits after the space)
     char status_str[4] = {0};
-    for (int i = 0; i < 3 && status_pos < end && isdigit(*status_pos); i++, status_pos++) {
-        status_str[i] = *status_pos;
+    for (int i = 0; i < 3 && (first_space + 1 + i) < (int64_t)raw_response->size; i++) {
+        char c = raw_response->data[first_space + 1 + i];
+        if (c < '0' || c > '9') {
+            RETURN_ERR("Invalid status code format");
+        }
+        status_str[i] = c;
     }
     int status_code = atoi(status_str);
 
@@ -222,20 +222,48 @@ static result_t extract_response_body(pool_t* pool, const string_t* raw_response
         RETURN_ERR("HTTP request failed with non-2xx status code");
     }
 
-    // Extract body content
-    size_t body_len = end - body_start;
-    if (body_len > 0) {
-        if(pool_string_free(pool, *body) != RESULT_OK) {
-            RETURN_ERR("Failed to free existing body string");
+    // Extract body content using string utilities
+    if (body_start < (int64_t)raw_response->size) {
+        size_t body_len = raw_response->size - body_start;
+        if (body_len > 0) {
+            // Create a temporary string to hold the body data
+            string_t* temp_body;
+            if (string_create(pool, &temp_body) != RESULT_OK) {
+                RETURN_ERR("Failed to create temporary body string");
+            }
+            
+            // Allocate enough space for the body
+            if (pool_string_realloc(pool, &temp_body, body_len + 1) != RESULT_OK) {
+                if (string_destroy(pool, temp_body) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy temporary body string");
+                }
+                RETURN_ERR("Failed to allocate space for response body");
+            }
+            
+            // Copy the body data
+            memcpy(temp_body->data, raw_response->data + body_start, body_len);
+            temp_body->data[body_len] = '\0';
+            temp_body->size = body_len;
+            
+            // Copy the body to the output parameter using string utilities
+            if (string_copy_string(pool, body, temp_body) != RESULT_OK) {
+                if (string_destroy(pool, temp_body) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy temporary body string");
+                }
+                RETURN_ERR("Failed to copy body to output string");
+            }
+            
+            if (string_destroy(pool, temp_body) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy temporary body string");
+            }
+        } else {
+            // Empty body
+            if (string_clear(pool, body) != RESULT_OK) {
+                RETURN_ERR("Failed to clear empty response body");
+            }
         }
-        if (pool_string_alloc(pool, body, body_len + 1) != RESULT_OK) {
-            RETURN_ERR("Failed to allocate response body string");
-        }
-        memcpy((*body)->data, body_start, body_len);
-        (*body)->data[body_len] = '\0';
-        (*body)->size = body_len;
     } else {
-        // Empty body
+        // Body start is beyond the response size - empty body
         if (string_clear(pool, body) != RESULT_OK) {
             RETURN_ERR("Failed to clear empty response body");
         }
