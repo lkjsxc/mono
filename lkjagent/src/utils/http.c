@@ -179,14 +179,11 @@ static result_t extract_response_body(pool_t* pool, const string_t* raw_response
     int64_t body_start_crlf = string_find_str(raw_response, "\r\n\r\n", 0);
     int64_t body_start_lf = string_find_str(raw_response, "\n\n", 0);
     int64_t body_start = -1;
-    int header_separator_len = 0;
     
     if (body_start_crlf >= 0) {
         body_start = body_start_crlf + 4;
-        header_separator_len = 4;
     } else if (body_start_lf >= 0) {
         body_start = body_start_lf + 2;
-        header_separator_len = 2;
     } else {
         // No body separator found - return empty body
         if (string_clear(pool, body) != RESULT_OK) {

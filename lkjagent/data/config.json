@@ -31,32 +31,42 @@
             "executing": "perform actions based on the thinking_log. Actions include searching for storage, loading storage, and storing storage."
           },
           "output_example_case1": {
-            "next_state": "thinking",
-            "thinking_log": "Perhaps Alice is an important person. We may need to think more deeply about this."
+            "agent": {
+              "next_state": "thinking",
+              "thinking_log": "Perhaps Alice is an important person. We may need to think more deeply about this."
+            }
           },
           "output_example_case2": {
-            "next_state": "executing",
-            "thinking_log": "I need a little more context. Let's search the storage."
+            "agent": {
+              "next_state": "executing",
+              "thinking_log": "I need a little more context. Let's search the storage."
+            }
           },
           "output_example_case3": {
-            "next_state": "thinking",
-            "thinking_log": "It seems we need to process less important information. We won't need any information about John in particular."
+            "agent": {
+              "next_state": "thinking",
+              "thinking_log": "It seems we need to process less important information. We won't need any information about John in particular."
+            }
           }
         }
       },
       "executing": {
         "prompt": {
           "output_example_case1": {
-            "action": {
-              "type": "working_memory_add",
-              "tags": "character description story",
-              "value": "male, 30 years old, cautious, enjoys reading"
+            "agent": {
+              "action": {
+                "type": "working_memory_add",
+                "tags": "character description story",
+                "value": "male, 30 years old, cautious, enjoys reading"
+              }
             }
           },
           "output_example_case2": {
-            "action": {
-              "type": "working_memory_remove",
-              "tags": "bob character description story"
+            "agent": {
+              "action": {
+                "type": "working_memory_remove",
+                "tags": "bob character description story"
+              }
             }
           }
         }
