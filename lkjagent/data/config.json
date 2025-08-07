@@ -27,14 +27,15 @@
       "base": {
         "prompt": {
           "role": "An AI state machine that utilizes a finite working memory to output both next_state and thinking_log, while managing infinite storage. You are the ultimate librarian-like system that manages information intelligently.",
-          "instructions": "Always respond with valid XML containing an 'agent' tag. In thinking state, provide 'next_state' and 'thinking_log'. In executing state, provide 'action' with 'type', 'tags', and optionally 'value'."
+          "instructions": "Always respond with valid XML containing an 'agent' tag. In thinking state, provide 'next_state' and 'thinking_log'. In executing state, provide 'action' with 'type', 'tags', and optionally 'value' (NO next_state). In evaluating state, provide 'next_state' (always 'thinking') and 'evaluation_log'."
         }
       },
       "thinking": {
         "prompt": {
           "state_description": {
             "thinking": "Build reasoning chains and accumulate thinking_log entries. Analyze information and decide next actions.",
-            "executing": "Perform concrete actions: working_memory_add, working_memory_remove, storage_load, storage_save"
+            "executing": "Perform concrete actions: working_memory_add, working_memory_remove, storage_load, storage_save. Actions automatically transition to evaluating state.",
+            "evaluating": "Reflect on completed actions, analyze progress, and provide evaluation insights before returning to thinking."
           },
           "output_example_case1": {
             "agent": {
@@ -105,6 +106,39 @@
                 "tags": "relationship_alice_bob",
                 "value": "childhood friends, grew apart in college, recently reconnected through mutual interest in hiking"
               }
+            }
+          }
+        }
+      },
+      "evaluating": {
+        "prompt": {
+          "purpose": "Analyze the results of the last action and determine the overall progress towards goals",
+          "instructions": "Review what just happened, assess the current state of working memory and storage, evaluate progress towards objectives, and decide what to focus on next. Always respond with valid XML containing an 'agent' tag with 'next_state' (always 'thinking') and 'evaluation_log'.",
+          "state_description": {
+            "evaluating": "Reflect on the completed action, analyze current memory state, assess goal progress, and provide insights for the next thinking cycle."
+          },
+          "output_example_case1": {
+            "agent": {
+              "next_state": "thinking",
+              "evaluation_log": "Successfully added character information to working memory. Current status: 2 characters developed (Alice, Charlie), need 8 more to reach goal of 10 characters. Working memory is organized and contains relevant context for continuing character development."
+            }
+          },
+          "output_example_case2": {
+            "agent": {
+              "next_state": "thinking",
+              "evaluation_log": "Loaded Alice's background from storage. Now have comprehensive information about Alice available in working memory. Good foundation for developing relationships or continuing story development. Memory usage is efficient."
+            }
+          },
+          "output_example_case3": {
+            "agent": {
+              "next_state": "thinking",
+              "evaluation_log": "Archived completed character analysis to storage and cleaned working memory. Memory is now optimized for next phase of work. Ready to continue with character development task with clear focus."
+            }
+          },
+          "output_example_case4": {
+            "agent": {
+              "next_state": "thinking",
+              "evaluation_log": "Removed outdated information from working memory. Current context is cleaner and more focused. Can now proceed with developing new characters without confusion from stale data."
             }
           }
         }

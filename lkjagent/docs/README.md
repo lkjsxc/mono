@@ -6,19 +6,23 @@ LKJAgent is a sophisticated AI agent system implemented in C that operates as a 
 
 ## Key Features
 
-- **State Machine Architecture**: Operates in distinct states (thinking, executing, paging)
+- **Modular State Machine Architecture**: Four distinct states (thinking, executing, evaluating, paging) with automatic transitions
+- **Reflection and Assessment**: Mandatory evaluating state provides continuous progress assessment
 - **Memory Management**: Dual-layer memory system with working memory and persistent storage
 - **LLM Integration**: Communicates with external language models via HTTP REST API
 - **Memory Pool System**: Custom memory allocator for efficient resource management
 - **JSON/XML Processing**: Robust parsing and generation capabilities
 - **Docker Support**: Containerized deployment with minimal attack surface
+- **Modular Codebase**: Separated concerns across specialized modules for maintainability
 
 ## Architecture Components
 
-1. **Agent Core** (`src/agent/core.c`, `src/agent/core.h`)
-   - Main agent orchestration logic
-   - State machine implementation
-   - LLM interaction handling
+1. **Agent Core** (`src/agent/`)
+   - **Core Orchestration** (`core.c`, `core.h`) - Main processing cycle coordination
+   - **State Management** (`state.c`, `state.h`) - State transitions and memory-aware logic
+   - **Prompt Generation** (`prompt.c`, `prompt.h`) - LLM prompt construction and formatting
+   - **HTTP Communication** (`http.c`, `http.h`) - LLM interaction and response processing
+   - **Action Execution** (`actions.c`, `actions.h`) - Memory operations and persistence
 
 2. **Memory Pool System** (`src/utils/pool.c`, `src/utils/pool.h`)
    - Custom memory allocator with multiple size pools
@@ -44,8 +48,9 @@ LKJAgent is a sophisticated AI agent system implemented in C that operates as a 
 ## Documentation Structure
 
 - [Architecture Overview](./architecture.md) - System design and component relationships
+- [Modular Architecture](./modular-architecture.md) - Detailed breakdown of the new modular design
 - [Memory Management](./memory-management.md) - Pool allocator and object lifecycle
-- [State Machine](./state-machine.md) - Agent states and transition logic
+- [State Machine](./state-machine.md) - Agent states and transition logic (including new evaluating state)
 - [LLM Integration](./llm-integration.md) - Communication protocol and prompt engineering
 - [Configuration](./configuration.md) - System configuration and parameters
 - [API Reference](./api-reference.md) - Function documentation and usage

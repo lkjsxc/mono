@@ -38,11 +38,34 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
         }
     } else {
         // This might be a state transition - handle it
-        if (agent_state_update_and_log(pool, agent, response_obj) != RESULT_OK) {
-            if (object_destroy(pool, response_obj) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy response object after state update failure");
+        // Check if we're in evaluating state and need special transition logic
+        object_t* current_state;
+        if (object_provide_str(pool, &current_state, agent->data, "state") == RESULT_OK) {
+            if (strncmp(current_state->string->data, "evaluating", current_state->string->size) == 0) {
+                // Special handling for evaluating state transitions (memory-aware)
+                if (agent_state_handle_evaluation_transition(pool, config, agent, response_obj) != RESULT_OK) {
+                    if (object_destroy(pool, response_obj) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy response object after evaluation transition failure");
+                    }
+                    RETURN_ERR("Failed to handle evaluation state transition");
+                }
+            } else {
+                // Regular state update for thinking and other states
+                if (agent_state_update_and_log(pool, agent, response_obj) != RESULT_OK) {
+                    if (object_destroy(pool, response_obj) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy response object after state update failure");
+                    }
+                    RETURN_ERR("Failed to update agent state");
+                }
             }
-            RETURN_ERR("Failed to update agent state");
+        } else {
+            // Fallback to regular state update if we can't determine current state
+            if (agent_state_update_and_log(pool, agent, response_obj) != RESULT_OK) {
+                if (object_destroy(pool, response_obj) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy response object after state update failure");
+                }
+                RETURN_ERR("Failed to update agent state");
+            }
         }
     }
 

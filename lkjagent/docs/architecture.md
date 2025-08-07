@@ -52,10 +52,11 @@ LKJAgent implements a **reactive AI agent architecture** that combines:
 
 ### 1. Agent State Machine
 
-The agent operates in three distinct states:
+The agent operates in four distinct states:
 
 - **Thinking State**: Processes information, builds reasoning chains, decides on next actions
-- **Executing State**: Performs concrete actions on memory (add, remove, load, save)
+- **Executing State**: Performs concrete actions on memory (add, remove, load, save) - automatically transitions to evaluating
+- **Evaluating State**: Reflects on completed actions, analyzes progress, provides insights - always returns to thinking (unless memory overflow forces paging)
 - **Paging State**: Manages memory overflow through intelligent context switching
 
 ### 2. Memory Architecture

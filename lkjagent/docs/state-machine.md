@@ -17,10 +17,16 @@ LKJAgent implements a finite state machine that governs AI behavior through dist
 2. **Executing State**
    - **Purpose**: Concrete actions on memory and storage
    - **Duration**: Single action per cycle
-   - **Output**: `action` with `type`, `tags`, and `value`
-   - **Transitions**: → `thinking` (default return)
+   - **Output**: `action` with `type`, `tags`, and `value` (NO `next_state`)
+   - **Transitions**: → `evaluating` (automatic, always)
 
-3. **Paging State** (Planned)
+3. **Evaluating State**
+   - **Purpose**: Reflection on completed actions and progress assessment
+   - **Duration**: Single evaluation per cycle
+   - **Output**: `next_state` (always "thinking") and `evaluation_log`
+   - **Transitions**: → `thinking` (default) or → `paging` (memory overflow)
+
+4. **Paging State**
    - **Purpose**: Memory overflow management
    - **Duration**: Single paging operation
    - **Output**: Context switching decisions
@@ -36,42 +42,71 @@ LKJAgent implements a finite state machine that governs AI behavior through dist
           │
           ▼
 ┌─────────────────┐
-│   Initialize    │◄──────────────┐
-│   Agent State   │               │
-└─────────┬───────┘               │
-          │                       │
-          ▼                       │
-┌─────────────────┐               │
-│    THINKING     │               │
-│                 │               │
-│ • Analyze info  │◄──────────────┤
-│ • Build chains  │               │
-│ • Make decisions│               │
-└─────────┬───────┘               │
-          │                       │
-          ▼                       │
-    ┌─────────┐                   │
-    │Decision?│                   │
-    └────┬────┘                   │
-         │                       │
-    ┌────▼────┐                   │
-    │Continue │  ┌─────────────┐  │
-    │thinking?│  │   Action    │  │
-    └────┬────┘  │  required?  │  │
-         │       └─────┬───────┘  │
-         │ No          │ Yes      │
-         │             ▼          │
-         │    ┌─────────────────┐ │
-         │    │   EXECUTING     │ │
-         │    │                 │ │
-         │    │ • Memory ops    │ │
-         │    │ • Storage ops   │─┘
-         │    │ • State updates │
-         │    └─────────────────┘
-         │
-         ▼
+│   Initialize    │
+│   Agent State   │
+└─────────┬───────┘
+          │
+          ▼
 ┌─────────────────┐
-│   Agent Cycle   │
+│    THINKING     │◄─────────────────┐
+│                 │                  │
+│ • Analyze info  │                  │
+│ • Build chains  │                  │
+│ • Make decisions│                  │
+└─────────┬───────┘                  │
+          │                          │
+          ▼                          │
+    ┌─────────┐                      │
+    │Decision?│                      │
+    └────┬────┘                      │
+         │                          │
+    ┌────▼────┐                      │
+    │Continue │  ┌─────────────┐     │
+    │thinking?│  │   Action    │     │
+    └────┬────┘  │  required?  │     │
+         │       └─────┬───────┘     │
+         │ No          │ Yes         │
+         │             ▼             │
+         │    ┌─────────────────┐    │
+         │    │   EXECUTING     │    │
+         │    │                 │    │
+         │    │ • Memory ops    │    │
+         │    │ • Storage ops   │    │
+         │    │ • State updates │    │
+         │    └─────────┬───────┘    │
+         │              │            │
+         │              ▼            │
+         │    ┌─────────────────┐    │
+         │    │   EVALUATING    │    │
+         │    │                 │    │
+         │    │ • Reflect       │    │
+         │    │ • Assess        │    │
+         │    │ • Log insights  │    │
+         │    └─────────┬───────┘    │
+         │              │            │
+         │              ▼            │
+         │        ┌─────────┐        │
+         │        │Memory   │        │
+         │        │overflow?│        │
+         │        └────┬────┘        │
+         │             │             │
+         │             ▼             │
+         │      ┌─────────────┐      │
+         │  No  │    Yes      │      │
+         └──────┤             │      │
+                │   ┌─────────────────┐
+                │   │     PAGING      │
+                │   │                 │
+                │   │ • Archive items │
+                │   │ • Clean memory  │
+                │   │ • Optimize      │
+                │   └─────────────────┘
+                │             │
+                └─────────────┘
+                              │
+                              ▼
+┌─────────────────┐          │
+│   Agent Cycle   │◄─────────┘
 │    Complete     │
 └─────────────────┘
 ```
@@ -147,8 +182,31 @@ Located in `data/config.json` under `agent.state.base.prompt`:
 ```
 
 **Transition Rules:**
-- After executing any action → Automatically return to thinking state
+- After executing any action → Automatically transition to evaluating state
 - Invalid action → Return to thinking state with error logged
+
+### Evaluating State Processing
+
+```c
+// In evaluating state, agent outputs:
+{
+  "agent": {
+    "next_state": "thinking", // Always "thinking"
+    "evaluation_log": "Reflection and assessment content"
+  }
+}
+```
+
+**Transition Rules:**
+- `next_state: "thinking"` → Return to thinking (default)
+- Memory overflow detected → Automatically transition to paging state
+- Memory within limits → Proceed to thinking state
+
+**Memory-Aware Transitions:**
+- The system checks memory usage after evaluation
+- If tokens >= paging_limit → Force transition to paging instead of thinking
+- If tokens >= hard_limit → Force immediate paging transition
+- Otherwise → Proceed to thinking as requested
 
 ## Action Execution Details
 
