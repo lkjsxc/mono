@@ -279,15 +279,11 @@ result_t agent_actions_save_memory(pool_t* pool, agent_t* agent) {
 
 // Parse LLM response content (XML format)
 result_t agent_actions_parse_response(pool_t* pool, const string_t* response_content, object_t** response_obj) {
-    // Try to parse XML response
-    if (object_parse_xml(pool, response_obj, response_content) == RESULT_OK) {
-        // XML parsing succeeded, return the parsed object
-        return RESULT_OK;
-    }
+    // Skip XML parsing entirely and use string-based extraction
+    // This is more reliable than trying to parse potentially malformed XML
     
-    // XML parsing failed - create a minimal response based on string analysis
     if (object_create(pool, response_obj) != RESULT_OK) {
-        RETURN_ERR("Failed to create fallback response object");
+        RETURN_ERR("Failed to create response object");
     }
     
     // Create agent object
@@ -296,80 +292,149 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
         if (object_destroy(pool, *response_obj) != RESULT_OK) {
             RETURN_ERR("Failed to destroy response object after agent creation failure");
         }
-        RETURN_ERR("Failed to create agent object for fallback");
+        RETURN_ERR("Failed to create agent object");
     }
     
-    // Simple string-based analysis to determine next state
+    // Extract values using simple string search
+    const char* content = (response_content && response_content->data) ? response_content->data : "";
+    
+    // Look for next_state
     string_t* next_state_value = NULL;
-    const char* next_state_str = "thinking"; // Default fallback
+    const char* next_state_start = strstr(content, "<next_state>");
+    const char* next_state_end = strstr(content, "</next_state>");
     
-    // Look for evaluation_log in the response content to determine state
-    if (response_content != NULL && response_content->data != NULL) {
-        if (strstr(response_content->data, "evaluation_log") != NULL) {
-            next_state_str = "thinking"; // evaluation typically transitions to thinking
-        } else if (strstr(response_content->data, "thinking_log") != NULL) {
-            next_state_str = "thinking"; // thinking log means stay in thinking
+    if (next_state_start && next_state_end && next_state_end > next_state_start) {
+        // Extract the content between tags
+        next_state_start += strlen("<next_state>");
+        size_t state_len = next_state_end - next_state_start;
+        
+        if (state_len > 0 && state_len < 64) { // Reasonable length check
+            char state_buffer[65];
+            strncpy(state_buffer, next_state_start, state_len);
+            state_buffer[state_len] = '\0';
+            
+            if (string_create_str(pool, &next_state_value, state_buffer) == RESULT_OK) {
+                string_t* next_state_path = NULL;
+                if (string_create_str(pool, &next_state_path, "next_state") == RESULT_OK) {
+                    if (object_set_string(pool, agent_obj, next_state_path, next_state_value) != RESULT_OK) {
+                        // Log error but continue - this is non-critical for fallback parsing
+                    }
+                    if (string_destroy(pool, next_state_path) != RESULT_OK) {
+                        // Log error but continue - cleanup failure is non-critical
+                    }
+                }
+                if (string_destroy(pool, next_state_value) != RESULT_OK) {
+                    // Log error but continue - cleanup failure is non-critical
+                }
+            }
         }
     }
     
-    // Create next_state value
-    if (string_create_str(pool, &next_state_value, next_state_str) != RESULT_OK) {
-        if (object_destroy(pool, *response_obj) != RESULT_OK ||
-            object_destroy(pool, agent_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy objects after string creation failure");
+    // Look for evaluation_log
+    const char* eval_log_start = strstr(content, "<evaluation_log>");
+    const char* eval_log_end = strstr(content, "</evaluation_log>");
+    
+    if (eval_log_start && eval_log_end && eval_log_end > eval_log_start) {
+        eval_log_start += strlen("<evaluation_log>");
+        size_t log_len = eval_log_end - eval_log_start;
+        
+        if (log_len > 0 && log_len < 1024) { // Reasonable length check
+            string_t* eval_log_value = NULL;
+            // Create string directly with the extracted content
+            char log_buffer[1025];
+            strncpy(log_buffer, eval_log_start, log_len);
+            log_buffer[log_len] = '\0';
+            
+            if (string_create_str(pool, &eval_log_value, log_buffer) == RESULT_OK) {
+                string_t* eval_log_path = NULL;
+                if (string_create_str(pool, &eval_log_path, "evaluation_log") == RESULT_OK) {
+                    if (object_set_string(pool, agent_obj, eval_log_path, eval_log_value) != RESULT_OK) {
+                        // Log error but continue - this is non-critical for fallback parsing
+                    }
+                    if (string_destroy(pool, eval_log_path) != RESULT_OK) {
+                        // Log error but continue - cleanup failure is non-critical
+                    }
+                }
+                if (string_destroy(pool, eval_log_value) != RESULT_OK) {
+                    // Log error but continue - cleanup failure is non-critical
+                }
+            }
         }
-        RETURN_ERR("Failed to create next_state string for fallback");
     }
     
-    // Set next_state in agent object
-    string_t* next_state_path = NULL;
-    if (string_create_str(pool, &next_state_path, "next_state") != RESULT_OK) {
-        if (string_destroy(pool, next_state_value) != RESULT_OK ||
-            object_destroy(pool, *response_obj) != RESULT_OK ||
-            object_destroy(pool, agent_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy resources after path creation failure");
+    // Look for thinking_log
+    const char* think_log_start = strstr(content, "<thinking_log>");
+    const char* think_log_end = strstr(content, "</thinking_log>");
+    
+    if (think_log_start && think_log_end && think_log_end > think_log_start) {
+        think_log_start += strlen("<thinking_log>");
+        size_t log_len = think_log_end - think_log_start;
+        
+        if (log_len > 0 && log_len < 1024) { // Reasonable length check
+            string_t* think_log_value = NULL;
+            // Create string directly with the extracted content
+            char log_buffer[1025];
+            strncpy(log_buffer, think_log_start, log_len);
+            log_buffer[log_len] = '\0';
+            
+            if (string_create_str(pool, &think_log_value, log_buffer) == RESULT_OK) {
+                string_t* think_log_path = NULL;
+                if (string_create_str(pool, &think_log_path, "thinking_log") == RESULT_OK) {
+                    if (object_set_string(pool, agent_obj, think_log_path, think_log_value) != RESULT_OK) {
+                        // Log error but continue - this is non-critical for fallback parsing
+                    }
+                    if (string_destroy(pool, think_log_path) != RESULT_OK) {
+                        // Log error but continue - cleanup failure is non-critical
+                    }
+                }
+                if (string_destroy(pool, think_log_value) != RESULT_OK) {
+                    // Log error but continue - cleanup failure is non-critical
+                }
+            }
         }
-        RETURN_ERR("Failed to create next_state path for fallback");
     }
     
-    if (object_set_string(pool, agent_obj, next_state_path, next_state_value) != RESULT_OK) {
-        if (string_destroy(pool, next_state_value) != RESULT_OK ||
-            string_destroy(pool, next_state_path) != RESULT_OK ||
-            object_destroy(pool, *response_obj) != RESULT_OK ||
-            object_destroy(pool, agent_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy resources after set failure");
+    // If no meaningful content was found, set a default next_state
+    object_t* check_next_state = NULL;
+    if (object_provide_str(pool, &check_next_state, agent_obj, "next_state") != RESULT_OK) {
+        // No next_state found, set default
+        string_t* default_state = NULL;
+        string_t* state_path = NULL;
+        if (string_create_str(pool, &default_state, "thinking") == RESULT_OK &&
+            string_create_str(pool, &state_path, "next_state") == RESULT_OK) {
+            if (object_set_string(pool, agent_obj, state_path, default_state) != RESULT_OK) {
+                // Log error but continue - this is non-critical for fallback parsing
+            }
+            if (string_destroy(pool, default_state) != RESULT_OK) {
+                // Log error but continue - cleanup failure is non-critical
+            }
+            if (string_destroy(pool, state_path) != RESULT_OK) {
+                // Log error but continue - cleanup failure is non-critical
+            }
         }
-        RETURN_ERR("Failed to set next_state in fallback agent object");
     }
     
     // Add agent object to response
     string_t* agent_path = NULL;
     if (string_create_str(pool, &agent_path, "agent") != RESULT_OK) {
-        if (string_destroy(pool, next_state_value) != RESULT_OK ||
-            string_destroy(pool, next_state_path) != RESULT_OK ||
-            object_destroy(pool, *response_obj) != RESULT_OK ||
+        if (object_destroy(pool, *response_obj) != RESULT_OK ||
             object_destroy(pool, agent_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy resources after agent path creation failure");
+            RETURN_ERR("Failed to destroy objects after agent path creation failure");
         }
-        RETURN_ERR("Failed to create agent path for fallback response");
+        RETURN_ERR("Failed to create agent path");
     }
     
     if (object_set(pool, *response_obj, agent_path, agent_obj) != RESULT_OK) {
-        if (string_destroy(pool, next_state_value) != RESULT_OK ||
-            string_destroy(pool, next_state_path) != RESULT_OK ||
-            string_destroy(pool, agent_path) != RESULT_OK ||
+        if (string_destroy(pool, agent_path) != RESULT_OK ||
             object_destroy(pool, *response_obj) != RESULT_OK ||
             object_destroy(pool, agent_obj) != RESULT_OK) {
             RETURN_ERR("Failed to destroy resources after agent set failure");
         }
-        RETURN_ERR("Failed to set agent object in fallback response");
+        RETURN_ERR("Failed to set agent object in response");
     }
     
-    // Clean up strings
-    if (string_destroy(pool, next_state_value) != RESULT_OK ||
-        string_destroy(pool, next_state_path) != RESULT_OK ||
-        string_destroy(pool, agent_path) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy strings after fallback response creation");
+    if (string_destroy(pool, agent_path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy agent path");
     }
     
     return RESULT_OK;
