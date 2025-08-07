@@ -43,4 +43,7 @@ __attribute__((warn_unused_result)) result_t agent_state_check_memory_limits(poo
 // Execute paging operation to manage memory overflow
 __attribute__((warn_unused_result)) result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* agent);
 
+// Synchronize all logs with working memory for consistent access
+__attribute__((warn_unused_result)) result_t agent_state_sync_logs_to_working_memory(pool_t* pool, agent_t* agent);
+
 #endif

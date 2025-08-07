@@ -64,11 +64,16 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
         }
     }
 
-    // Phase 4: Save the updated agent memory to file (make this more robust)
+    // Phase 4: Synchronize logs to working memory for consistent access
+    if (agent_state_sync_logs_to_working_memory(pool, agent) != RESULT_OK) {
+        // Don't fail the cycle if sync fails, just continue
+    }
+
+    // Phase 5: Save the updated agent memory to file (make this more robust)
     result_t save_result = agent_actions_save_memory(pool, agent);
     (void)save_result; // Don't fail the cycle if save fails
 
-    // Phase 5: Clean up
+    // Phase 6: Clean up
     if (object_destroy(pool, response_obj) != RESULT_OK) {
         // Don't fail if cleanup fails, just continue
     }

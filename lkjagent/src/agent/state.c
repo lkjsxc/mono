@@ -156,17 +156,8 @@ result_t agent_state_estimate_tokens(pool_t* pool, agent_t* agent, uint64_t* tok
     // Rough token estimation: 1 token per 4 characters (common approximation)
     *token_count = memory_string->size / 4;
     
-    // Add estimation for thinking logs
-    uint64_t log_count = 0;
-    char log_key[64];
-    for (uint64_t i = 1; i <= 10; i++) {  // Check up to 10 thinking logs
-        snprintf(log_key, sizeof(log_key), "thinking_log_%03lu", (unsigned long)i);
-        object_t* log_obj = NULL;
-        if (object_provide_str(pool, &log_obj, agent->data, log_key) == RESULT_OK) {
-            log_count++;
-            *token_count += log_obj->string->size / 4;
-        }
-    }
+    // Note: thinking logs and evaluation logs are now included in working memory JSON,
+    // so no need for separate counting - they're already included in the above calculation
     
     if (string_destroy(pool, memory_string) != RESULT_OK) {
         RETURN_ERR("Failed to destroy memory string after token estimation");
@@ -226,7 +217,7 @@ result_t agent_state_update_state(pool_t* pool, agent_t* agent, const char* new_
     return RESULT_OK;
 }
 
-// Handle thinking log entries with rotation
+// Handle thinking log entries with rotation and working memory integration
 result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj) {
     object_t* thinking_log_obj = NULL;
     object_t* config_thinking_log = NULL;
@@ -254,69 +245,93 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
         }
     }
     
-    // Find the next available thinking log slot
+    // Find the next available thinking log slot in working memory
     char log_key[64];
     uint64_t next_index = 1;
     
-    // Find the highest existing index
+    // Get working memory to check existing logs
+    object_t* working_memory = NULL;
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
+        printf("Error: Failed to get working memory for thinking log management\n");
+        return RESULT_OK;
+    }
+    
+    // Find the highest existing index in working memory
     for (uint64_t i = 1; i <= max_entries; i++) {
         snprintf(log_key, sizeof(log_key), "thinking_log_%03lu", (unsigned long)i);
         object_t* existing_log = NULL;
-        if (object_provide_str(pool, &existing_log, agent->data, log_key) == RESULT_OK) {
+        if (object_provide_str(pool, &existing_log, working_memory, log_key) == RESULT_OK) {
             next_index = i + 1;
         }
     }
     
     // If we've exceeded max entries, rotate (remove first, shift others)
     if (next_index > max_entries) {
-        // Shift all logs down by one position
+        // Remove oldest entry from working memory before rotation
+        char oldest_wm_key[64];
+        snprintf(oldest_wm_key, sizeof(oldest_wm_key), "thinking_log_%03lu", (unsigned long)1);
+        string_t* oldest_wm_key_string = NULL;
+        string_t* empty_string = NULL;
+        if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
+            string_create_str(pool, &empty_string, "") == RESULT_OK) {
+            // Remove from working memory (ignore result as this is cleanup)
+            if (!object_set_string(pool, working_memory, oldest_wm_key_string, empty_string)) {
+                printf("Error: Failed to clear old thinking log from working memory\n");
+            }
+            if (!string_destroy(pool, oldest_wm_key_string)) {
+                printf("Error: Failed to destroy oldest working memory key string\n");
+            }
+            if (!string_destroy(pool, empty_string)) {
+                printf("Error: Failed to destroy empty string\n");
+            }
+        }
+        
+        // Shift all logs down by one position - only in working memory
         for (uint64_t i = 1; i < max_entries; i++) {
             char old_key[64], new_key[64];
             snprintf(old_key, sizeof(old_key), "thinking_log_%03lu", (unsigned long)(i + 1));
             snprintf(new_key, sizeof(new_key), "thinking_log_%03lu", (unsigned long)i);
             
             object_t* log_to_move = NULL;
-            if (object_provide_str(pool, &log_to_move, agent->data, old_key) == RESULT_OK) {
+            if (object_provide_str(pool, &log_to_move, working_memory, old_key) == RESULT_OK) {
                 string_t* new_key_string = NULL;
                 if (string_create_str(pool, &new_key_string, new_key) != RESULT_OK) {
-                    return RESULT_OK; // Don't fail on rotation error
+                    continue; // Skip this rotation on error
                 }
                 
-                result_t set_result = object_set_string(pool, agent->data, new_key_string, log_to_move->string);
-                
-                if (string_destroy(pool, new_key_string) != RESULT_OK) {
-                    return RESULT_OK; // Don't fail on cleanup error
+                // Move within working memory only
+                if (!object_set_string(pool, working_memory, new_key_string, log_to_move->string)) {
+                    printf("Error: Failed to rotate thinking log in working memory\n");
                 }
                 
-                if (set_result != RESULT_OK) {
-                    return RESULT_OK; // Don't fail on rotation error
+                if (!string_destroy(pool, new_key_string)) {
+                    printf("Error: Failed to destroy new key string during rotation\n");
                 }
             }
         }
         next_index = max_entries;
     }
     
-    // Add the new thinking log entry
+    // Add the new thinking log entry - only to working memory
     snprintf(log_key, sizeof(log_key), "thinking_log_%03lu", (unsigned long)next_index);
     string_t* log_key_string = NULL;
     if (string_create_str(pool, &log_key_string, log_key) != RESULT_OK) {
         return RESULT_OK; // Don't fail on key creation error
     }
     
-    result_t set_result = object_set_string(pool, agent->data, log_key_string, thinking_log_obj->string);
+    // Add to working memory
+    if (!object_set_string(pool, working_memory, log_key_string, thinking_log_obj->string)) {
+        printf("Error: Failed to add thinking log to working memory\n");
+    }
     
     if (string_destroy(pool, log_key_string) != RESULT_OK) {
         return RESULT_OK; // Don't fail on cleanup error
     }
     
-    if (set_result != RESULT_OK) {
-        return RESULT_OK; // Don't fail on set error
-    }
-    
     return RESULT_OK;
 }
 
-// Handle evaluation log entries
+// Handle evaluation log entries with working memory integration
 result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_t* response_obj) {
     object_t* evaluation_log_obj = NULL;
     
@@ -326,37 +341,63 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
         return RESULT_OK;
     }
     
-    // Find the next available evaluation log slot (simple increment)
+    // Find the next available evaluation log slot (simple increment) in working memory
     char log_key[64];
     uint64_t next_index = 1;
     
-    // Find the highest existing index
+    // Get working memory to check existing logs
+    object_t* working_memory = NULL;
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
+        RETURN_ERR("Failed to get working memory for evaluation log management");
+    }
+    
+    // Find the highest existing index in working memory
     for (uint64_t i = 1; i <= 10; i++) {  // Check up to 10 evaluation logs
         snprintf(log_key, sizeof(log_key), "evaluation_log_%03lu", (unsigned long)i);
         object_t* existing_log = NULL;
-        if (object_provide_str(pool, &existing_log, agent->data, log_key) == RESULT_OK) {
+        if (object_provide_str(pool, &existing_log, working_memory, log_key) == RESULT_OK) {
             next_index = i + 1;
         }
     }
     
     // Limit evaluation logs to prevent memory overflow
     if (next_index > 10) {
+        // Remove oldest entry from working memory before replacing
+        char oldest_wm_key[64];
+        snprintf(oldest_wm_key, sizeof(oldest_wm_key), "evaluation_log_%03lu", (unsigned long)1);
+        string_t* oldest_wm_key_string = NULL;
+        string_t* empty_string = NULL;
+        if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
+            string_create_str(pool, &empty_string, "") == RESULT_OK) {
+            // Remove from working memory (ignore result as this is cleanup)
+            if (!object_set_string(pool, working_memory, oldest_wm_key_string, empty_string)) {
+                printf("Error: Failed to clear old evaluation log from working memory\n");
+            }
+            if (!string_destroy(pool, oldest_wm_key_string)) {
+                printf("Error: Failed to destroy oldest evaluation working memory key string\n");
+            }
+            if (!string_destroy(pool, empty_string)) {
+                printf("Error: Failed to destroy empty string for evaluation log\n");
+            }
+        }
+        
         // Replace the last entry
         next_index = 10;
     }
     
-    // Add the new evaluation log entry
+    // Add the new evaluation log entry - only to working memory
     snprintf(log_key, sizeof(log_key), "evaluation_log_%03lu", (unsigned long)next_index);
     string_t* log_key_string = NULL;
     if (string_create_str(pool, &log_key_string, log_key) != RESULT_OK) {
         RETURN_ERR("Failed to create evaluation log key string");
     }
     
-    if (object_set_string(pool, agent->data, log_key_string, evaluation_log_obj->string) != RESULT_OK) {
+    // Add to working memory only (working_memory already available from above)
+    if (!object_set_string(pool, working_memory, log_key_string, evaluation_log_obj->string)) {
         if (string_destroy(pool, log_key_string) != RESULT_OK) {
             RETURN_ERR("Failed to destroy evaluation log key string after set failure");
         }
-        RETURN_ERR("Failed to set evaluation log entry");
+        RETURN_ERR("Failed to add evaluation log to working memory");
     }
     
     if (string_destroy(pool, log_key_string) != RESULT_OK) {
@@ -439,13 +480,13 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
     // Simple paging strategy: move least recently used items from working memory to storage
     // For this implementation, we'll move items with certain prefixes to storage
     
-    // Find items to page out (example: old thinking logs)
+    // Find items to page out (example: old thinking logs and evaluation logs)
     for (uint64_t i = 1; i <= 5; i++) {  // Page out older thinking logs
         char old_log_key[64];
         snprintf(old_log_key, sizeof(old_log_key), "thinking_log_%03lu", (unsigned long)i);
         
         object_t* log_to_page = NULL;
-        if (object_provide_str(pool, &log_to_page, agent->data, old_log_key) == RESULT_OK) {
+        if (object_provide_str(pool, &log_to_page, working_memory, old_log_key) == RESULT_OK) {
             // Move to storage with archived prefix
             char storage_key[128]; // Increased buffer size to prevent truncation
             snprintf(storage_key, sizeof(storage_key), "archived_%s", old_log_key);
@@ -463,9 +504,9 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
             }
             
             // Remove from working memory by setting to empty
-            string_t* agent_key_string = NULL;
+            string_t* wm_key_string = NULL;
             string_t* empty_string = NULL;
-            if (string_create_str(pool, &agent_key_string, old_log_key) != RESULT_OK ||
+            if (string_create_str(pool, &wm_key_string, old_log_key) != RESULT_OK ||
                 string_create_str(pool, &empty_string, "") != RESULT_OK) {
                 if (string_destroy(pool, storage_key_string) != RESULT_OK) {
                     RETURN_ERR("Failed to destroy storage key string after removal failure");
@@ -473,22 +514,74 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
                 RETURN_ERR("Failed to create strings for log removal");
             }
             
-            if (object_set_string(pool, agent->data, agent_key_string, empty_string) != RESULT_OK) {
+            if (!object_set_string(pool, working_memory, wm_key_string, empty_string)) {
                 if (string_destroy(pool, storage_key_string) != RESULT_OK ||
-                    string_destroy(pool, agent_key_string) != RESULT_OK ||
+                    string_destroy(pool, wm_key_string) != RESULT_OK ||
                     string_destroy(pool, empty_string) != RESULT_OK) {
                     RETURN_ERR("Failed to destroy strings after removal failure");
                 }
-                RETURN_ERR("Failed to remove log from agent memory during paging");
+                RETURN_ERR("Failed to remove log from working memory during paging");
             }
             
             if (string_destroy(pool, storage_key_string) != RESULT_OK ||
-                string_destroy(pool, agent_key_string) != RESULT_OK ||
+                string_destroy(pool, wm_key_string) != RESULT_OK ||
                 string_destroy(pool, empty_string) != RESULT_OK) {
                 RETURN_ERR("Failed to destroy strings after paging operation");
             }
         }
     }
     
+    // Also page out older evaluation logs
+    for (uint64_t i = 1; i <= 5; i++) {  // Page out older evaluation logs
+        char old_log_key[64];
+        snprintf(old_log_key, sizeof(old_log_key), "evaluation_log_%03lu", (unsigned long)i);
+        
+        object_t* log_to_page = NULL;
+        if (object_provide_str(pool, &log_to_page, working_memory, old_log_key) == RESULT_OK) {
+            // Move to storage with archived prefix
+            char storage_key[128];
+            snprintf(storage_key, sizeof(storage_key), "archived_%s", old_log_key);
+            
+            string_t* storage_key_string = NULL;
+            if (string_create_str(pool, &storage_key_string, storage_key) != RESULT_OK) {
+                continue; // Skip this entry on error
+            }
+            
+            if (object_set_string(pool, storage, storage_key_string, log_to_page->string) == RESULT_OK) {
+                // Remove from working memory only
+                string_t* wm_key_string = NULL;
+                string_t* empty_string = NULL;
+                if (string_create_str(pool, &wm_key_string, old_log_key) == RESULT_OK &&
+                    string_create_str(pool, &empty_string, "") == RESULT_OK) {
+                    
+                    if (!object_set_string(pool, working_memory, wm_key_string, empty_string)) {
+                        printf("Error: Failed to remove evaluation log from working memory during paging\n");
+                    }
+                    
+                    if (!string_destroy(pool, wm_key_string)) {
+                        printf("Error: Failed to destroy working memory key string during evaluation log paging\n");
+                    }
+                    if (!string_destroy(pool, empty_string)) {
+                        printf("Error: Failed to destroy empty string during evaluation log paging\n");
+                    }
+                }
+            }
+            
+            if (!string_destroy(pool, storage_key_string)) {
+                printf("Error: Failed to destroy storage key string during evaluation log paging\n");
+            }
+        }
+    }
+    
+    return RESULT_OK;
+}
+
+// Synchronize all logs with working memory for consistent access
+result_t agent_state_sync_logs_to_working_memory(pool_t* pool, agent_t* agent) {
+    (void)pool;  // Mark as unused
+    (void)agent; // Mark as unused
+    
+    // Since logs are now stored exclusively in working memory,
+    // no synchronization is needed - they're already where they should be
     return RESULT_OK;
 }
