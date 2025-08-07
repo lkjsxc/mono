@@ -85,13 +85,12 @@ static bool is_json_primitive(const string_t* str) {
     size_t size = str->size;
 
     // Check for null
-    if (size == 4 && memcmp(data, "null", 4) == 0) {
+    if (string_equal_str(str, "null")) {
         return true;
     }
 
     // Check for boolean values
-    if ((size == 4 && memcmp(data, "true", 4) == 0) ||
-        (size == 5 && memcmp(data, "false", 5) == 0)) {
+    if (string_equal_str(str, "true") || string_equal_str(str, "false")) {
         return true;
     }
 
@@ -552,14 +551,18 @@ static result_t parse_json_value(pool_t* pool, const char** json, const char* en
             RETURN_ERR("Failed to allocate object for primitive value");
         }
 
+        // Create a temporary null-terminated string from the segment
         size_t length = current - start;
-        if (pool_string_alloc(pool, &((*result)->string), length + 1) != RESULT_OK) {
-            RETURN_ERR("Failed to allocate string for primitive value");
+        char temp_str[length + 1];
+        memcpy(temp_str, start, length);
+        temp_str[length] = '\0';
+        
+        if (string_create_str(pool, &((*result)->string), temp_str) != RESULT_OK) {
+            if (pool_object_free(pool, *result) != RESULT_OK) {
+                RETURN_ERR("Failed to cleanup object after string creation failure");
+            }
+            RETURN_ERR("Failed to create string for primitive value");
         }
-
-        (*result)->string->size = length;
-        memcpy((*result)->string->data, start, length);
-        (*result)->string->data[length] = '\0';  // Null-terminate the string
         (*result)->child = NULL;
         (*result)->next = NULL;
 
@@ -631,12 +634,14 @@ static result_t parse_xml_tag_name(pool_t* pool, const char** xml, const char* e
         RETURN_ERR("Empty XML tag name");
     }
 
-    if (pool_string_alloc(pool, result, length + 1) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate string for XML tag name");
+    // Create a temporary null-terminated string from the tag name segment
+    char temp_str[length + 1];
+    memcpy(temp_str, start, length);
+    temp_str[length] = '\0';
+    
+    if (string_create_str(pool, result, temp_str) != RESULT_OK) {
+        RETURN_ERR("Failed to create string for XML tag name");
     }
-
-    (*result)->size = length;
-    memcpy((*result)->data, start, length);
 
     *xml = current;
     return RESULT_OK;
@@ -669,12 +674,14 @@ static result_t parse_xml_text_content(pool_t* pool, const char** xml, const cha
         return RESULT_OK;
     }
 
-    if (pool_string_alloc(pool, result, length + 1) != RESULT_OK) {
-        RETURN_ERR("Failed to allocate string for XML text content");
+    // Create a temporary null-terminated string from the text content segment
+    char temp_str[length + 1];
+    memcpy(temp_str, start, length);
+    temp_str[length] = '\0';
+    
+    if (string_create_str(pool, result, temp_str) != RESULT_OK) {
+        RETURN_ERR("Failed to create string for XML text content");
     }
-
-    (*result)->size = length;
-    memcpy((*result)->data, start, length);
 
     *xml = current;
     return RESULT_OK;
@@ -1605,10 +1612,14 @@ static object_t* find_object_by_path(const object_t* object, const string_t* pat
             object_t* found_child = NULL;
             object_t* child = current_obj->child;
 
+            // Create temporary null-terminated string for the path segment
+            size_t segment_len = segment_end - segment_start;
+            char temp_segment[segment_len + 1];
+            memcpy(temp_segment, path_data + segment_start, segment_len);
+            temp_segment[segment_len] = '\0';
+
             while (child) {
-                if (child->string &&
-                    child->string->size == (segment_end - segment_start) &&
-                    memcmp(child->string->data, path_data + segment_start, segment_end - segment_start) == 0) {
+                if (child->string && string_equal_str(child->string, temp_segment)) {
                     found_child = child;
                     break;
                 }
@@ -1683,10 +1694,14 @@ result_t object_set(pool_t* pool, object_t* object, const string_t* path, object
         object_t* found_child = NULL;
         object_t* child = current_obj->child;
 
+        // Create temporary null-terminated string for the path segment
+        size_t segment_len = segment_end - segment_start;
+        char temp_segment[segment_len + 1];
+        memcpy(temp_segment, path_data + segment_start, segment_len);
+        temp_segment[segment_len] = '\0';
+
         while (child) {
-            if (child->string &&
-                child->string->size == (segment_end - segment_start) &&
-                memcmp(child->string->data, path_data + segment_start, segment_end - segment_start) == 0) {
+            if (child->string && string_equal_str(child->string, temp_segment)) {
                 found_child = child;
                 break;
             }

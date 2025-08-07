@@ -113,9 +113,6 @@ result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
 
     // Phase 4: Clean up allocated resources
     if (string_destroy(pool, prompt) != RESULT_OK) {
-        if (string_destroy(pool, response_content) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy response content after prompt cleanup failure");
-        }
         RETURN_ERR("Failed to destroy prompt");
     }
 
