@@ -7,7 +7,7 @@ Follow these requirements and the step-by-step plan meticulously.
 1.  **Library:** Use `nostr-tools`. Import it from the unpkg CDN: `https://unpkg.com/nostr-tools/lib/nostr.bundle.js`. All functions will be available under the `window.NostrTools` global object.
 2.  **Relays:** Connect to a pool of 5 popular, public relays.
     *   `wss://relay.damus.io`
-    *   `wss://relay.snort.social`
+    *   `wss://yabu.me`
     *   `wss://nos.lol`
     *   `wss://nostr.wine`
     *   `wss://relay.primal.net`
@@ -49,7 +49,7 @@ To avoid common mistakes, please adhere to the following `nostr-tools` usage pat
     *   Instantiate with `const pool = new NostrTools.SimplePool()`.
     *   **Publishing:** `pool.publish(relays: string[], event: object)`: Publishes a signed event to the specified relays. Use `Promise.any()` to handle the array of promises it returns.
     *   **Subscribing (for Timeline):** Use `pool.subscribe()` for a real-time feed. **Do not use `pool.get()` or `pool.querySync()` for the timeline, as they are not suitable for continuous updates.**
-        *   The correct signature is `sub = pool.subscribe(relays: string[], filters: object[], callbacks: object)`.
+        *   The correct signature is `sub = pool.subscribe(relays: string[], filters: object, callbacks: object)`.
         *   `filters` is an **object**, e.g., `{ kinds: [1], limit: 100 }`.
         *   The `callbacks` object should have an `onevent` property: `{ onevent(event) { /* ... UI update logic ... */ } }`.
         *   Keep a reference to the subscription object (`sub`) returned by `pool.subscribe` so you can call `sub.unsubscribe()` when a new subscription is created.
