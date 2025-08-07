@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Functional Nostr Client</title>
+    <!-- 1. Core Requirements: Import nostr-tools from CDN -->
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    <style>
+        /* Step 1: HTML and CSS Foundation */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: auto;
+            gap: 2rem;
+        }
+        .column {
+            flex: 1;
+            padding: 1rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+        }
+        h2 {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        textarea {
+            flex-grow: 1;
+            resize: vertical;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            background-color: #1877f2;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #166fe5;
+        }
+        button:disabled {
+            background-color: #9cb4d8;
+            cursor: not-allowed;
+        }
+        .key-display {
+            background-color: #f0f2f5;
+            padding: 0.5rem;
+            border-radius: 4px;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .timeline {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .note {
+            border: 1px solid #e0e0e0;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+        }
+        .note-header {
+            font-size: 0.8rem;
+            color: #65676b;
+            margin-bottom: 0.5rem;
+            word-wrap: break-word;
+        }
+        .note-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .error {
+            color: #d32f2f;
+            font-size: 0.8rem;
+            margin-top: -0.8rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="column">
+        <h2>Controls</h2>
+        <textarea id="note-content" placeholder="Compose a new note..."></textarea>
+        <label for="secret-key">Secret Key (nsec)</label>
+        <input type="text" id="secret-key" placeholder="nsec...">
+        <div id="key-error" class="error"></div>
+        <button id="generate-keys-btn">Generate New Keys</button>
+        <button id="post-btn">Post Note</button>
+        <div>
+            <strong>Public Key (npub):</strong>
+            <div id="public-key-display" class="key-display">Not set</div>
+        </div>
+    </div>
+    <div class="column">
+        <h2>Timeline (kind: 1 notes)</h2>
+        <div id="timeline" class="timeline">
+            <!-- Notes will be prepended here -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is the "Impure Root" of the application, where side effects are orchestrated.
+
+    // =================================================================
+    // Step 2: Setup and Initial State
+    // =================================================================
+    const RELAYS = [
+        'wss://relay.damus.io',
+        'wss://yabu.me',
+        'wss://nos.lol',
+        'wss://nostr.wine',
+        'wss://relay.primal.net'
+    ];
+    const pool = new window.NostrTools.SimplePool();
+    let appState = { currentSubscription: null };
+
+
+    // =================================================================
+    // Step 3: Functional Utilities
+    // =================================================================
+
+    // Rust-inspired Result type for robust error handling without try/catch
+    const Ok = (value) => ({ ok: true, value });
+    const Err = (error) => ({ ok: false, error });
+
+    // Pure helper function for DOM element selection
+    const $ = (selector) => document.querySelector(selector);
+
+
+    // =================================================================
+    // Step 4: Key Management Functions (Pure)
+    // =================================================================
+
+    /**
+     * Generates a new Nostr keypair.
+     * This is a pure function.
+     * @returns {{sk: Uint8Array, nsec: string, npub: string}}
+     */
+    const generateNewKeys = () => {
+        const sk = window.NostrTools.generateSecretKey();
+        const pk = window.NostrTools.getPublicKey(sk);
+        const nsec = window.NostrTools.nip19.nsecEncode(sk);
+        const npub = window.NostrTools.nip19.npubEncode(pk);
+        return { sk, nsec, npub };
+    };
+
+    /**
+     * Decodes an nsec string into a Uint8Array secret key.
+     * This is a pure function that returns a Result.
+     * @param {string} nsecValue - The user-provided nsec string.
+     * @returns {Result<Uint8Array, string>}
+     */
+    const getSecretKeyFromInput = (nsecValue) => {
+        if (!nsecValue || !nsecValue.startsWith('nsec1')) {
+            return Err('Invalid format: key must start with "nsec1".');
+        }
+        try {
+            const decoded = window.NostrTools.nip19.decode(nsecValue);
+            if (decoded.type === 'nsec') {
+                return Ok(decoded.data); // data is the Uint8Array
+            }
+            return Err('Invalid key type: not an nsec key.');
+        } catch (e) {
+            return Err('Failed to decode key. Please check for typos.');
+        }
+    };
+
+
+    // =================================================================
+    // Step 5: Event Publishing Functions (Pure and Impure)
+    // =================================================================
+
+    /**
+     * Creates and signs a kind: 1 note event.
+     * This is a pure function.
+     * @param {string} content - The text content of the note.
+     * @param {Uint8Array} sk - The secret key as a Uint8Array.
+     * @returns {object} The finalized, signed Nostr event.
+     */
+    const createNoteEvent = (content, sk) => {
+        const pk = window.NostrTools.getPublicKey(sk);
+        const eventTemplate = {
+            kind: 1,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [],
+            content: content,
+            pubkey: pk,
+        };
+        return window.NostrTools.finalizeEvent(eventTemplate, sk);
+    };
+
+    /**
+     * Publishes an event to the relay pool.
+     * This is an impure function (network side effect).
+     * @param {SimplePool} poolInstance - The nostr-tools SimplePool.
+     * @param {string[]} relays - Array of relay URLs.
+     * @param {object} event - The signed Nostr event.
+     * @returns {Promise<string>} A promise that resolves when the event is published to at least one relay.
+     */
+    const publishEvent = async (poolInstance, relays, event) => {
+        const pubs = poolInstance.publish(relays, event);
+        // Promise.any resolves as soon as one of the promises resolves.
+        // We don't need to wait for all relays.
+        await Promise.any(pubs);
+        return `Event published to at least one relay.`;
+    };
+
+
+    // =================================================================
+    // Step 6: Timeline Subscription Functions (Pure and Impure)
+    // =================================================================
+
+    /**
+     * Creates an HTML DOM element for a given Nostr event.
+     * This is a pure function.
+     * @param {object} event - The Nostr event object.
+     * @returns {HTMLElement} A div element representing the note.
+     */
+    const renderNote = (event) => {
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note';
+        
+        const npub = window.NostrTools.nip19.npubEncode(event.pubkey);
+        const eventDate = new Date(event.created_at * 1000).toLocaleString();
+        
+        const header = document.createElement('div');
+        header.className = 'note-header';
+        header.innerHTML = `<strong>${npub.slice(0, 12)}...</strong> &middot; ${eventDate}`;
+        
+        const content = document.createElement('div');
+        content.className = 'note-content';
+        content.textContent = event.content || ''; // Handle potentially empty content
+        
+        noteDiv.appendChild(header);
+        noteDiv.appendChild(content);
+
+        return noteDiv;
+    };
+
+    /**
+     * Subscribes to the global timeline feed.
+     * This is an impure function (network side effect, DOM manipulation).
+     * @param {SimplePool} poolInstance - The nostr-tools SimplePool.
+     * @param {string[]} relays - Array of relay URLs.
+     * @param {HTMLElement} timelineContainer - The DOM element to prepend notes to.
+     * @returns {object} The subscription object, which can be used to unsubscribe.
+     */
+    const subscribeToTimeline = (poolInstance, relays, timelineContainer) => {
+        // Correct filter format is an array of filter objects
+        const filters = [{ kinds: [1], limit: 50 }];
+
+        const sub = poolInstance.subscribeMany(
+            relays,
+            filters,
+            {
+                onevent(event) {
+                    const noteElement = renderNote(event);
+                    // Prepend to show newest first
+                    timelineContainer.prepend(noteElement);
+                }
+            }
+        );
+        return sub;
+    };
+
+
+    // =================================================================
+    // Step 7: UI Update Functions (Impure Boundary)
+    // =================================================================
+
+    /**
+     * Updates the UI with key information.
+     * @param {string} nsec - The nsec string to display.
+     * @param {string} npub - The npub string to display.
+     */
+    const updateKeyUI = (nsec, npub) => {
+        $('#secret-key').value = nsec;
+        $('#public-key-display').textContent = npub;
+    };
+
+    /**
+     * Clears and displays an error message in the key input area.
+     * @param {string} message - The error message to display.
+     */
+    const displayKeyError = (message) => {
+        $('#key-error').textContent = message;
+    };
+
+    /**
+     * Clears all notes from the timeline view.
+     */
+    const clearTimeline = () => {
+        $('#timeline').innerHTML = '';
+    };
+
+
+    // =================================================================
+    // Step 8: Main Logic and Event Listeners (The Impure Root)
+    // =================================================================
+
+    const main = () => {
+        // Get all DOM elements
+        const generateBtn = $('#generate-keys-btn');
+        const postBtn = $('#post-btn');
+        const secretKeyInput = $('#secret-key');
+        const noteContentInput = $('#note-content');
+        const timelineContainer = $('#timeline');
+
+        // --- Initial State ---
+        // Start with a general subscription
+        appState.currentSubscription = subscribeToTimeline(pool, RELAYS, timelineContainer);
+
+        // --- Event Listener: Generate New Keys ---
+        generateBtn.addEventListener('click', () => {
+            const keys = generateNewKeys(); // Pure function call
+            updateKeyUI(keys.nsec, keys.npub); // Impure UI update
+            displayKeyError(''); // Clear any previous errors
+            
+            // Refresh timeline for the new user
+            if (appState.currentSubscription) {
+                appState.currentSubscription.close(); // Use close() for SimplePool's sub
+            }
+            clearTimeline();
+            appState.currentSubscription = subscribeToTimeline(pool, RELAYS, timelineContainer);
+        });
+
+        // --- Event Listener: Post Note ---
+        postBtn.addEventListener('click', async () => {
+            postBtn.disabled = true;
+            postBtn.textContent = 'Posting...';
+
+            const nsecValue = secretKeyInput.value;
+            const content = noteContentInput.value;
+            
+            const skResult = getSecretKeyFromInput(nsecValue); // Pure validation
+            
+            if (!skResult.ok) {
+                alert(`Error: ${skResult.error}`);
+                postBtn.disabled = false;
+                postBtn.textContent = 'Post Note';
+                return;
+            }
+
+            if (!content.trim()) {
+                alert('Error: Note content cannot be empty.');
+                postBtn.disabled = false;
+                postBtn.textContent = 'Post Note';
+                return;
+            }
+
+            try {
+                const sk = skResult.value;
+                const event = createNoteEvent(content, sk); // Pure event creation
+                const resultMessage = await publishEvent(pool, RELAYS, event); // Impure publish
+                alert(resultMessage);
+                noteContentInput.value = ''; // Clear textarea on success
+            } catch (e) {
+                console.error(e);
+                alert('Failed to publish event. See console for details.');
+            } finally {
+                postBtn.disabled = false;
+                postBtn.textContent = 'Post Note';
+            }
+        });
+
+        // --- Event Listener: Secret Key Change ---
+        // This triggers a refresh of the timeline subscription.
+        secretKeyInput.addEventListener('change', () => {
+            displayKeyError(''); // Clear previous errors on new input
+            const nsecValue = secretKeyInput.value;
+
+            // If the key is cleared, revert to the general timeline
+            if (!nsecValue) {
+                if (appState.currentSubscription) {
+                    appState.currentSubscription.close();
+                }
+                clearTimeline();
+                appState.currentSubscription = subscribeToTimeline(pool, RELAYS, timelineContainer);
+                $('#public-key-display').textContent = 'Not set';
+                return;
+            }
+
+            const skResult = getSecretKeyFromInput(nsecValue); // Pure validation
+            if (skResult.ok) {
+                const sk = skResult.value;
+                const pk = window.NostrTools.getPublicKey(sk);
+                const npub = window.NostrTools.nip19.npubEncode(pk);
+                $('#public-key-display').textContent = npub;
+
+                // Refresh timeline with new context (could be personalized in a real app)
+                if (appState.currentSubscription) {
+                    appState.currentSubscription.close(); // Use close() which calls unsub
+                }
+                clearTimeline();
+                // For this simple client, we just re-subscribe to the same global feed.
+                // A more advanced client might add a filter for the user's own notes.
+                appState.currentSubscription = subscribeToTimeline(pool, RELAYS, timelineContainer);
+
+            } else {
+                displayKeyError(skResult.error); // Show validation error in the UI
+                $('#public-key-display').textContent = 'Invalid Key';
+            }
+        });
+    };
+
+    // Run the main application logic
+    main();
+
+});
+</script>
+
+</body>
+</html>
