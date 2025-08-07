@@ -28,3 +28,8 @@ services:
     container_name: lkjnostrclient
     volumes:
       - ./lkjnostrclient/route:/usr/share/nginx/html
+
+networks:
+  default:
+    name: main
+    external: true
