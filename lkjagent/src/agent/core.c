@@ -103,6 +103,10 @@ result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
         RETURN_ERR("Failed to communicate with LLM");
     }
 
+    // Debug
+    printf("Received response content: %.*s\n", (int)response_content->size, response_content->data);
+    fflush(stdout);
+
     // Phase 3: Execute agent actions based on LLM response
     if (lkjagent_agent_execute(pool, config, agent, response_content) != RESULT_OK) {
         if (string_destroy(pool, prompt) != RESULT_OK || string_destroy(pool, response_content) != RESULT_OK) {
