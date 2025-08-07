@@ -26,8 +26,6 @@ services:
   lkjnostrclient:
     build: ./lkjnostrclient
     container_name: lkjnostrclient
-    volumes:
-      - ./lkjnostrclient/route:/usr/share/nginx/html
 
 networks:
   default:
