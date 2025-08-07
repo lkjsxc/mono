@@ -8,7 +8,11 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
 
     // Phase 1: Parse the LLM response
     if (agent_actions_parse_response(pool, recv, &response_obj) != RESULT_OK) {
-        RETURN_ERR("Failed to parse LLM response");
+        // If parsing fails completely, force a state reset and continue
+        if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+            RETURN_ERR("Failed to reset state after parse failure");
+        }
+        return RESULT_OK; // Continue execution but skip this cycle
     }
 
     // Phase 2: Extract agent response
@@ -16,70 +20,57 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
         if (object_destroy(pool, response_obj) != RESULT_OK) {
             RETURN_ERR("Failed to destroy response object after agent extraction failure");
         }
-        RETURN_ERR("Failed to get agent object from LLM response");
+        // If we can't extract agent response, force a state reset to thinking
+        if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+            RETURN_ERR("Failed to reset agent state to thinking after extraction failure");
+        }
+        return RESULT_OK; // Continue execution but skip this cycle
     }
 
     // Phase 3: Check if this is an action (executing state) or state transition
     if (object_provide_str(pool, &action_obj, agent_response, "action") == RESULT_OK) {
         // This is an action - dispatch it
         if (agent_actions_dispatch(pool, agent, action_obj) != RESULT_OK) {
-            if (object_destroy(pool, response_obj) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy response object after action dispatch failure");
-            }
-            RETURN_ERR("Failed to execute agent action");
-        }
-
-        // After executing any action, automatically transition state
-        if (agent_state_auto_transition(pool, config, agent) != RESULT_OK) {
-            if (object_destroy(pool, response_obj) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy response object after auto transition failure");
-            }
-            RETURN_ERR("Failed to automatically transition state after action execution");
-        }
-    } else {
-        // This might be a state transition - handle it
-        // Check if we're in evaluating state and need special transition logic
-        object_t* current_state;
-        if (object_provide_str(pool, &current_state, agent->data, "state") == RESULT_OK) {
-            if (strncmp(current_state->string->data, "evaluating", current_state->string->size) == 0) {
-                // Special handling for evaluating state transitions (memory-aware)
-                if (agent_state_handle_evaluation_transition(pool, config, agent, response_obj) != RESULT_OK) {
-                    if (object_destroy(pool, response_obj) != RESULT_OK) {
-                        RETURN_ERR("Failed to destroy response object after evaluation transition failure");
-                    }
-                    RETURN_ERR("Failed to handle evaluation state transition");
+            // If action fails, reset to thinking state
+            if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                if (object_destroy(pool, response_obj) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy response object after state reset failure");
                 }
-            } else {
-                // Regular state update for thinking and other states
-                if (agent_state_update_and_log(pool, agent, response_obj) != RESULT_OK) {
-                    if (object_destroy(pool, response_obj) != RESULT_OK) {
-                        RETURN_ERR("Failed to destroy response object after state update failure");
-                    }
-                    RETURN_ERR("Failed to update agent state");
-                }
+                RETURN_ERR("Failed to reset to thinking after action failure");
             }
         } else {
-            // Fallback to regular state update if we can't determine current state
-            if (agent_state_update_and_log(pool, agent, response_obj) != RESULT_OK) {
+            // After executing any action, automatically transition state
+            if (agent_state_auto_transition(pool, config, agent) != RESULT_OK) {
+                // If auto transition fails, reset to thinking
+                if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                    if (object_destroy(pool, response_obj) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy response object after auto transition failure");
+                    }
+                    RETURN_ERR("Failed to reset to thinking after auto transition failure");
+                }
+            }
+        }
+    } else {
+        // This might be a state transition - handle it with unified logic
+        // Use simple state update that handles both thinking and evaluating states
+        if (agent_state_update_and_log(pool, agent, agent_response) != RESULT_OK) {
+            // If state update fails, force reset to thinking
+            if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
                 if (object_destroy(pool, response_obj) != RESULT_OK) {
                     RETURN_ERR("Failed to destroy response object after state update failure");
                 }
-                RETURN_ERR("Failed to update agent state");
+                RETURN_ERR("Failed to reset to thinking after state update failure");
             }
         }
     }
 
-    // Phase 4: Save the updated agent memory to file
-    if (agent_actions_save_memory(pool, agent) != RESULT_OK) {
-        if (object_destroy(pool, response_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy response object after memory save failure");
-        }
-        RETURN_ERR("Failed to save agent memory");
-    }
+    // Phase 4: Save the updated agent memory to file (make this more robust)
+    result_t save_result = agent_actions_save_memory(pool, agent);
+    (void)save_result; // Don't fail the cycle if save fails
 
     // Phase 5: Clean up
     if (object_destroy(pool, response_obj) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy response object");
+        // Don't fail if cleanup fails, just continue
     }
 
     return RESULT_OK;
