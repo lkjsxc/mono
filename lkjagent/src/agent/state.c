@@ -275,13 +275,13 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
         if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
             string_create_str(pool, &empty_string, "") == RESULT_OK) {
             // Remove from working memory (ignore result as this is cleanup)
-            if (!object_set_string(pool, working_memory, oldest_wm_key_string, empty_string)) {
+            if (object_set_string(pool, working_memory, oldest_wm_key_string, empty_string) != RESULT_OK) {
                 printf("Error: Failed to clear old thinking log from working memory\n");
             }
-            if (!string_destroy(pool, oldest_wm_key_string)) {
+            if (string_destroy(pool, oldest_wm_key_string) != RESULT_OK) {
                 printf("Error: Failed to destroy oldest working memory key string\n");
             }
-            if (!string_destroy(pool, empty_string)) {
+            if (string_destroy(pool, empty_string) != RESULT_OK) {
                 printf("Error: Failed to destroy empty string\n");
             }
         }
@@ -300,11 +300,11 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
                 }
                 
                 // Move within working memory only
-                if (!object_set_string(pool, working_memory, new_key_string, log_to_move->string)) {
+                if (object_set_string(pool, working_memory, new_key_string, log_to_move->string) != RESULT_OK) {
                     printf("Error: Failed to rotate thinking log in working memory\n");
                 }
                 
-                if (!string_destroy(pool, new_key_string)) {
+                if (string_destroy(pool, new_key_string) != RESULT_OK) {
                     printf("Error: Failed to destroy new key string during rotation\n");
                 }
             }
@@ -320,7 +320,7 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
     }
     
     // Add to working memory
-    if (!object_set_string(pool, working_memory, log_key_string, thinking_log_obj->string)) {
+    if (object_set_string(pool, working_memory, log_key_string, thinking_log_obj->string) != RESULT_OK) {
         printf("Error: Failed to add thinking log to working memory\n");
     }
     
@@ -370,13 +370,13 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
         if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
             string_create_str(pool, &empty_string, "") == RESULT_OK) {
             // Remove from working memory (ignore result as this is cleanup)
-            if (!object_set_string(pool, working_memory, oldest_wm_key_string, empty_string)) {
+            if (object_set_string(pool, working_memory, oldest_wm_key_string, empty_string) != RESULT_OK) {
                 printf("Error: Failed to clear old evaluation log from working memory\n");
             }
-            if (!string_destroy(pool, oldest_wm_key_string)) {
+            if (string_destroy(pool, oldest_wm_key_string) != RESULT_OK) {
                 printf("Error: Failed to destroy oldest evaluation working memory key string\n");
             }
-            if (!string_destroy(pool, empty_string)) {
+            if (string_destroy(pool, empty_string) != RESULT_OK) {
                 printf("Error: Failed to destroy empty string for evaluation log\n");
             }
         }
@@ -393,7 +393,7 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
     }
     
     // Add to working memory only (working_memory already available from above)
-    if (!object_set_string(pool, working_memory, log_key_string, evaluation_log_obj->string)) {
+    if (object_set_string(pool, working_memory, log_key_string, evaluation_log_obj->string) != RESULT_OK) {
         if (string_destroy(pool, log_key_string) != RESULT_OK) {
             RETURN_ERR("Failed to destroy evaluation log key string after set failure");
         }
@@ -514,7 +514,7 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
                 RETURN_ERR("Failed to create strings for log removal");
             }
             
-            if (!object_set_string(pool, working_memory, wm_key_string, empty_string)) {
+            if (object_set_string(pool, working_memory, wm_key_string, empty_string) != RESULT_OK) {
                 if (string_destroy(pool, storage_key_string) != RESULT_OK ||
                     string_destroy(pool, wm_key_string) != RESULT_OK ||
                     string_destroy(pool, empty_string) != RESULT_OK) {
@@ -554,20 +554,20 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
                 if (string_create_str(pool, &wm_key_string, old_log_key) == RESULT_OK &&
                     string_create_str(pool, &empty_string, "") == RESULT_OK) {
                     
-                    if (!object_set_string(pool, working_memory, wm_key_string, empty_string)) {
+                    if (object_set_string(pool, working_memory, wm_key_string, empty_string) != RESULT_OK) {
                         printf("Error: Failed to remove evaluation log from working memory during paging\n");
                     }
                     
-                    if (!string_destroy(pool, wm_key_string)) {
+                    if (string_destroy(pool, wm_key_string) != RESULT_OK) {
                         printf("Error: Failed to destroy working memory key string during evaluation log paging\n");
                     }
-                    if (!string_destroy(pool, empty_string)) {
+                    if (string_destroy(pool, empty_string) != RESULT_OK) {
                         printf("Error: Failed to destroy empty string during evaluation log paging\n");
                     }
                 }
             }
             
-            if (!string_destroy(pool, storage_key_string)) {
+            if (string_destroy(pool, storage_key_string) != RESULT_OK) {
                 printf("Error: Failed to destroy storage key string during evaluation log paging\n");
             }
         }

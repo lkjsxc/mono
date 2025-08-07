@@ -43,6 +43,10 @@ __attribute__((warn_unused_result)) result_t agent_actions_process_tags(pool_t* 
 // Working memory access helpers
 __attribute__((warn_unused_result)) result_t agent_actions_get_working_memory(pool_t* pool, agent_t* agent, object_t** working_memory);
 __attribute__((warn_unused_result)) result_t agent_actions_get_storage(pool_t* pool, agent_t* agent, object_t** storage);
+__attribute__((warn_unused_result)) result_t agent_actions_ensure_working_memory_exists(pool_t* pool, agent_t* agent);
 __attribute__((warn_unused_result)) result_t agent_actions_ensure_storage_exists(pool_t* pool, agent_t* agent);
+
+// Action result logging
+__attribute__((warn_unused_result)) result_t agent_actions_log_result(pool_t* pool, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
 
 #endif

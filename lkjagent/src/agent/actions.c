@@ -54,6 +54,11 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, agent_t* agent, 
         RETURN_ERR("Failed to extract parameters for working_memory_add");
     }
 
+    // Ensure working memory exists
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        RETURN_ERR("Failed to ensure working memory exists for add operation");
+    }
+
     // Get working memory
     if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
         RETURN_ERR("Failed to get working memory for add operation");
@@ -70,6 +75,12 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, agent_t* agent, 
             RETURN_ERR("Failed to destroy processed tags after set failure");
         }
         RETURN_ERR("Failed to add item to working memory");
+    }
+
+    // Log successful action result
+    if (agent_actions_log_result(pool, agent, "working_memory_add", 
+                                processed_tags->data, "Successfully added item to working memory") != RESULT_OK) {
+        printf("Warning: Failed to log working_memory_add result\n");
     }
 
     // Clean up processed tags
@@ -92,6 +103,11 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, agent_t* agen
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
         RETURN_ERR("Failed to extract parameters for working_memory_remove");
+    }
+
+    // Ensure working memory exists
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        RETURN_ERR("Failed to ensure working memory exists for remove operation");
     }
 
     // Get working memory
@@ -119,6 +135,12 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, agent_t* agen
             RETURN_ERR("Failed to destroy strings after set failure");
         }
         RETURN_ERR("Failed to remove item from working memory");
+    }
+
+    // Log successful action result
+    if (agent_actions_log_result(pool, agent, "working_memory_remove", 
+                                processed_tags->data, "Successfully removed item from working memory") != RESULT_OK) {
+        printf("Warning: Failed to log working_memory_remove result\n");
     }
 
     // Clean up
@@ -150,6 +172,11 @@ result_t agent_actions_execute_storage_load(pool_t* pool, agent_t* agent, object
         RETURN_ERR("Failed to get storage for load operation");
     }
 
+    // Ensure working memory exists before trying to load into it
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        RETURN_ERR("Failed to ensure working memory exists for load operation");
+    }
+
     if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
         RETURN_ERR("Failed to get working memory for load operation");
     }
@@ -168,9 +195,19 @@ result_t agent_actions_execute_storage_load(pool_t* pool, agent_t* agent, object
             }
             RETURN_ERR("Failed to copy item from storage to working memory");
         }
+        
+        // Log successful load result
+        if (agent_actions_log_result(pool, agent, "storage_load", 
+                                    processed_tags->data, "Successfully loaded item from storage to working memory") != RESULT_OK) {
+            printf("Warning: Failed to log storage_load success result\n");
+        }
     } else {
         // Item not found in storage - this is not necessarily an error
         // The agent should be aware that the load didn't find anything
+        if (agent_actions_log_result(pool, agent, "storage_load", 
+                                    processed_tags->data, "Item not found in storage") != RESULT_OK) {
+            printf("Warning: Failed to log storage_load not found result\n");
+        }
     }
 
     // Clean up
@@ -215,6 +252,12 @@ result_t agent_actions_execute_storage_save(pool_t* pool, agent_t* agent, object
             RETURN_ERR("Failed to destroy processed tags after save failure");
         }
         RETURN_ERR("Failed to save item to storage");
+    }
+
+    // Log successful action result
+    if (agent_actions_log_result(pool, agent, "storage_save", 
+                                processed_tags->data, "Successfully saved item to storage") != RESULT_OK) {
+        printf("Warning: Failed to log storage_save result\n");
     }
 
     // Clean up
@@ -564,5 +607,96 @@ result_t agent_actions_ensure_storage_exists(pool_t* pool, agent_t* agent) {
         RETURN_ERR("Failed to destroy storage path string");
     }
 
+    return RESULT_OK;
+}
+
+// Ensure working memory exists in agent data
+result_t agent_actions_ensure_working_memory_exists(pool_t* pool, agent_t* agent) {
+    object_t* working_memory = NULL;
+
+    // Try to get existing working memory
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") == RESULT_OK) {
+        // Working memory already exists
+        return RESULT_OK;
+    }
+
+    // Working memory doesn't exist, create it
+    object_t* new_working_memory = NULL;
+    if (object_create(pool, &new_working_memory) != RESULT_OK) {
+        RETURN_ERR("Failed to create new working memory object");
+    }
+
+    string_t* working_memory_path = NULL;
+    if (string_create_str(pool, &working_memory_path, "working_memory") != RESULT_OK) {
+        if (object_destroy(pool, new_working_memory) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy new working memory after path creation failure");
+        }
+        RETURN_ERR("Failed to create working memory path string");
+    }
+
+    if (object_set(pool, agent->data, working_memory_path, new_working_memory) != RESULT_OK) {
+        if (string_destroy(pool, working_memory_path) != RESULT_OK ||
+            object_destroy(pool, new_working_memory) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy resources after working memory set failure");
+        }
+        RETURN_ERR("Failed to set working memory object in agent data");
+    }
+
+    if (string_destroy(pool, working_memory_path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy working memory path string");
+    }
+
+    return RESULT_OK;
+}
+
+// Log action execution results to working memory
+result_t agent_actions_log_result(pool_t* pool, agent_t* agent, const char* action_type, const char* tags, const char* result_message) {
+    object_t* working_memory = NULL;
+    char result_key[128];
+    string_t* result_key_string = NULL;
+    string_t* result_value_string = NULL;
+    
+    // Get working memory
+    if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
+        // Don't fail action execution if result logging fails
+        return RESULT_OK;
+    }
+    
+    // Create a result key with timestamp-like suffix
+    static uint64_t result_counter = 0;
+    result_counter++;
+    snprintf(result_key, sizeof(result_key), "action_result_%03lu_%s", result_counter, action_type);
+    
+    // Create result message
+    char result_buffer[512];
+    snprintf(result_buffer, sizeof(result_buffer), "Action: %s, Tags: %s, Result: %s", 
+             action_type, tags ? tags : "none", result_message);
+    
+    // Create strings for key and value
+    if (string_create_str(pool, &result_key_string, result_key) != RESULT_OK ||
+        string_create_str(pool, &result_value_string, result_buffer) != RESULT_OK) {
+        // Clean up on failure
+        if (result_key_string && string_destroy(pool, result_key_string) != RESULT_OK) {
+            printf("Error: Failed to destroy result key string during cleanup\n");
+        }
+        if (result_value_string && string_destroy(pool, result_value_string) != RESULT_OK) {
+            printf("Error: Failed to destroy result value string during cleanup\n");
+        }
+        return RESULT_OK; // Don't fail action execution
+    }
+    
+    // Add result to working memory
+    if (object_set_string(pool, working_memory, result_key_string, result_value_string) != RESULT_OK) {
+        printf("Error: Failed to log action result to working memory\n");
+    }
+    
+    // Clean up strings
+    if (string_destroy(pool, result_key_string) != RESULT_OK) {
+        printf("Error: Failed to destroy result key string\n");
+    }
+    if (string_destroy(pool, result_value_string) != RESULT_OK) {
+        printf("Error: Failed to destroy result value string\n");
+    }
+    
     return RESULT_OK;
 }
