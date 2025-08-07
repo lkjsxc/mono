@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Nostr Client</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #8a2be2;
+            --border-color: #444;
+            --error-color: #ff6b6b;
+            --success-color: #51cf66;
+            --input-bg: #2a2a2a;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h1, h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin: 0;
+            padding-bottom: 0.5rem;
+        }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.2rem; }
+        .main-container {
+            display: flex;
+            flex-grow: 1;
+            gap: 1rem;
+            height: calc(100% - 80px); /* Adjust based on h1 and status bar height */
+            min-height: 0;
+        }
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .left-column {
+            flex: 0 0 350px;
+        }
+        .right-column {
+            flex: 1;
+            overflow-y: hidden;
+        }
+        #timeline {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        /* Style timeline to have newest notes at the top */
+        #timeline {
+            flex-direction: column-reverse;
+        }
+        textarea, input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+            flex-grow: 1;
+        }
+        button {
+            padding: 0.75rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #7a1fcf;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        #status-bar {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 4px;
+            visibility: hidden;
+            font-weight: 500;
+        }
+        .note {
+            background-color: var(--bg-color);
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            word-wrap: break-word;
+        }
+        .note-header {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .note-pubkey {
+            font-weight: bold;
+            color: var(--primary-color);
+            font-family: monospace;
+        }
+        .note-content {
+            font-size: 1rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Nostr Client</h1>
+    <div id="status-bar"></div>
+
+    <div class="main-container">
+        <div class="column left-column">
+            <h2>Compose Note</h2>
+            <textarea id="note-composer" placeholder="What's on your mind?"></textarea>
+            <input type="password" id="private-key-input" placeholder="Enter your private key (nsec)...">
+            <button id="post-btn">Post</button>
+            <hr style="width:100%; border-color: var(--border-color);">
+            <button id="generate-keys-btn">Generate New Keys</button>
+        </div>
+        <div class="column right-column">
+            <h2>Timeline (Live Feed)</h2>
+            <div id="timeline">
+                <!-- Notes will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    // Step 2: JavaScript Scaffolding and Constants
+    import * as NostrTools from 'https://esm.sh/nostr-tools@2.7.0';
+
+    const RELAY_URLS = [
+        'wss://relay.damus.io',
+        'wss://relay.primal.net',
+        'wss://relay.snort.social',
+        'wss://nos.lol',
+        'wss://nostr.wine'
+    ];
+    
+    // DOM Element References
+    const noteComposer = document.getElementById('note-composer');
+    const privateKeyInput = document.getElementById('private-key-input');
+    const postBtn = document.getElementById('post-btn');
+    const generateKeysBtn = document.getElementById('generate-keys-btn');
+    const timeline = document.getElementById('timeline');
+    const statusBar = document.getElementById('status-bar');
+
+    // --- Utility Functions ---
+
+    /**
+     * Displays a message in the status bar.
+     * @param {string} message - The message to display.
+     * @param {'error' | 'success' | 'info'} type - The type of message.
+     */
+    const showStatus = (message, type = 'info') => {
+        statusBar.textContent = message;
+        statusBar.style.visibility = 'visible';
+        if (type === 'error') {
+            statusBar.style.backgroundColor = 'var(--error-color)';
+            statusBar.style.color = '#000';
+        } else if (type === 'success') {
+            statusBar.style.backgroundColor = 'var(--success-color)';
+            statusBar.style.color = '#000';
+        } else {
+            statusBar.style.backgroundColor = 'var(--border-color)';
+            statusBar.style.color = 'var(--text-color)';
+        }
+    };
+    
+    const hideStatus = () => {
+        statusBar.style.visibility = 'hidden';
+    };
+
+
+    // Step 3: Key Management Logic
+
+    /**
+     * Generates a new Nostr key pair.
+     * @returns {{nsec: string, npub: string}} The new key pair.
+     */
+    const generateKeys = () => {
+        const sk = NostrTools.generatePrivateKey();
+        const pk = NostrTools.getPublicKey(sk);
+        const nsec = NostrTools.nip19.nsecEncode(sk);
+        const npub = NostrTools.nip19.npubEncode(pk);
+        return { nsec, npub };
+    };
+
+    /**
+     * Decodes an nsec private key and derives the public key.
+     * @param {string} nsec - The nsec private key string.
+     * @returns {{ok: {sk: string, pk: string}} | {err: string}} A Result object.
+     */
+    const getKeysFromNsec = (nsec) => {
+        if (!nsec || typeof nsec !== 'string') {
+            return { err: "Private key cannot be empty." };
+        }
+        try {
+            const { type, data: sk } = NostrTools.nip19.decode(nsec);
+            if (type !== 'nsec') {
+                return { err: "Invalid key format. Please provide an 'nsec' key." };
+            }
+            const pk = NostrTools.getPublicKey(sk);
+            return { ok: { sk, pk } };
+        } catch (error) {
+            return { err: `Invalid private key: ${error.message}` };
+        }
+    };
+
+    // Step 4: Nostr Event and Publishing Logic
+
+    /**
+     * Creates and signs a kind 1 note event.
+     * @param {string} content - The text content of the note.
+     * @param {string} sk - The user's hex-encoded private key.
+     * @param {string} pk - The user's hex-encoded public key.
+     * @returns {{ok: NostrTools.Event} | {err: string}} A Result object with the signed event.
+     */
+    const createNoteEvent = (content, sk, pk) => {
+        if (!content.trim()) {
+            return { err: "Note content cannot be empty." };
+        }
+        try {
+            const unsignedEvent = {
+                kind: 1,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [],
+                content: content,
+                pubkey: pk,
+            };
+            const id = NostrTools.getEventHash(unsignedEvent);
+            const sig = NostrTools.signEvent(unsignedEvent, sk);
+            return { ok: { ...unsignedEvent, id, sig } };
+        } catch (error) {
+            return { err: `Failed to create event: ${error.message}` };
+        }
+    };
+    
+    /**
+     * Publishes a signed event to the configured relays.
+     * @param {NostrTools.SimplePool} pool - The relay pool instance.
+     * @param {NostrTools.Event} event - The signed event to publish.
+     * @returns {Promise<{ok: string} | {err: string}>} A Result object indicating success or failure.
+     */
+    const publishEvent = async (pool, event) => {
+        try {
+            const pubs = pool.publish(RELAY_URLS, event);
+            // Promise.allSettled waits for all promises, regardless of success/failure
+            const results = await Promise.allSettled(pubs);
+            const successfulPubs = results.filter(r => r.status === 'fulfilled').length;
+            
+            if (successfulPubs > 0) {
+                return { ok: `Event published to ${successfulPubs}/${RELAY_URLS.length} relays.` };
+            } else {
+                const errorMessages = results.map(r => r.reason?.message || 'Unknown error').join(', ');
+                return { err: `Failed to publish to any relay. Errors: ${errorMessages}` };
+            }
+        } catch (error) {
+            return { err: `An unexpected error occurred during publishing: ${error.message}` };
+        }
+    };
+
+    // Step 5: Timeline and Rendering Logic
+
+    /**
+     * Renders a Nostr event into a DOM element for the timeline.
+     * @param {NostrTools.Event} event - The Nostr event object.
+     * @returns {HTMLElement} The DOM element representing the note.
+     */
+    const renderNote = (event) => {
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note';
+
+        const pubkeyShort = `${event.pubkey.substring(0, 8)}...${event.pubkey.substring(56)}`;
+        const eventDate = new Date(event.created_at * 1000).toLocaleString();
+        
+        noteDiv.innerHTML = `
+            <div class="note-header">
+                <span class="note-pubkey" title="${event.pubkey}">${pubkeyShort}</span>
+                <span class="note-date">${eventDate}</span>
+            </div>
+            <p class="note-content"></p>
+        `;
+        // Use textContent to prevent XSS from user-provided content
+        noteDiv.querySelector('.note-content').textContent = event.content;
+        
+        return noteDiv;
+    };
+    
+    /**
+     * Connects to relays and subscribes to new notes.
+     * @param {NostrTools.SimplePool} pool - The relay pool instance.
+     */
+    const connectAndSubscribe = (pool) => {
+        showStatus("Connecting to relays...", 'info');
+        const sub = pool.sub(RELAY_URLS, [{ kinds: [1], limit: 20 }]);
+        
+        sub.on('event', event => {
+            const noteElement = renderNote(event);
+            // Using prepend to add new notes to the top (due to flex-direction: column-reverse)
+            timeline.prepend(noteElement);
+        });
+
+        sub.on('eose', () => {
+            showStatus("Live feed connected.", 'success');
+            setTimeout(hideStatus, 2000);
+        });
+        
+        console.log(`Subscribed to ${RELAY_URLS.length} relays.`);
+    };
+
+    // Step 6: UI Event Listeners and Main Application Logic
+
+    const handleGenerateKeys = () => {
+        const keys = generateKeys();
+        privateKeyInput.value = keys.nsec;
+        alert(`New Keys Generated!\n\nPublic Key (npub):\n${keys.npub}\n\nPrivate Key (nsec) has been placed in the input field. SAVE IT securely! It cannot be recovered.`);
+        showStatus("New keys generated and filled in.", "success");
+        setTimeout(hideStatus, 3000);
+    };
+
+    const handlePostNote = async () => {
+        postBtn.disabled = true;
+        postBtn.textContent = 'Posting...';
+        hideStatus();
+
+        // 1. Get user input
+        const nsec = privateKeyInput.value;
+        const content = noteComposer.value;
+
+        // 2. Validate key and get hex private/public keys
+        const keysResult = getKeysFromNsec(nsec);
+        if (keysResult.err) {
+            showStatus(keysResult.err, 'error');
+            postBtn.disabled = false;
+            postBtn.textContent = 'Post';
+            return;
+        }
+        const { sk, pk } = keysResult.ok;
+
+        // 3. Create and sign the event
+        const eventResult = createNoteEvent(content, sk, pk);
+        if (eventResult.err) {
+            showStatus(eventResult.err, 'error');
+            postBtn.disabled = false;
+            postBtn.textContent = 'Post';
+            return;
+        }
+        const signedEvent = eventResult.ok;
+        
+        // 4. Publish the event
+        showStatus("Publishing event...", 'info');
+        const publishResult = await publishEvent(window.nostrPool, signedEvent);
+        
+        if (publishResult.err) {
+            showStatus(publishResult.err, 'error');
+        } else {
+            showStatus(publishResult.ok, 'success');
+            noteComposer.value = ''; // Clear composer on success
+        }
+
+        postBtn.disabled = false;
+        postBtn.textContent = 'Post';
+        setTimeout(hideStatus, 4000);
+    };
+
+    /**
+     * Main application entry point.
+     */
+    const main = () => {
+        // Expose the pool globally for easy access in handlers and debugging
+        window.nostrPool = new NostrTools.SimplePool();
+        
+        // Attach event listeners
+        generateKeysBtn.addEventListener('click', handleGenerateKeys);
+        postBtn.addEventListener('click', handlePostNote);
+        
+        // Start the connection and subscription
+        connectAndSubscribe(window.nostrPool);
+    };
+
+    // Run the application
+    main();
+
+</script>
+</body>
+</html>

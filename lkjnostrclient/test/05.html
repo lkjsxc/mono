@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Nostr Client</title>
+    <!-- Import nostr-tools library -->
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #8a2be2;
+            --secondary-color: #333;
+            --border-color: #444;
+            --error-color: #ff6b6b;
+            --success-color: #51cf66;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1.5rem;
+        }
+
+        #app {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #control-panel {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        #timeline-panel {
+            flex: 2;
+            min-width: 400px;
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        .control-section {
+            background-color: var(--secondary-color);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input:focus, textarea:focus {
+            outline: 2px solid var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #7b24ca;
+        }
+
+        #newKeysOutput {
+            background-color: var(--bg-color);
+            padding: 1rem;
+            border-radius: 4px;
+            word-wrap: break-word;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+
+        #newKeysOutput strong {
+            color: var(--primary-color);
+        }
+
+        #timeline {
+            height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .note {
+            background-color: var(--secondary-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        .note:last-child {
+            margin-bottom: 0;
+        }
+
+        #status-area {
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .status-success {
+            background-color: var(--success-color);
+            color: #111;
+        }
+        .status-error {
+            background-color: var(--error-color);
+            color: #111;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Left Column: Control Panel -->
+        <div id="control-panel">
+            <h1>Controls</h1>
+
+            <div class="control-section">
+                <h2>Keys</h2>
+                <label for="secretKeyInput">Secret Key (nsec)</label>
+                <input type="password" id="secretKeyInput" placeholder="nsec1...">
+                <button id="generateKeysBtn">Generate New Keys</button>
+                <div id="newKeysOutput">
+                    <p>Click "Generate" to create a new key pair.</p>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Post a Note</h2>
+                <textarea id="noteTextarea" rows="5" placeholder="What's on your mind?"></textarea>
+                <button id="postBtn">Post</button>
+            </div>
+             <div id="status-area"></div>
+        </div>
+
+        <!-- Right Column: Timeline -->
+        <div id="timeline-panel">
+            <h1>Timeline (Kind 1 Notes)</h1>
+            <div id="timeline">
+                <p>Connecting to relays...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Main entry point for the application.
+            // Manages state and orchestrates the different parts of the app.
+            const main = async () => {
+                // --- Constants and State ---
+                const RELAYS = [
+                    "wss://relay.damus.io",
+                    "wss://relay.snort.social",
+                    "wss://nostr.wine",
+                    "wss://relay.nostr.band",
+                    "wss://nos.lol"
+                ];
+                
+                // This is our only "state". It's kept within the main function's scope.
+                let events = [];
+
+                // Destructure the NostrTools library for easier access.
+                const {
+                    generateSecretKey,
+                    getPublicKey,
+                    finalizeEvent,
+                    nip19,
+                    SimplePool
+                } = window.NostrTools;
+
+                // --- DOM Element Selectors ---
+                const DOMElements = {
+                    secretKeyInput: document.getElementById('secretKeyInput'),
+                    generateKeysBtn: document.getElementById('generateKeysBtn'),
+                    newKeysOutput: document.getElementById('newKeysOutput'),
+                    noteTextarea: document.getElementById('noteTextarea'),
+                    postBtn: document.getElementById('postBtn'),
+                    timeline: document.getElementById('timeline'),
+                    statusArea: document.getElementById('status-area'),
+                };
+
+                // --- Pure Functions & UI Rendering ---
+
+                /**
+                 * Creates a DOM element for a single Nostr note.
+                 * @param {object} event - The Nostr event object.
+                 * @returns {HTMLElement} A div element representing the note.
+                 */
+                const createNoteElement = (event) => {
+                    const noteDiv = document.createElement('div');
+                    noteDiv.className = 'note';
+                    noteDiv.textContent = event.content;
+                    return noteDiv;
+                };
+
+                /**
+                 * Renders the entire timeline from the events array.
+                 * @param {Array<object>} eventsToRender - The array of events to display.
+                 */
+                const renderTimeline = (eventsToRender) => {
+                    DOMElements.timeline.innerHTML = ''; // Clear previous content
+                    if (eventsToRender.length === 0) {
+                        DOMElements.timeline.innerHTML = '<p>No events found. Waiting for new notes...</p>';
+                        return;
+                    }
+                    const noteElements = eventsToRender.map(createNoteElement);
+                    noteElements.forEach(el => DOMElements.timeline.appendChild(el));
+                };
+                
+                /**
+                 * Displays a status message (success or error) for a short duration.
+                 * @param {string} message - The message to display.
+                 * @param {'success' | 'error'} type - The type of message.
+                 */
+                const showStatus = (message, type) => {
+                    DOMElements.statusArea.textContent = message;
+                    DOMElements.statusArea.className = `status-${type}`;
+                    setTimeout(() => {
+                        DOMElements.statusArea.textContent = '';
+                        DOMElements.statusArea.className = '';
+                    }, 3000);
+                };
+
+                // --- Nostr-related Functions with Rust-style Error Handling ---
+
+                /**
+                 * Decodes an nsec string into a Uint8Array secret key.
+                 * @param {string} nsec - The nsec string to decode.
+                 * @returns {{ok: true, value: Uint8Array} | {ok: false, error: string}}
+                 */
+                const decodeNsec = (nsec) => {
+                    try {
+                        if (!nsec.startsWith('nsec1')) {
+                            return { ok: false, error: 'Invalid format: Key must start with "nsec1".' };
+                        }
+                        const { type, data } = nip19.decode(nsec);
+                        if (type !== 'nsec') {
+                            return { ok: false, error: 'Provided key is not a secret key (nsec).' };
+                        }
+                        return { ok: true, value: data }; // data is Uint8Array
+                    } catch (e) {
+                        return { ok: false, error: `Failed to decode secret key: ${e.message}` };
+                    }
+                };
+
+                /**
+                 * Creates, signs, and publishes a kind 1 note.
+                 * @param {SimplePool} pool - The nostr-tools pool instance.
+                 * @param {Array<string>} relays - The list of relays to publish to.
+                 * @param {string} content - The content of the note.
+                 * @param {Uint8Array} sk - The user's secret key as a Uint8Array.
+                 * @returns {Promise<{ok: true, value: object} | {ok: false, error: string}>}
+                 */
+                const publishNote = async (pool, relays, content, sk) => {
+                    try {
+                        const eventTemplate = {
+                            kind: 1,
+                            created_at: Math.floor(Date.now() / 1000),
+                            tags: [],
+                            content: content,
+                        };
+                        
+                        // This function signs the event and adds the pubkey, id, and sig.
+                        // It requires the secret key as a Uint8Array.
+                        const signedEvent = finalizeEvent(eventTemplate, sk);
+
+                        // Publish the event to the relays
+                        const pubs = pool.publish(relays, signedEvent);
+                        
+                        // Wait for at least one relay to accept the event
+                        await Promise.any(pubs);
+
+                        return { ok: true, value: signedEvent };
+                    } catch (e) {
+                        return { ok: false, error: `Failed to publish note: ${e.message}` };
+                    }
+                };
+
+                // --- Event Handlers ---
+
+                const handleGenerateKeys = () => {
+                    try {
+                        const sk = generateSecretKey(); // Returns Uint8Array
+                        const pk = getPublicKey(sk);    // Returns hex string
+                        
+                        const nsec = nip19.nsecEncode(sk);
+                        const npub = nip19.npubEncode(pk);
+
+                        DOMElements.newKeysOutput.innerHTML = `
+                            <p><strong>Secret Key (nsec):</strong> ${nsec}</p>
+                            <p><strong>Public Key (npub):</strong> ${npub}</p>
+                            <p>Save your secret key securely! It's like a password.</p>
+                        `;
+                        // For convenience, also fill the input field
+                        DOMElements.secretKeyInput.value = nsec;
+                    } catch (e) {
+                         showStatus(`Error generating keys: ${e.message}`, 'error');
+                    }
+                };
+
+                const handlePostNote = async () => {
+                    const nsec = DOMElements.secretKeyInput.value.trim();
+                    const content = DOMElements.noteTextarea.value.trim();
+
+                    if (!nsec) {
+                        showStatus('Secret key is required to post.', 'error');
+                        return;
+                    }
+                    if (!content) {
+                        showStatus('Note content cannot be empty.', 'error');
+                        return;
+                    }
+
+                    const skResult = decodeNsec(nsec);
+                    if (!skResult.ok) {
+                        showStatus(skResult.error, 'error');
+                        return;
+                    }
+
+                    const publishResult = await publishNote(pool, RELAYS, content, skResult.value);
+
+                    if (publishResult.ok) {
+                        showStatus('Note published successfully!', 'success');
+                        DOMElements.noteTextarea.value = ''; // Clear textarea on success
+                    } else {
+                        showStatus(publishResult.error, 'error');
+                    }
+                };
+
+                // --- Initialization ---
+
+                // Attach event listeners to buttons
+                DOMElements.generateKeysBtn.addEventListener('click', handleGenerateKeys);
+                DOMElements.postBtn.addEventListener('click', handlePostNote);
+
+                // Initialize the connection to relays
+                const pool = new SimplePool();
+
+                // Subscribe to relays to fetch past events and listen for new ones
+                // Note: nostr-tools v2 uses pool.sub() instead of pool.subscribe()
+                const sub = pool.sub(
+                    RELAYS,
+                    [{
+                        kinds: [1], // Kind 1 is for short text notes
+                        limit: 50   // Fetch the last 50 notes
+                    }]
+                );
+
+                sub.on('event', event => {
+                    // Avoid adding duplicate events
+                    if (events.some(e => e.id === event.id)) {
+                        return;
+                    }
+                    // Add new event to the beginning of the array
+                    events.unshift(event);
+                    // Re-sort just in case events arrive out of order
+                    events.sort((a, b) => b.created_at - a.created_at);
+                    // Re-render the timeline with the new data
+                    renderTimeline(events);
+                });
+
+                sub.on('eose', () => {
+                    console.log('End of stored events. Now listening for new ones...');
+                });
+                
+                console.log(`Subscribed to ${RELAYS.length} relays for kind:1 notes.`);
+            };
+
+            // Run the application
+            main();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Nostr Client</title>
+    
+    <!-- Load nostr-tools library -->
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --text-color: #e0e0e0;
+            --border-color: #333;
+            --error-color: #cf6679;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+        .container {
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .panel {
+            background-color: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+        .btn-primary:hover {
+            background-color: #a764fa;
+        }
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: #000;
+        }
+        .btn-secondary:hover {
+            background-color: #00bfa5;
+        }
+        .key-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        #timeline {
+            background-color: var(--surface-color);
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            height: 85vh;
+            overflow-y: auto;
+        }
+        .note {
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .note:last-child {
+            border-bottom: none;
+        }
+        .note-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .note-author {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Left Column: Control Panel -->
+        <div class="column">
+            <div class="panel">
+                <h2>Controls</h2>
+                <label for="nsecInput">Your Secret Key (nsec)</label>
+                <input type="password" id="nsecInput" placeholder="nsec...">
+                <div class="key-actions" style="margin-top: 1rem;">
+                    <button id="generateKeyBtn" class="btn-secondary">Generate New Key</button>
+                </div>
+            </div>
+            <div class="panel">
+                <h2>Compose Note</h2>
+                <label for="noteContent">What's on your mind?</label>
+                <textarea id="noteContent" placeholder="Write your note here..."></textarea>
+                <div style="text-align: right; margin-top: 1rem;">
+                    <button id="postBtn" class="btn-primary">Post</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Timeline -->
+        <div class="column">
+            <div id="timeline">
+                <h2>Timeline</h2>
+                <!-- Notes will be prepended here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // =================================================================
+        // SETUP: NOSTR-TOOLS & CONSTANTS
+        // =================================================================
+
+        const {
+            generateSecretKey,
+            getPublicKey,
+            finalizeEvent,
+            SimplePool
+        } = window.NostrTools;
+        const { nsecEncode, npubEncode, decode } = window.NostrTools.nip19;
+
+        const RELAYS = [
+            'wss://relay.damus.io',
+            'wss://nos.lol',
+            'wss://relay.primal.net',
+            'wss://nostr.wine'
+        ];
+
+        // =================================================================
+        // PURE UTILITY FUNCTIONS
+        // =================================================================
+
+        /**
+         * A Result type for Rust-inspired error handling.
+         * @typedef {{ok: true, value: T} | {ok: false, error: string}} Result<T>
+         */
+
+        /**
+         * Truncates a public key for display.
+         * @param {string} pk - The public key hex string.
+         * @returns {string} - The truncated public key.
+         */
+        const truncatePublicKey = (pk) => `${pk.slice(0, 8)}...${pk.slice(-8)}`;
+
+        /**
+         * Safely decodes an nsec string into a Uint8Array secret key.
+         * @param {string} nsec - The nsec string to decode.
+         * @returns {Result<Uint8Array>} A result object.
+         */
+        const decodeNsec = (nsec) => {
+            try {
+                const decoded = decode(nsec);
+                if (decoded.type === 'nsec' && decoded.data instanceof Uint8Array) {
+                    return { ok: true, value: decoded.data };
+                }
+                return { ok: false, error: 'Invalid nsec format or type.' };
+            } catch (e) {
+                return { ok: false, error: `Failed to decode nsec: ${e.message}` };
+            }
+        };
+
+        // =================================================================
+        // UI RENDERING FUNCTIONS (SIDE-EFFECTFUL)
+        // =================================================================
+
+        /**
+         * Creates a DOM element for a single Nostr note.
+         * @param {object} event - The Nostr event object.
+         * @returns {HTMLElement} A div element representing the note.
+         */
+        const createNoteElement = (event) => {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note';
+            
+            const contentP = document.createElement('p');
+            contentP.className = 'note-content';
+            contentP.textContent = event.content;
+            
+            const authorP = document.createElement('p');
+            authorP.className = 'note-author';
+            authorP.textContent = `by: ${truncatePublicKey(event.pubkey)}`;
+            
+            noteDiv.appendChild(contentP);
+            noteDiv.appendChild(authorP);
+            
+            return noteDiv;
+        };
+        
+        /**
+         * Renders the entire timeline from a list of events.
+         * @param {HTMLElement} container - The DOM element to render into.
+         * @param {object[]} events - An array of Nostr event objects.
+         */
+        const renderTimeline = (container, events) => {
+            // Clear all but the H2 title
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            // Prepend each note to keep the newest at the top
+            const fragment = document.createDocumentFragment();
+            for (const event of events) {
+                fragment.appendChild(createNoteElement(event));
+            }
+            container.appendChild(fragment);
+        };
+
+        // =================================================================
+        // NOSTR CORE LOGIC FUNCTIONS
+        // =================================================================
+
+        /**
+         * Creates and signs a Kind 1 (text note) event.
+         * @param {string} content - The text content of the note.
+         * @param {Uint8Array} sk - The secret key as a Uint8Array.
+         * @returns {object} The signed Nostr event.
+         */
+        const createNoteEvent = (content, sk) => {
+            const eventTemplate = {
+                kind: 1,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [],
+                content: content,
+            };
+            return finalizeEvent(eventTemplate, sk);
+        };
+
+        /**
+         * Publishes a signed event to the relay pool.
+         * @param {SimplePool} pool - The Nostr SimplePool instance.
+         * @param {string[]} relays - An array of relay URLs.
+         * @param {object} event - The signed Nostr event to publish.
+         * @returns {Promise<Result<true>>} A promise resolving to a result object.
+         */
+        const publishNote = async (pool, relays, event) => {
+            try {
+                await Promise.any(pool.publish(relays, event));
+                return { ok: true, value: true };
+            } catch (error) {
+                console.error("Failed to publish to any relay:", error);
+                return { ok: false, error: 'Failed to publish note to any of the connected relays.' };
+            }
+        };
+
+        /**
+         * Subscribes to a real-time feed of notes.
+         * @param {SimplePool} pool - The Nostr SimplePool instance.
+         * @param {string[]} relays - An array of relay URLs.
+         * @param {function(object): void} onEventCallback - Callback to handle each event.
+         */
+        const subscribeToTimeline = (pool, relays, onEventCallback) => {
+            pool.subscribe(
+                relays,
+                { kinds: [1], limit: 50 },
+                { onevent: onEventCallback }
+            );
+        };
+
+        // =================================================================
+        // EVENT HANDLERS & INITIALIZATION
+        // =================================================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Get DOM Elements ---
+            const nsecInput = document.getElementById('nsecInput');
+            const generateKeyBtn = document.getElementById('generateKeyBtn');
+            const noteContent = document.getElementById('noteContent');
+            const postBtn = document.getElementById('postBtn');
+            const timelineContainer = document.getElementById('timeline');
+
+            // --- State Management ---
+            let timelineEvents = [];
+
+            // --- Nostr Pool ---
+            const pool = new SimplePool();
+
+            // --- Event Handlers ---
+
+            const handleGenerateKey = () => {
+                const sk = generateSecretKey();
+                const nsec = nsecEncode(sk);
+                nsecInput.value = nsec;
+                alert('New secret key generated and placed in the input field. Store it safely!');
+            };
+
+            const handlePostNote = async () => {
+                const content = noteContent.value.trim();
+                if (!content) {
+                    alert('Note content cannot be empty.');
+                    return;
+                }
+
+                const nsec = nsecInput.value.trim();
+                if (!nsec) {
+                    alert('Secret key (nsec) is required to post.');
+                    return;
+                }
+
+                const decodeResult = decodeNsec(nsec);
+                if (!decodeResult.ok) {
+                    alert(`Error with secret key: ${decodeResult.error}`);
+                    return;
+                }
+
+                const sk = decodeResult.value;
+                const signedEvent = createNoteEvent(content, sk);
+                
+                postBtn.disabled = true;
+                postBtn.textContent = 'Posting...';
+
+                const publishResult = await publishNote(pool, RELAYS, signedEvent);
+                
+                if (publishResult.ok) {
+                    alert('Note published successfully to at least one relay!');
+                    noteContent.value = '';
+                } else {
+                    alert(`Publishing failed: ${publishResult.error}`);
+                }
+                
+                postBtn.disabled = false;
+                postBtn.textContent = 'Post';
+            };
+            
+            const onTimelineEvent = (event) => {
+                // Avoid duplicates
+                if (timelineEvents.some(e => e.id === event.id)) {
+                    return;
+                }
+                // Prepend for immutable update and render
+                timelineEvents = [event, ...timelineEvents];
+                // Keep the timeline from growing indefinitely in memory
+                if (timelineEvents.length > 100) {
+                    timelineEvents.length = 100;
+                }
+                renderTimeline(timelineContainer, timelineEvents);
+            };
+
+            // --- Attach Listeners & Start Subscription ---
+            generateKeyBtn.addEventListener('click', handleGenerateKey);
+            postBtn.addEventListener('click', handlePostNote);
+
+            subscribeToTimeline(pool, RELAYS, onTimelineEvent);
+
+            console.log('Simple Nostr Client Initialized. Listening for events...');
+        });
+
+    </script>
+</body>
+</html>
