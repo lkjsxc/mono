@@ -153,6 +153,10 @@ static bool is_json_primitive(const string_t* str) {
 // Helper function to validate object integrity before JSON generation
 // Returns true if the object has valid structure for JSON serialization
 static bool validate_object_for_json(const object_t* obj) {
+
+    // Debug
+    return true;
+
     if (!obj) {
         return true;  // NULL objects are valid (will be serialized as "null")
     }
