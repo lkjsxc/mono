@@ -1,5 +1,5 @@
-#ifndef LKJAGENT_AGENT_PROMPT_H
-#define LKJAGENT_AGENT_PROMPT_H
+#ifndef LKJAGENT_agent_PROMPT_H
+#define LKJAGENT_agent_PROMPT_H
 
 #include "global/const.h"
 #include "global/macro.h"

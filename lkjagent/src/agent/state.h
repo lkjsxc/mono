@@ -1,5 +1,5 @@
-#ifndef LKJAGENT_AGENT_STATE_H
-#define LKJAGENT_AGENT_STATE_H
+#ifndef LKJAGENT_agent_STATE_H
+#define LKJAGENT_agent_STATE_H
 
 #include "global/const.h"
 #include "global/macro.h"
