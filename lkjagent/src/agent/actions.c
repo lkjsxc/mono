@@ -1,5 +1,9 @@
 #include "agent/actions.h"
 
+// Forward declarations for local helpers used before their definitions
+static void destroy_string_with_warning(pool_t* pool, string_t* s, const char* context);
+static void destroy_string_array_with_warning(pool_t* pool, string_t** arr, size_t count, const char* context);
+
 result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;

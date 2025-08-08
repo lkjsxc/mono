@@ -22,15 +22,15 @@
       "key_prefix": "execution_log_"
     },
     "paging_limit": {
-      "enable": true,
+      "enable": false,
       "max_tokens": 1024
     },
     "hard_limit": {
-      "enable": true,
+      "enable": false,
       "max_tokens": 2048
     },
     "iterate": {
-      "enable": true,
+      "enable": false,
       "max_iterations": 10000
     },
     "state": {
