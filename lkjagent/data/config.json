@@ -13,12 +13,12 @@
     },
     "evaluation_log": {
       "enable": true,
-      "max_entries": 4,
+      "max_entries": 2,
       "key_prefix": "evaluation_log_"
     },
     "execution_log": {
       "enable": true,
-      "max_entries": 4,
+      "max_entries": 2,
       "key_prefix": "execution_log_"
     },
     "paging_limit": {

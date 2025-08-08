@@ -294,38 +294,67 @@ static const char* skip_whitespace(const char* json, const char* end) {
     return json;
 }
 
-// Helper function to parse a JSON string value
+// Helper function to parse a JSON string value or primitive value
 static result_t parse_json_string(pool_t* pool, const char** json, const char* end, string_t** result) {
     const char* start = *json;
 
-    if (start >= end || *start != '"') {
-        RETURN_ERR("Expected opening quote for JSON string");
+    if (start >= end) {
+        RETURN_ERR("Unexpected end of input");
     }
 
-    start++;  // Skip opening quote
-    const char* current = start;
+    // Check if this is a quoted string
+    if (*start == '"') {
+        start++;  // Skip opening quote
+        const char* current = start;
 
-    // Find the closing quote (handle escapes)
-    while (current < end && *current != '"') {
-        if (*current == '\\' && current + 1 < end) {
-            current += 2;  // Skip escaped character
-        } else {
+        // Find the closing quote (handle escapes)
+        while (current < end && *current != '"') {
+            if (*current == '\\' && current + 1 < end) {
+                current += 2;  // Skip escaped character
+            } else {
+                current++;
+            }
+        }
+
+        if (current >= end) {
+            RETURN_ERR("Unterminated JSON string");
+        }
+
+        // Process escape sequences in the string content
+        size_t raw_length = current - start;
+        if (process_escape_sequences(pool, start, raw_length, result) != RESULT_OK) {
+            RETURN_ERR("Failed to process escape sequences in JSON string");
+        }
+
+        *json = current + 1;  // Skip closing quote
+        return RESULT_OK;
+    } else {
+        // Handle primitive values (numbers, booleans, null)
+        const char* current = start;
+
+        // Find the end of the primitive value
+        while (current < end && *current != ',' && *current != '}' && *current != ']' &&
+               *current != ' ' && *current != '\t' && *current != '\n' && *current != '\r') {
             current++;
         }
-    }
 
-    if (current >= end) {
-        RETURN_ERR("Unterminated JSON string");
-    }
+        if (current == start) {
+            RETURN_ERR("Invalid JSON value");
+        }
 
-    // Process escape sequences in the string content
-    size_t raw_length = current - start;
-    if (process_escape_sequences(pool, start, raw_length, result) != RESULT_OK) {
-        RETURN_ERR("Failed to process escape sequences in JSON string");
-    }
+        // Create a string from the primitive value
+        size_t length = current - start;
+        char temp_str[length + 1];
+        memcpy(temp_str, start, length);
+        temp_str[length] = '\0';
+        
+        if (string_create_str(pool, result, temp_str) != RESULT_OK) {
+            RETURN_ERR("Failed to create string for primitive value");
+        }
 
-    *json = current + 1;  // Skip closing quote
-    return RESULT_OK;
+        *json = current;
+        return RESULT_OK;
+    }
 }
 
 // Forward declaration for recursive parsing
@@ -1124,8 +1153,9 @@ result_t object_tostring_json(pool_t* pool, string_t** dst, const object_t* src)
 
 // Helper function to escape characters when serializing to XML
 static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t** output) {
-    // Estimate output size (worst case: every character needs escaping with spaces)
-    size_t estimated_size = input->size * 8 + 1;  // " &quot; " is 8 chars
+    // Estimate output size (worst case: every character needs escaping)
+    // Max entity length now is 6 ("&quot;" or "&apos;")
+    size_t estimated_size = input->size * 6 + 1;
     if (pool_string_alloc(pool, output, estimated_size) != RESULT_OK) {
         RETURN_ERR("Failed to allocate output string for XML escaping");
     }
@@ -1138,29 +1168,29 @@ static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t*
     while (src < src_end) {
         switch (*src) {
             case '<':
-                // Expand to " &lt; "
-                memcpy(dst + dst_pos, " &lt; ", 6);
-                dst_pos += 6;
+                // Expand to "&lt;"
+                memcpy(dst + dst_pos, "&lt;", 4);
+                dst_pos += 4;
                 break;
             case '>':
-                // Expand to " &gt; "
-                memcpy(dst + dst_pos, " &gt; ", 6);
-                dst_pos += 6;
+                // Expand to "&gt;"
+                memcpy(dst + dst_pos, "&gt;", 4);
+                dst_pos += 4;
                 break;
             case '&':
-                // Expand to " &amp; "
-                memcpy(dst + dst_pos, " &amp; ", 7);
-                dst_pos += 7;
+                // Expand to "&amp;"
+                memcpy(dst + dst_pos, "&amp;", 5);
+                dst_pos += 5;
                 break;
             case '"':
-                // Expand to " &quot; "
-                memcpy(dst + dst_pos, " &quot; ", 8);
-                dst_pos += 8;
+                // Expand to "&quot;"
+                memcpy(dst + dst_pos, "&quot;", 6);
+                dst_pos += 6;
                 break;
             case '\'':
-                // Expand to " &apos; "
-                memcpy(dst + dst_pos, " &apos; ", 8);
-                dst_pos += 8;
+                // Expand to "&apos;"
+                memcpy(dst + dst_pos, "&apos;", 6);
+                dst_pos += 6;
                 break;
             default:
                 if (*src < 0x20 && *src != '\t' && *src != '\n' && *src != '\r') {

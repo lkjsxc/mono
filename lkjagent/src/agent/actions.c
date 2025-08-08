@@ -6,9 +6,16 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
 
+    // Ensure working memory exists before any logging attempts
+    // so that execution results can always be recorded.
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        // Non-fatal: logging may fail if working memory is unavailable
+        printf("Warning: Failed to ensure working memory exists before dispatch logging\n");
+    }
+
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "unknown", 
+        if (agent_actions_log_result(pool, config, agent, "unknown", 
                                            "unknown", "Failed to extract action parameters") != RESULT_OK) {
             printf("Warning: Failed to log action parameter extraction failure\n");
         }
@@ -18,7 +25,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
     // Dispatch based on action type
     if (string_equal_str(type_obj->string, "working_memory_add")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "working_memory_add", 1) != RESULT_OK) {
-            if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+            if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                                tags_obj ? tags_obj->string->data : "unknown",
                                                "Invalid parameters for working_memory_add action") != RESULT_OK) {
                 printf("Warning: Failed to log working_memory_add validation failure\n");
@@ -29,7 +36,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
 
     } else if (string_equal_str(type_obj->string, "working_memory_remove")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "working_memory_remove", 0) != RESULT_OK) {
-            if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+            if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                                tags_obj ? tags_obj->string->data : "unknown",
                                                "Invalid parameters for working_memory_remove action") != RESULT_OK) {
                 printf("Warning: Failed to log working_memory_remove validation failure\n");
@@ -40,7 +47,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
 
     } else if (string_equal_str(type_obj->string, "storage_load")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_load", 0) != RESULT_OK) {
-            if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+            if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                                tags_obj ? tags_obj->string->data : "unknown",
                                                "Invalid parameters for storage_load action") != RESULT_OK) {
                 printf("Warning: Failed to log storage_load validation failure\n");
@@ -51,7 +58,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
 
     } else if (string_equal_str(type_obj->string, "storage_save")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_save", 1) != RESULT_OK) {
-            if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+            if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                                tags_obj ? tags_obj->string->data : "unknown",
                                                "Invalid parameters for storage_save action") != RESULT_OK) {
                 printf("Warning: Failed to log storage_save validation failure\n");
@@ -61,7 +68,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
         return agent_actions_execute_storage_save(pool, config, agent, action_obj);
 
     } else {
-        if (agent_state_manage_execution_log(pool, config, agent,
+    if (agent_actions_log_result(pool, config, agent,
                                            type_obj ? type_obj->string->data : "unknown",
                                            tags_obj ? tags_obj->string->data : "unknown",
                                            "Unknown action type") != RESULT_OK) {
@@ -79,9 +86,15 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
     object_t* working_memory = NULL;
     string_t* processed_tags = NULL;
 
+    // Ensure working memory exists before any logging attempts within this action
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        // Non-fatal: continue, but initial logs may fail
+        printf("Warning: Failed to ensure working memory exists before working_memory_add logging\n");
+    }
+
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                            "unknown", "Failed to extract action parameters") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_add parameter extraction failure\n");
         }
@@ -90,7 +103,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
 
     // Ensure working memory exists
     if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to ensure working memory exists") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_add memory existence failure\n");
@@ -100,7 +113,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
 
     // Get working memory
     if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to get working memory") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_add memory access failure\n");
@@ -110,7 +123,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
 
     // Process tags (convert spaces to underscores)
     if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_add tag processing failure\n");
@@ -120,7 +133,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
 
     // Add the key-value pair to working memory
     if (object_set_string(pool, working_memory, processed_tags, value_obj->string) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                            processed_tags->data, 
                                            "Failed to add item to working memory") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_add set failure\n");
@@ -132,7 +145,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
     }
 
     // Log successful action result using execution log
-    if (agent_state_manage_execution_log(pool, config, agent, "working_memory_add", 
+    if (agent_actions_log_result(pool, config, agent, "working_memory_add", 
                                         processed_tags->data, "Successfully added item to working memory") != RESULT_OK) {
         printf("Warning: Failed to log working_memory_add result\n");
     }
@@ -154,9 +167,15 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
     string_t* processed_tags = NULL;
     string_t* empty_string = NULL;
 
+    // Ensure working memory exists before any logging attempts within this action
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        // Non-fatal: continue, but initial logs may fail
+        printf("Warning: Failed to ensure working memory exists before working_memory_remove logging\n");
+    }
+
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            "unknown", "Failed to extract action parameters") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove parameter extraction failure\n");
         }
@@ -165,7 +184,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
 
     // Ensure working memory exists
     if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to ensure working memory exists") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove memory existence failure\n");
@@ -175,7 +194,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
 
     // Get working memory
     if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to get working memory") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove memory access failure\n");
@@ -185,7 +204,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
 
     // Process tags
     if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove tag processing failure\n");
@@ -195,7 +214,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
 
     // Create empty string to effectively remove the item
     if (string_create_str(pool, &empty_string, "") != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            processed_tags->data, 
                                            "Failed to create empty string") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove empty string creation failure\n");
@@ -208,7 +227,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
 
     // Set the key to empty string (effective removal)
     if (object_set_string(pool, working_memory, processed_tags, empty_string) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+        if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                            processed_tags->data, 
                                            "Failed to remove item from working memory") != RESULT_OK) {
             printf("Warning: Failed to log working_memory_remove set failure\n");
@@ -221,7 +240,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
     }
 
     // Log successful action result using execution log
-    if (agent_state_manage_execution_log(pool, config, agent, "working_memory_remove", 
+    if (agent_actions_log_result(pool, config, agent, "working_memory_remove", 
                                         processed_tags->data, "Successfully removed item from working memory") != RESULT_OK) {
         printf("Warning: Failed to log working_memory_remove result\n");
     }
@@ -245,9 +264,15 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
     string_t* processed_tags = NULL;
     object_t* stored_item = NULL;
 
+    // Ensure working memory exists before any logging attempts within this action
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        // Non-fatal: continue, but initial logs may fail
+        printf("Warning: Failed to ensure working memory exists before storage_load logging\n");
+    }
+
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                            "unknown", "Failed to extract action parameters") != RESULT_OK) {
             printf("Warning: Failed to log storage_load parameter extraction failure\n");
         }
@@ -256,7 +281,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
 
     // Get storage and working memory
     if (agent_actions_get_storage(pool, agent, &storage) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to get storage") != RESULT_OK) {
             printf("Warning: Failed to log storage_load storage access failure\n");
@@ -266,7 +291,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
 
     // Ensure working memory exists before trying to load into it
     if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to ensure working memory exists") != RESULT_OK) {
             printf("Warning: Failed to log storage_load memory existence failure\n");
@@ -275,7 +300,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
     }
 
     if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to get working memory") != RESULT_OK) {
             printf("Warning: Failed to log storage_load memory access failure\n");
@@ -285,7 +310,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
 
     // Process tags
     if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log storage_load tag processing failure\n");
@@ -297,7 +322,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
     if (object_provide_string(&stored_item, storage, processed_tags) == RESULT_OK) {
         // Item found in storage, copy to working memory
         if (object_set_string(pool, working_memory, processed_tags, stored_item->string) != RESULT_OK) {
-            if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+            if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                                processed_tags->data, 
                                                "Failed to copy item from storage to working memory") != RESULT_OK) {
                 printf("Warning: Failed to log storage_load copy failure\n");
@@ -309,14 +334,14 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
         }
         
         // Log successful load result using execution log
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                             processed_tags->data, "Successfully loaded item from storage to working memory") != RESULT_OK) {
             printf("Warning: Failed to log storage_load success result\n");
         }
     } else {
         // Item not found in storage - this is not necessarily an error
         // The agent should be aware that the load didn't find anything
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_load", 
+        if (agent_actions_log_result(pool, config, agent, "storage_load", 
                                             processed_tags->data, "Item not found in storage") != RESULT_OK) {
             printf("Warning: Failed to log storage_load not found result\n");
         }
@@ -338,9 +363,15 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
     object_t* storage = NULL;
     string_t* processed_tags = NULL;
 
+    // Ensure working memory exists before any logging attempts within this action
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        // Non-fatal: continue, but initial logs may fail
+        printf("Warning: Failed to ensure working memory exists before storage_save logging\n");
+    }
+
     // Extract action parameters
     if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+        if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                            "unknown", "Failed to extract action parameters") != RESULT_OK) {
             printf("Warning: Failed to log storage_save parameter extraction failure\n");
         }
@@ -349,7 +380,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
 
     // Ensure storage exists
     if (agent_actions_ensure_storage_exists(pool, agent) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+        if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to ensure storage exists") != RESULT_OK) {
             printf("Warning: Failed to log storage_save storage existence failure\n");
@@ -359,7 +390,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
 
     // Get storage
     if (agent_actions_get_storage(pool, agent, &storage) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+        if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to get storage") != RESULT_OK) {
             printf("Warning: Failed to log storage_save storage access failure\n");
@@ -369,7 +400,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
 
     // Process tags
     if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+        if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                            tags_obj ? tags_obj->string->data : "unknown", 
                                            "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log storage_save tag processing failure\n");
@@ -379,7 +410,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
 
     // Save the key-value pair to storage
     if (object_set_string(pool, storage, processed_tags, value_obj->string) != RESULT_OK) {
-        if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+        if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                            processed_tags->data, 
                                            "Failed to save item to storage") != RESULT_OK) {
             printf("Warning: Failed to log storage_save set failure\n");
@@ -391,7 +422,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
     }
 
     // Log successful action result using execution log
-    if (agent_state_manage_execution_log(pool, config, agent, "storage_save", 
+    if (agent_actions_log_result(pool, config, agent, "storage_save", 
                                         processed_tags->data, "Successfully saved item to storage") != RESULT_OK) {
         printf("Warning: Failed to log storage_save result\n");
     }
@@ -571,6 +602,163 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
                 }
                 if (string_destroy(pool, think_log_value) != RESULT_OK) {
                     // Log error but continue - cleanup failure is non-critical
+                }
+            }
+        }
+    }
+
+    // Look for action block and its fields (type, tags, value)
+    const char* action_start = strstr(content, "<action>");
+    const char* action_end = strstr(content, "</action>");
+
+    if (action_start && action_end && action_end > action_start) {
+        action_start += strlen("<action>");
+
+        // Create action object container
+        object_t* action_obj = NULL;
+        if (object_create(pool, &action_obj) == RESULT_OK) {
+            // Extract <type>
+            string_t* type_val = NULL;
+            {
+                char open_tag[32];
+                char close_tag[32];
+                snprintf(open_tag, sizeof(open_tag), "<%s>", "type");
+                snprintf(close_tag, sizeof(close_tag), "</%s>", "type");
+                const char* f_start = strstr(action_start, open_tag);
+                const char* f_end = strstr(action_start, close_tag);
+                if (f_start && f_end && f_end > f_start) {
+                    f_start += strlen(open_tag);
+                    size_t len = (size_t)(f_end - f_start);
+                    if (len > 0 && len <= 1024) {
+                        char buf[1025];
+                        size_t cpy = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+                        strncpy(buf, f_start, cpy);
+                        buf[cpy] = '\0';
+                        if (string_create_str(pool, &type_val, buf) != RESULT_OK) {
+                            printf("Error: Failed to create string for action.type while parsing response\n");
+                            type_val = NULL;
+                        }
+                    }
+                }
+            }
+
+            // Extract <tags>
+            string_t* tags_val = NULL;
+            {
+                char open_tag[32];
+                char close_tag[32];
+                snprintf(open_tag, sizeof(open_tag), "<%s>", "tags");
+                snprintf(close_tag, sizeof(close_tag), "</%s>", "tags");
+                const char* f_start = strstr(action_start, open_tag);
+                const char* f_end = strstr(action_start, close_tag);
+                if (f_start && f_end && f_end > f_start) {
+                    f_start += strlen(open_tag);
+                    size_t len = (size_t)(f_end - f_start);
+                    if (len > 0 && len <= 1024) {
+                        char buf[1025];
+                        size_t cpy = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+                        strncpy(buf, f_start, cpy);
+                        buf[cpy] = '\0';
+                        if (string_create_str(pool, &tags_val, buf) != RESULT_OK) {
+                            printf("Error: Failed to create string for action.tags while parsing response\n");
+                            tags_val = NULL;
+                        }
+                    }
+                }
+            }
+
+            // Extract optional <value>
+            string_t* value_val = NULL;
+            {
+                char open_tag[32];
+                char close_tag[32];
+                snprintf(open_tag, sizeof(open_tag), "<%s>", "value");
+                snprintf(close_tag, sizeof(close_tag), "</%s>", "value");
+                const char* f_start = strstr(action_start, open_tag);
+                const char* f_end = strstr(action_start, close_tag);
+                if (f_start && f_end && f_end > f_start) {
+                    f_start += strlen(open_tag);
+                    size_t len = (size_t)(f_end - f_start);
+                    if (len > 0 && len <= 2048) {
+                        char buf[2049];
+                        size_t cpy = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+                        strncpy(buf, f_start, cpy);
+                        buf[cpy] = '\0';
+                        if (string_create_str(pool, &value_val, buf) != RESULT_OK) {
+                            printf("Error: Failed to create string for action.value while parsing response\n");
+                            value_val = NULL;
+                        }
+                    }
+                }
+            }
+
+            // Set any extracted fields into action_obj
+            if (type_val) {
+                string_t* key = NULL;
+                if (string_create_str(pool, &key, "type") == RESULT_OK) {
+                    if (object_set_string(pool, action_obj, key, type_val) != RESULT_OK) {
+                        printf("Error: Failed to set action.type into response object\n");
+                    }
+                    if (string_destroy(pool, key) != RESULT_OK) {
+                        printf("Error: Failed to destroy key string for action.type\n");
+                    }
+                } else {
+                    printf("Error: Failed to create key string for action.type\n");
+                }
+                if (string_destroy(pool, type_val) != RESULT_OK) {
+                    printf("Error: Failed to destroy value string for action.type\n");
+                }
+            }
+            if (tags_val) {
+                string_t* key = NULL;
+                if (string_create_str(pool, &key, "tags") == RESULT_OK) {
+                    if (object_set_string(pool, action_obj, key, tags_val) != RESULT_OK) {
+                        printf("Error: Failed to set action.tags into response object\n");
+                    }
+                    if (string_destroy(pool, key) != RESULT_OK) {
+                        printf("Error: Failed to destroy key string for action.tags\n");
+                    }
+                } else {
+                    printf("Error: Failed to create key string for action.tags\n");
+                }
+                if (string_destroy(pool, tags_val) != RESULT_OK) {
+                    printf("Error: Failed to destroy value string for action.tags\n");
+                }
+            }
+            if (value_val) {
+                string_t* key = NULL;
+                if (string_create_str(pool, &key, "value") == RESULT_OK) {
+                    if (object_set_string(pool, action_obj, key, value_val) != RESULT_OK) {
+                        printf("Error: Failed to set action.value into response object\n");
+                    }
+                    if (string_destroy(pool, key) != RESULT_OK) {
+                        printf("Error: Failed to destroy key string for action.value\n");
+                    }
+                } else {
+                    printf("Error: Failed to create key string for action.value\n");
+                }
+                if (string_destroy(pool, value_val) != RESULT_OK) {
+                    printf("Error: Failed to destroy value string for action.value\n");
+                }
+            }
+
+            // If at least one field was present, attach action to agent object
+            if (action_obj->child != NULL || action_obj->string != NULL) {
+                string_t* action_path = NULL;
+                if (string_create_str(pool, &action_path, "action") == RESULT_OK) {
+                    if (object_set(pool, agent_obj, action_path, action_obj) != RESULT_OK) {
+                        printf("Error: Failed to attach action object to agent response\n");
+                    }
+                    if (string_destroy(pool, action_path) != RESULT_OK) {
+                        printf("Error: Failed to destroy action path string\n");
+                    }
+                } else {
+                    printf("Error: Failed to create action path string\n");
+                }
+            } else {
+                // No fields extracted, discard empty action_obj
+                if (object_destroy(pool, action_obj) != RESULT_OK) {
+                    printf("Error: Failed to destroy empty action object\n");
                 }
             }
         }
@@ -787,6 +975,12 @@ result_t agent_actions_ensure_working_memory_exists(pool_t* pool, agent_t* agent
 
 // Log action execution results using the execution log system
 result_t agent_actions_log_result(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message) {
+    // Ensure working memory exists before attempting to write logs
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        printf("Warning: Failed to ensure working memory exists before logging\n");
+        // Continue anyway; underlying log function may still fail gracefully
+    }
+
     // Use the new execution log management function
     if (agent_state_manage_execution_log(pool, config, agent, action_type, tags, result_message) != RESULT_OK) {
         printf("Warning: Failed to manage execution log\n");
