@@ -809,6 +809,28 @@ static int cmp_string_t_ptrs(const void* a, const void* b) {
     return 0;
 }
 
+// Helpers to destroy strings while logging failures and honoring warn_unused_result
+static void destroy_string_with_warning(pool_t* pool, string_t* s, const char* context) {
+    if (s) {
+        result_t r = string_destroy(pool, s);
+        if (r != RESULT_OK) {
+            printf("Warning: Failed to destroy string (%s)\n", context ? context : "");
+        }
+    }
+}
+
+static void destroy_string_array_with_warning(pool_t* pool, string_t** arr, size_t count, const char* context) {
+    if (!arr) return;
+    for (size_t i = 0; i < count; i++) {
+        if (arr[i]) {
+            result_t r = string_destroy(pool, arr[i]);
+            if (r != RESULT_OK) {
+                printf("Warning: Failed to destroy string at index %zu (%s)\n", i, context ? context : "");
+            }
+        }
+    }
+}
+
 result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, string_t** processed_tags) {
     if (!tags_obj || !tags_obj->string || !tags_obj->string->data) {
         RETURN_ERR("Invalid tags object");
@@ -835,7 +857,7 @@ result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, 
             string_t* token = NULL;
             if (string_create(pool, &token) != RESULT_OK) {
                 // cleanup created parts
-                for (size_t k = 0; k < count; k++) string_destroy(pool, parts[k]);
+                destroy_string_array_with_warning(pool, parts, count, "token create failure cleanup");
                 RETURN_ERR("Failed to create token string");
             }
 
@@ -844,8 +866,8 @@ result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, 
                 if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
                 if (c == ' ') c = '_';
                 if (string_append_char(pool, &token, c) != RESULT_OK) {
-                    for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
-                    string_destroy(pool, token);
+                    destroy_string_array_with_warning(pool, parts, count, "append token failure cleanup");
+                    destroy_string_with_warning(pool, token, "append token failure cleanup");
                     RETURN_ERR("Failed to append to token");
                 }
             }
@@ -853,7 +875,7 @@ result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, 
             if (token->size > 0) {
                 parts[count++] = token;
             } else {
-                string_destroy(pool, token);
+                destroy_string_with_warning(pool, token, "drop empty token");
             }
         }
         i = (j < n) ? (j + 1) : j;
@@ -881,34 +903,34 @@ result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, 
                 parts[uniq++] = parts[k];
             } else {
                 // drop duplicate
-                string_destroy(pool, parts[k]);
+                if(string_destroy(pool, parts[k]) != RESULT_OK){
+                    printf("Warning: Failed to destroy duplicate string\n");
+                }
             }
         }
     }
     count = uniq;
 
     if (string_create(pool, processed_tags) != RESULT_OK) {
-        for (size_t k = 0; k < count; k++) string_destroy(pool, parts[k]);
+        destroy_string_array_with_warning(pool, parts, count, "create processed_tags failure cleanup");
         RETURN_ERR("Failed to create processed tags");
     }
 
     for (size_t k = 0; k < count; k++) {
         if (k > 0) {
             if (string_append_char(pool, processed_tags, ',') != RESULT_OK) {
-                for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
+                destroy_string_array_with_warning(pool, parts, count, "append comma failure cleanup");
                 RETURN_ERR("Failed to append comma");
             }
         }
         if (string_append_string(pool, processed_tags, parts[k]) != RESULT_OK) {
-            for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
+            destroy_string_array_with_warning(pool, parts, count, "append tag failure cleanup");
             RETURN_ERR("Failed to append tag");
         }
     }
 
     // cleanup tokens
-    for (size_t k = 0; k < count; k++) {
-        string_destroy(pool, parts[k]);
-    }
+    destroy_string_array_with_warning(pool, parts, count, "final tokens cleanup");
     return RESULT_OK;
 }
 

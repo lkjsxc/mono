@@ -1209,86 +1209,17 @@ static result_t escape_xml_string(pool_t* pool, const string_t* input, string_t*
     return RESULT_OK;
 }
 
-// Helper structure to hold children for sorting
-typedef struct {
-    object_t* child;
-    char* key;
-} sorted_child_t;
-
-// Comparison function for sorting children by key name
-static int compare_children(const void* a, const void* b) {
-    const sorted_child_t* child_a = (const sorted_child_t*)a;
-    const sorted_child_t* child_b = (const sorted_child_t*)b;
-    return strcmp(child_a->key, child_b->key);
-}
-
-// Helper function to collect and sort children by their keys
-static result_t collect_and_sort_children(const object_t* parent, sorted_child_t** sorted_children, size_t* count) {
-    if (!parent || !parent->child) {
-        *sorted_children = NULL;
-        *count = 0;
-        return RESULT_OK;
-    }
-
-    // First pass: count children
-    *count = 0;
-    object_t* child = parent->child;
-    while (child) {
-        if (child->string) {
-            (*count)++;
-        }
-        child = child->next;
-    }
-
-    if (*count == 0) {
-        *sorted_children = NULL;
-        return RESULT_OK;
-    }
-
-    // Allocate array for sorted children
-    *sorted_children = malloc(*count * sizeof(sorted_child_t));
-    if (!*sorted_children) {
-        RETURN_ERR("Failed to allocate memory for sorted children array");
-    }
-
-    // Second pass: collect children and their keys
-    size_t i = 0;
-    child = parent->child;
-    while (child && i < *count) {
-        if (child->string) {
-            (*sorted_children)[i].child = child;
-            
-            // Convert key to C string for sorting
-            (*sorted_children)[i].key = malloc(child->string->size + 1);
-            if (!(*sorted_children)[i].key) {
-                // Clean up allocated keys
-                for (size_t j = 0; j < i; j++) {
-                    free((*sorted_children)[j].key);
-                }
-                free(*sorted_children);
-                RETURN_ERR("Failed to allocate memory for child key");
-            }
-            memcpy((*sorted_children)[i].key, child->string->data, child->string->size);
-            (*sorted_children)[i].key[child->string->size] = '\0';
-            i++;
-        }
-        child = child->next;
-    }
-
-    // Sort the children by key name
-    qsort(*sorted_children, *count, sizeof(sorted_child_t), compare_children);
-
-    return RESULT_OK;
-}
-
-// Helper function to free sorted children array
-static void free_sorted_children(sorted_child_t* sorted_children, size_t count) {
-    if (sorted_children) {
-        for (size_t i = 0; i < count; i++) {
-            free(sorted_children[i].key);
-        }
-        free(sorted_children);
-    }
+// Lexicographic compare for string_t (byte-wise; if prefix equal, shorter is smaller)
+static int string_lexcmp(const string_t* a, const string_t* b) {
+    if (a == NULL && b == NULL) return 0;
+    if (a == NULL) return -1;
+    if (b == NULL) return 1;
+    uint64_t min = a->size < b->size ? a->size : b->size;
+    int cmp = memcmp(a->data, b->data, min);
+    if (cmp != 0) return cmp;
+    if (a->size < b->size) return -1;
+    if (a->size > b->size) return 1;
+    return 0;
 }
 
 // Helper function to convert object to XML string recursively
@@ -1377,57 +1308,78 @@ static result_t object_to_xml_recursive(pool_t* pool, string_t** dst, const obje
                 RETURN_ERR("Failed to append closing bracket for object opening tag");
             }
 
-            // Collect and sort children by their keys
-            sorted_child_t* sorted_children;
-            size_t child_count;
-            if (collect_and_sort_children(src, &sorted_children, &child_count) != RESULT_OK) {
-                RETURN_ERR("Failed to collect and sort children");
+            // Process children in lexicographic order without dynamic allocations
+            const string_t* prev_key = NULL;
+            const object_t* prev_child = NULL;
+            size_t emitted = 0;
+            // Count children with keys
+            size_t child_count = 0;
+            {
+                object_t* c = first_child;
+                while (c) { if (c->string) child_count++; c = c->next; }
             }
-
-            // Process children in sorted order
-            for (size_t i = 0; i < child_count; i++) {
-                object_t* child = sorted_children[i].child;
-                if (child->string) {
-                    // Use the key as the element name
-                    string_t* key_escaped;
-                    if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to escape key for XML element name");
-                    }
-
-                    // Convert key to C string for element name
-                    char* key_cstr = malloc(key_escaped->size + 1);
-                    if (!key_cstr) {
-                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                            free_sorted_children(sorted_children, child_count);
-                            RETURN_ERR("Failed to destroy escaped key");
+            while (emitted < child_count) {
+                object_t* best = NULL;
+                for (object_t* c = first_child; c; c = c->next) {
+                    if (!c->string) continue;
+                    if (prev_key == NULL) {
+                        int rel = string_lexcmp(c->string, best ? best->string : NULL);
+                        if (!best || rel < 0 || (rel == 0 && c < best)) {
+                            best = c;
                         }
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to allocate memory for key string");
-                    }
-                    memcpy(key_cstr, key_escaped->data, key_escaped->size);
-                    key_cstr[key_escaped->size] = '\0';
-
-                    if (object_to_xml_recursive(pool, dst, child->child, depth + 1, key_cstr) != RESULT_OK) {
-                        free(key_cstr);
-                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                            free_sorted_children(sorted_children, child_count);
-                            RETURN_ERR("Failed to destroy escaped key");
+                    } else {
+                        int cmp_prev = string_lexcmp(c->string, prev_key);
+                        if (cmp_prev < 0) continue; // smaller than previous key
+                        if (cmp_prev == 0 && prev_child != NULL && c <= prev_child) continue; // same key but not after last emitted
+                        // choose smallest among valid candidates
+                        int rel = string_lexcmp(c->string, best ? best->string : NULL);
+                        if (!best || rel < 0 || (rel == 0 && c < best)) {
+                            best = c;
                         }
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to convert child to XML");
-                    }
-
-                    free(key_cstr);
-                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to destroy escaped key");
                     }
                 }
-            }
+                if (!best) {
+                    // Safety: break to avoid infinite loop (should not happen if logic correct)
+                    break;
+                }
 
-            // Clean up sorted children array
-            free_sorted_children(sorted_children, child_count);
+                // Use the key as the element name (escaped and nul-terminated via pool)
+                string_t* key_escaped;
+                if (escape_xml_string(pool, best->string, &key_escaped) != RESULT_OK) {
+                    RETURN_ERR("Failed to escape key for XML element name");
+                }
+                string_t* key_cstr;
+                if (pool_string_alloc(pool, &key_cstr, key_escaped->size + 1) != RESULT_OK) {
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                    RETURN_ERR("Failed to allocate cstr key");
+                }
+                memcpy(key_cstr->data, key_escaped->data, key_escaped->size);
+                key_cstr->data[key_escaped->size] = '\0';
+                key_cstr->size = key_escaped->size; // content size (excludes terminator)
+
+                if (object_to_xml_recursive(pool, dst, best->child, depth + 1, key_cstr->data) != RESULT_OK) {
+                    if (string_destroy(pool, key_cstr) != RESULT_OK) {
+                        // warn only, continue cleanup
+                    }
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                    RETURN_ERR("Failed to convert child to XML");
+                }
+
+                if (string_destroy(pool, key_cstr) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy temporary key cstr");
+                }
+                if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy escaped key");
+                }
+
+                prev_key = best->string;
+                prev_child = best;
+                emitted++;
+            }
 
             if (string_append_str(pool, dst, "</") != RESULT_OK) {
                 RETURN_ERR("Failed to append opening of closing tag for object");
@@ -1505,57 +1457,74 @@ result_t object_tostring_xml(pool_t* pool, string_t** dst, const object_t* src) 
 
         // Check if this is an object (has key-value pairs) or array
         if (first_child && first_child->string) {
-            // Object with key-value pairs - output children directly in sorted order
-            sorted_child_t* sorted_children;
-            size_t child_count;
-            if (collect_and_sort_children(src, &sorted_children, &child_count) != RESULT_OK) {
-                RETURN_ERR("Failed to collect and sort root-level children");
+            // Object with key-value pairs - output children directly in sorted order without malloc/free
+            const string_t* prev_key = NULL;
+            const object_t* prev_child = NULL;
+            size_t emitted = 0;
+            size_t child_count = 0;
+            {
+                object_t* c = first_child;
+                while (c) { if (c->string) child_count++; c = c->next; }
             }
-
-            // Process children in sorted order
-            for (size_t i = 0; i < child_count; i++) {
-                object_t* child = sorted_children[i].child;
-                if (child->string) {
-                    // Use the key as the element name
-                    string_t* key_escaped;
-                    if (escape_xml_string(pool, child->string, &key_escaped) != RESULT_OK) {
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to escape key for XML element name");
-                    }
-
-                    // Convert key to C string for element name
-                    char* key_cstr = malloc(key_escaped->size + 1);
-                    if (!key_cstr) {
-                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                            free_sorted_children(sorted_children, child_count);
-                            RETURN_ERR("Failed to destroy escaped key");
+            while (emitted < child_count) {
+                object_t* best = NULL;
+                for (object_t* c = first_child; c; c = c->next) {
+                    if (!c->string) continue;
+                    if (prev_key == NULL) {
+                        int rel = string_lexcmp(c->string, best ? best->string : NULL);
+                        if (!best || rel < 0 || (rel == 0 && c < best)) {
+                            best = c;
                         }
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to allocate memory for key string");
-                    }
-                    memcpy(key_cstr, key_escaped->data, key_escaped->size);
-                    key_cstr[key_escaped->size] = '\0';
-
-                    if (object_to_xml_recursive(pool, dst, child->child, 1, key_cstr) != RESULT_OK) {
-                        free(key_cstr);
-                        if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                            free_sorted_children(sorted_children, child_count);
-                            RETURN_ERR("Failed to destroy escaped key");
+                    } else {
+                        int cmp_prev = string_lexcmp(c->string, prev_key);
+                        if (cmp_prev < 0) continue;
+                        if (cmp_prev == 0 && prev_child != NULL && c <= prev_child) continue;
+                        int rel = string_lexcmp(c->string, best ? best->string : NULL);
+                        if (!best || rel < 0 || (rel == 0 && c < best)) {
+                            best = c;
                         }
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to convert child to XML");
-                    }
-
-                    free(key_cstr);
-                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
-                        free_sorted_children(sorted_children, child_count);
-                        RETURN_ERR("Failed to destroy escaped key");
                     }
                 }
-            }
+                if (!best) {
+                    break;
+                }
 
-            // Clean up sorted children array
-            free_sorted_children(sorted_children, child_count);
+                string_t* key_escaped;
+                if (escape_xml_string(pool, best->string, &key_escaped) != RESULT_OK) {
+                    RETURN_ERR("Failed to escape key for XML element name");
+                }
+                string_t* key_cstr;
+                if (pool_string_alloc(pool, &key_cstr, key_escaped->size + 1) != RESULT_OK) {
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                    RETURN_ERR("Failed to allocate cstr key");
+                }
+                memcpy(key_cstr->data, key_escaped->data, key_escaped->size);
+                key_cstr->data[key_escaped->size] = '\0';
+                key_cstr->size = key_escaped->size;
+
+                if (object_to_xml_recursive(pool, dst, best->child, 1, key_cstr->data) != RESULT_OK) {
+                    if (string_destroy(pool, key_cstr) != RESULT_OK) {
+                        // warn only
+                    }
+                    if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy escaped key");
+                    }
+                    RETURN_ERR("Failed to convert child to XML");
+                }
+
+                if (string_destroy(pool, key_cstr) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy temporary key cstr");
+                }
+                if (string_destroy(pool, key_escaped) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy escaped key");
+                }
+
+                prev_key = best->string;
+                prev_child = best;
+                emitted++;
+            }
             return RESULT_OK;
         } else {
             // Array - output items directly

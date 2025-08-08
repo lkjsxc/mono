@@ -130,6 +130,17 @@
             "stability": "Prefer updating existing keys over creating new ones.",
             "traceability": "Choose tags that clearly reflect content and future retrieval needs."
           },
+          "strict_output_format": {
+            "exact_xml_only": "Output exactly one XML block with the following structure and lowercase tag names; no prose, no backticks, no JSON:",
+            "template": "<action>\n  <type>a</type>\n  <tags>b</tags>\n  <value>c</value>\n</action>",
+            "rules": {
+              "type_values": "a must be one of: working_memory_add | working_memory_remove | storage_load | storage_save",
+              "tags_required": "b is a single string of comma-separated tags (the system will normalize: lowercase, replace spaces with underscores, sort, dedupe)",
+              "value_required_for": "Include <value> only for working_memory_add and storage_save; omit the <value> element entirely for working_memory_remove and storage_load",
+              "no_other_fields": "Do not emit any other elements or attributes.",
+              "whitespace": "Whitespace and indentation are flexible; tag names and structure must match exactly."
+            }
+          },
           "action_rules": {
             "single_action": "Emit exactly one action per response.",
             "no_next_state": "Do NOT emit next_state in executing state (the system will auto-transition to evaluating).",
@@ -181,6 +192,17 @@
             "analyze": "Scan keys in working_memory and rank by recency, relevance to current goals, and necessity for next iterations.",
             "select": "Prefer archiving older thinking logs, completed subtasks, and reference data.",
             "preserve": "Keep immediate context, current todos, and active entities in working_memory."
+          },
+          "strict_output_format": {
+            "exact_xml_only": "Output exactly one XML block in this structure; no prose, no backticks, no JSON:",
+            "template": "<action>\n  <type>a</type>\n  <tags>b</tags>\n  <value>c</value>\n</action>",
+            "rules": {
+              "type_values": "a must be one of: storage_save | working_memory_remove",
+              "tags_required": "b is a single string of comma-separated tags (the system will normalize)",
+              "value_policy": "Include <value> for storage_save (concise summary ~100 tokens). Omit <value> for working_memory_remove.",
+              "no_other_fields": "Do not emit any other elements or attributes.",
+              "whitespace": "Whitespace and indentation are flexible; tag names and structure must match exactly."
+            }
           },
           "actions_policy": {
             "per_response": "Emit one <action> per response.",
