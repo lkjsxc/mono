@@ -21,8 +21,9 @@ This describes the core runtime types and persisted schemas.
   - evaluation_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - execution_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - paging_limit: { enable: bool|number, max_tokens: number }
-  - hard_limit: { enable: bool|number, max_tokens: number }
-  - iterate: { enable: bool|number, max_iterations: number }
+  - hard_limit: { enable: bool|number, max_tokens: number }  // reserved; not actively enforced
+  - iterate: { max_iterations: number }  // when missing or invalid, defaults to 5
+    - Note: `agent.iterate.enable` (if present) is ignored by the current implementation; only `max_iterations` is read.
   - state:
     - base.prompt: object (arbitrary keys)
     - thinking.prompt: object
@@ -30,15 +31,23 @@ This describes the core runtime types and persisted schemas.
     - evaluating.prompt: object
     - paging.prompt: object
 
+Notes:
+- enable values accept "true" or non-zero numeric strings; missing keys are treated as disabled.
+- llm.temperature is appended as-is to the request JSON; ensure it is a numeric literal in the config JSON.
+
 ## Memory JSON (data/memory.json)
 
 - working_memory: object (arbitrary kv)
 - storage: object (optional)
 - state: string (thinking|executing|evaluating|paging)
 
+Persistence behavior:
+- After each cycle, the entire `agent.data` object is serialized and written to data/memory.json.
+  - Missing `working_memory`/`storage` are created on demand by actions.
+
 ## Paths (object API)
 
-- object_provide_str(pool, &obj, root, "a.b.c") walks children
+- object_provide_str(pool, &obj, root, "a.b.c") walks children; arrays use index notation like "choices.[0]"
 - object_provide_string(&obj, root, key_string) uses string_t as key
 - object_set_string(pool, root, key_string, value_string) assigns leaf strings
 - object_tostring_json(pool, &dst_string, root) serializes
@@ -47,3 +56,4 @@ This describes the core runtime types and persisted schemas.
 ## Token Estimation
 
 - agent_state_estimate_tokens serializes working_memory to JSON and approximates: tokens ~ bytes/4
+- Paging decision compares this count to agent.paging_limit.max_tokens when agent.paging_limit.enable is truthy.

@@ -1,19 +1,19 @@
 # LLM Protocol
 
-The agent talks to an OpenAI-compatible chat/completions endpoint specified by config.llm.endpoint.
+The agent talks to an OpenAI-compatible chat/completions endpoint specified by `config.llm.endpoint`.
 
 ## Request
 
-- HTTP POST to config.llm.endpoint
-- Content-Type: application/json
-- Body shape (assembled by prompt.c):
+- HTTP POST to `config.llm.endpoint`
+- Content-Type: `application/json`
+- Body shape (constructed by prompt.c):
 
 ```
 {
   "messages": [
     {
       "role": "user",
-      "content": "<escaped XML constructed from base+state prompts and working_memory/>"
+      "content": "<escaped-xml: base + state + working_memory>"
     }
   ],
   "model": "${config.llm.model}",
@@ -23,28 +23,33 @@ The agent talks to an OpenAI-compatible chat/completions endpoint specified by c
 }
 ```
 
-The content string is built from:
-- Base prompt: config.agent.state.base.prompt (converted to XML then escaped)
-- State-specific prompt: config.agent.state.<state>.prompt (XML-escaped)
-- Working memory: object_tostring_xml(agent.data.working_memory) wrapped in <working_memory> … </working_memory>
+Content assembly details:
+- Base prompt: `config.agent.state.base.prompt` -> XML -> JSON-escaped
+- State prompt: `config.agent.state.<current>.prompt` -> XML -> JSON-escaped
+- Working memory: `object_tostring_xml(agent.data.working_memory)` wrapped with `<working_memory>...</working_memory>` then JSON-escaped
 
 ## Response
 
-- Expects OpenAI-like JSON with `choices[0].message.content` containing XML
-- http.c extracts `content` into a string_t
+- Expects OpenAI-like JSON; `choices.[0].message.content` is extracted
+- The content string should contain simple XML-like tags parsed by a tolerant substring search
 
-### XML-in-JSON Content
+### XML-in-JSON Content Contract
 
-The agent parses with a lenient string search (actions.c: agent_actions_parse_response):
-- <next_state>STATE</next_state>
-- <thinking_log>…</thinking_log>
-- <evaluation_log>…</evaluation_log>
-- <action><type>…</type><tags>…</tags>[<value>…</value>]</action>
+Supported tags (any order; optional unless noted):
+- `<next_state>STATE</next_state>` (optional; defaults to `thinking` if absent)
+- `<thinking_log>...</thinking_log>` (optional)
+- `<evaluation_log>...</evaluation_log>` (optional)
+- `<action>` (optional)
+  - `<type>working_memory_add|working_memory_remove|storage_load|storage_save</type>`
+  - `<tags>key or label (spaces become underscores)</tags>`
+  - `<value>string value</value>` (required for add/save)
 
-Missing or malformed sections are tolerated; defaults are applied (e.g., next_state="thinking").
+Error tolerance and defaults:
+- Missing tags are ignored; next_state defaults to `thinking`
+- Unknown action types are logged as execution failures and ignored
+- Oversized fragments are clipped by conservative buffers (1–2 KB per field)
 
 ## Robustness Considerations
 
-- The parser avoids full XML parsing to handle imperfect outputs
-- Always safe-update state and logs; unknown action types are logged and ignored
-- HTTP, JSON, and content extraction failures result in a single-cycle soft error
+- The agent uses lenient string search instead of full XML parsing to handle imperfect outputs
+- HTTP, JSON, and content extraction failures produce soft errors; the main loop continues
