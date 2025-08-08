@@ -25,7 +25,7 @@ Objective: Produce high-quality, robust code for `src/agent/*` while keeping `sr
 
 ## Test Scenarios
 
-- thinking -> thinking with thinking_log
+- thinking -> thinking with think_log
 - thinking -> executing (working_memory_add)
 - executing -> evaluating (auto) -> thinking
 - storage_save + storage_load round-trip

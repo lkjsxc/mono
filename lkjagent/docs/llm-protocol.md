@@ -37,7 +37,7 @@ Content assembly details:
 
 Supported tags (any order; optional unless noted):
 - `<next_state>STATE</next_state>` (optional; defaults to `thinking` if absent)
-- `<thinking_log>...</thinking_log>` (optional)
+- `<think_log>...</think_log>` (optional)
 - `<evaluation_log>...</evaluation_log>` (optional)
 - `<action>` (optional)
   - `<type>working_memory_add|working_memory_remove|storage_load|storage_save</type>`

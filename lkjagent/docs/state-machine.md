@@ -5,7 +5,7 @@ The agent is a simple state machine that cycles via LLM outputs. States drive pr
 ## States
 
 - thinking (default)
-  - LLM may return: `<next_state>` (thinking|executing|evaluating) and optional `<thinking_log>`
+  - LLM may return: `<next_state>` (thinking|executing|evaluating) and optional `<think_log>`
 - executing
   - LLM returns: `<action>` with `<type>`, `<tags>`, and optional `<value>`
   - System logs an execution entry and auto-transitions to `evaluating`
@@ -27,9 +27,9 @@ The agent is a simple state machine that cycles via LLM outputs. States drive pr
 
 ## Logs
 
-- thinking_log
-  - Controlled by `agent.thinking_log.enable`
-  - Rotation configured by `max_entries` and `key_prefix` (default `thinking_log_`)
+- think_log
+  - Controlled by `agent.think_log.enable`
+  - Rotation configured by `max_entries` and `key_prefix` (default `think_log_`)
   - Stored in `working_memory` as key/value entries with zero-padded numeric suffixes
 - evaluation_log
   - Controlled by `agent.evaluation_log.enable`; same rotation scheme (default `evaluation_log_`)

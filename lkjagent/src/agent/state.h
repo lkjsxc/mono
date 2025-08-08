@@ -32,7 +32,7 @@ __attribute__((warn_unused_result)) result_t agent_state_extract_next_state(pool
 __attribute__((warn_unused_result)) result_t agent_state_update_state(pool_t* pool, agent_t* agent, const char* new_state);
 
 // Handle thinking log entries with rotation
-__attribute__((warn_unused_result)) result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
+__attribute__((warn_unused_result)) result_t agent_state_manage_think_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
 // Handle evaluation log entries with rotation
 __attribute__((warn_unused_result)) result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);

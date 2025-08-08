@@ -648,11 +648,11 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
         }
     }
 
-    const char* think_log_start = strstr(content, "<thinking_log>");
-    const char* think_log_end = strstr(content, "</thinking_log>");
+    const char* think_log_start = strstr(content, "<think_log>");
+    const char* think_log_end = strstr(content, "</think_log>");
 
     if (think_log_start && think_log_end && think_log_end > think_log_start) {
-        think_log_start += strlen("<thinking_log>");
+        think_log_start += strlen("<think_log>");
         size_t log_len = (size_t)(think_log_end - think_log_start);
 
         if (log_len > 0 && log_len < 1024) {
@@ -664,9 +664,9 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
 
             if (string_create_str(pool, &think_log_value, log_buffer) == RESULT_OK) {
                 string_t* think_log_path = NULL;
-                if (string_create_str(pool, &think_log_path, "thinking_log") == RESULT_OK) {
+                if (string_create_str(pool, &think_log_path, "think_log") == RESULT_OK) {
                     if (object_set_string(pool, agent_obj, think_log_path, think_log_value) != RESULT_OK) {
-                        printf("Warning: Failed to set thinking_log on agent_obj\n");
+                        printf("Warning: Failed to set think_log on agent_obj\n");
                     }
                     if (string_destroy(pool, think_log_path) != RESULT_OK) {
                         printf("Warning: Failed to destroy think_log_path\n");

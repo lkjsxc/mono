@@ -17,7 +17,7 @@ This describes the core runtime types and persisted schemas.
 - version: string
 - llm: { endpoint: string, model: string, temperature: number }
 - agent:
-  - thinking_log: { enable: bool|number, max_entries: number, key_prefix: string }
+  - think_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - evaluation_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - execution_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - paging_limit: { enable: bool|number, max_tokens: number }

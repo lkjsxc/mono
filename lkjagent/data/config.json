@@ -6,10 +6,10 @@
     "temperature": 0.7
   },
   "agent": {
-    "thinking_log": {
+    "think_log": {
       "enable": true,
-      "max_entries": 4,
-      "key_prefix": "thinking_log_"
+      "max_entries": 6,
+      "key_prefix": "think_log_"
     },
     "evaluation_log": {
       "enable": true,
@@ -39,7 +39,7 @@
           "purpose": "Deterministic agent loop that reads current state and working_memory, decides the next step, and outputs strictly formatted simple markup.",
           "memory_model": {
             "working_memory": "Volatile key-value space that holds the active context for this session.",
-            "storage": "Persistent key-value store. Multiple conceptual tags must be combined into a single 'tags' string key. Use lowercase ASCII, underscores for separators, and no spaces (spaces will be converted to underscores). Values are plain strings.",
+            "storage": "Persistent key-value store with effectively unlimited capacity. Multiple conceptual tags must be combined into a single 'tags' string key. Use lowercase ASCII, underscores for separators, and no spaces (spaces will be converted to underscores). Values are plain strings. When in doubt, prefer saving rich, retrievable details to storage.",
             "value_format_policy": {
               "avoid_structured_values": "Do not store values in JSON, XML, CSV, or other structured formats.",
               "represent_structure_with_keys": "Represent structure via the 'tags' key naming; keep values as concise plain strings."
@@ -55,10 +55,11 @@
               },
               "length_hint": "Keep each tag concise (less than 64 chars)."
             },
-            "storage_constraints": {
-              "value_target_tokens": "Less than 100",
-              "max_keys_ideal": 8,
-              "consolidation_guidance": "When keys proliferate, summarize and merge related items to stay within the budget."
+            "storage_usage_policy": {
+              "capacity": "Effectively unlimited; create as many keys as helpful for retrieval and provenance.",
+              "value_target_tokens": "Around 100 tokens per key; if longer, split across multiple keys instead of shrinking content.",
+              "granularity": "Prefer small, focused values saved under descriptive, composable tags—it's fine to spread information across many keys.",
+              "housekeeping": "Occasionally consolidate for readability, not due to capacity limits."
             }
           },
           "iteration_principles": {
@@ -72,7 +73,7 @@
             "no_freeform_json": "Do not output JSON; output only the required tags inside the agent container.",
             "respect_limits": "When memory is large, prefer archiving less-relevant items to storage with clear tags.",
             "compact_values": "Keep storage values around 100 tokens. If exceeding this size, split into multiple parts.",
-            "key_budget": "Aim to keep total storage keys at or below 8; prefer updating/summarizing existing keys over creating new ones."
+            "storage_capacity": "Storage capacity is unlimited; favor liberal saving to storage for traceability and retrieval."
           }
         }
       },
@@ -85,7 +86,7 @@
           "principles": {
             "parsimony": "Include only fields required by this state.",
             "stability": "Preserve established tags and meanings; avoid unnecessary churn.",
-            "traceability": "Use <thinking_log> sparingly to reference concrete keys or intended actions."
+            "traceability": "Use <think_log> sparingly to reference concrete keys or intended actions."
           },
           "decision_rubric": {
             "choose_executing_when": {
@@ -106,7 +107,7 @@
               "next_state": "Allowed values: thinking | executing | evaluating"
             },
             "may_emit": {
-              "thinking_log": "Concise, factual reasoning about the chosen next step; reference keys when helpful"
+              "think_log": "Concise, factual reasoning about the chosen next step; reference keys when helpful"
             },
             "must_not_emit": {
               "action": true,
@@ -129,7 +130,8 @@
           "principles": {
             "parsimony": "Only emit <action> with required children; nothing else.",
             "stability": "Prefer updating existing keys over creating new ones.",
-            "traceability": "Choose tags that clearly reflect content and future retrieval needs."
+            "traceability": "Choose tags that clearly reflect content and future retrieval needs.",
+            "storage_first": "When in doubt, persist useful details to storage. Storage capacity is unlimited, so don't hesitate to create new keys for clarity and recall."
           },
           "strict_output_format": {
             "exact_xml_only": "Output exactly one XML block with the following structure and lowercase tag names; no prose, no backticks, no JSON:",
@@ -149,7 +151,7 @@
             "value_requirement": "Include value only for working_memory_add and storage_save.",
             "no_structured_values": "Values must be plain strings, not JSON/XML/CSV or similar structured data.",
             "value_size_limit": "For storage_save, keep value around 100 tokens; summarize if longer.",
-            "key_budget_rule": "Prefer updating or summarizing existing storage keys to keep total keys ≤8.",
+            "unlimited_capacity": "Storage capacity is unlimited—feel free to create new, well-tagged keys to maximize retrieval quality.",
             "idempotence_hint": "Prefer actions that do not cause duplication when repeated."
           }
         }
@@ -169,7 +171,7 @@
             },
             "must_not_emit": {
               "action": true,
-              "thinking_log": true
+              "think_log": true
             }
           },
           "guidance": {
@@ -183,10 +185,10 @@
       },
       "paging": {
         "prompt": {
-          "purpose": "Reduce working_memory size by archiving low-priority items to storage while preserving high-value context.",
+          "purpose": "Reduce working_memory size by archiving low-priority items to storage while preserving high-value context. Storage capacity is unlimited; paging exists to declutter working_memory tokens, not because storage is scarce.",
           "principles": {
             "compactness": "Produce concise summaries when saving to storage (≈100 tokens).",
-            "budget": "Favor merging related items to keep total storage keys small (≈8 or fewer).",
+            "declutter": "Use paging to move detail out of working_memory liberally; storage has no practical limit.",
             "safety": "Remove only items that have been safely archived or are clearly low-value."
           },
           "strategy": {
@@ -212,7 +214,7 @@
               "step_2": "working_memory_remove (corresponding keys just archived)"
             },
             "tagging": "Use descriptive, stable tags (lowercase, underscores).",
-            "enforce_key_budget": "If storage keys exceed ~8, merge/summarize to reduce count, then remove superseded keys.",
+            "unlimited_capacity": "No key-count budget—feel free to create more keys for clarity. Consolidate only for readability or navigation, not capacity.",
             "value_size": "When saving to storage, produce concise summaries ≈100 tokens."
           },
           "output_requirements": {
@@ -222,7 +224,7 @@
             "must_not_emit": {
               "next_state": true,
               "evaluation_log": true,
-              "thinking_log": true
+              "think_log": true
             }
           }
         }
@@ -231,7 +233,7 @@
   },
   "documentation": {
     "paging_system": {
-      "description": "LLM-driven memory management system that activates when working memory approaches token limits",
+  "description": "LLM-driven memory management system that activates when working memory approaches token limits. Storage capacity is unlimited; paging is about managing working_memory tokens, not storage size.",
       "trigger_conditions": {
         "paging_limit_reached": "When estimated tokens >= paging_limit (1024), system transitions to paging mode",
         "hard_limit_reached": "When estimated tokens >= hard_limit (2048), system forces paging mode immediately"
@@ -251,7 +253,7 @@
       "example_workflow": {
         "step1": "Working memory reaches 1024+ tokens",
         "step2": "System auto-transitions from 'executing' to 'paging'",
-        "step3": "LLM analyzes working memory: todo, character_alice_about, thinking_log_00, thinking_log_01",
+        "step3": "LLM analyzes working memory: todo, character_alice_about, think_log_00, think_log_01",
         "step4": "LLM decides: keep 'todo' (current task), archive old thinking logs",
         "step5": "LLM creates summary: 'Early session focused on Alice character development'",
         "step6": "LLM saves summary to storage with descriptive tag",

@@ -192,12 +192,12 @@ result_t agent_state_update_and_log(pool_t* pool, config_t* config, agent_t* age
         successful_operations++;
     }
 
-    object_t* thinking_log_obj = NULL;
-    if (object_provide_str(pool, &thinking_log_obj, response_obj, "thinking_log") == RESULT_OK) {
-        uint64_t thinking_log_enabled = 0;
-        if (get_config_bool(pool, config, "agent.thinking_log.enable", &thinking_log_enabled) == RESULT_OK && thinking_log_enabled) {
-            result_t thinking_log_result = agent_state_manage_thinking_log(pool, config, agent, response_obj);
-            if (thinking_log_result == RESULT_OK) {
+    object_t* think_log_obj = NULL;
+    if (object_provide_str(pool, &think_log_obj, response_obj, "think_log") == RESULT_OK) {
+        uint64_t think_log_enabled = 0;
+        if (get_config_bool(pool, config, "agent.think_log.enable", &think_log_enabled) == RESULT_OK && think_log_enabled) {
+            result_t think_log_result = agent_state_manage_think_log(pool, config, agent, response_obj);
+            if (think_log_result == RESULT_OK) {
                 successful_operations++;
             }
         }
@@ -390,30 +390,30 @@ result_t agent_state_update_state(pool_t* pool, agent_t* agent, const char* new_
     return RESULT_OK;
 }
 
-result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj) {
-    object_t* thinking_log_obj = NULL;
+result_t agent_state_manage_think_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj) {
+    object_t* think_log_obj = NULL;
     uint64_t max_entries = 10;
-    char key_prefix[32] = "thinking_log_";
+    char key_prefix[32] = "think_log_";
     uint64_t enable = 1;
 
     if (pool == NULL || agent == NULL || response_obj == NULL) {
         RETURN_ERR("Invalid parameters for thinking log management");
     }
 
-    if (get_config_bool(pool, config, "agent.thinking_log.enable", &enable) != RESULT_OK || !enable) {
+    if (get_config_bool(pool, config, "agent.think_log.enable", &enable) != RESULT_OK || !enable) {
         return RESULT_OK;
     }
 
-    if (object_provide_str(pool, &thinking_log_obj, response_obj, "thinking_log") != RESULT_OK) {
+    if (object_provide_str(pool, &think_log_obj, response_obj, "think_log") != RESULT_OK) {
         return RESULT_OK;
     }
 
-    if (thinking_log_obj == NULL || thinking_log_obj->string == NULL) {
+    if (think_log_obj == NULL || think_log_obj->string == NULL) {
         return RESULT_OK;
     }
 
-    get_config_uint64(pool, config, "agent.thinking_log.max_entries", &max_entries, 10);
-    get_config_string(pool, config, "agent.thinking_log.key_prefix", key_prefix, sizeof(key_prefix), "thinking_log_");
+    get_config_uint64(pool, config, "agent.think_log.max_entries", &max_entries, 10);
+    get_config_string(pool, config, "agent.think_log.key_prefix", key_prefix, sizeof(key_prefix), "think_log_");
 
     char log_key[64];
     uint64_t next_index = 1;
@@ -463,7 +463,7 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
         return RESULT_OK;
     }
 
-    if (object_set_string(pool, working_memory, log_key_string, thinking_log_obj->string) != RESULT_OK) {
+    if (object_set_string(pool, working_memory, log_key_string, think_log_obj->string) != RESULT_OK) {
         printf("Error: Failed to add thinking log to working memory\n");
     }
 
