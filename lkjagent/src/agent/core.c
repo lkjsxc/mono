@@ -30,7 +30,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
     // Phase 3: Check if this is an action (executing state) or state transition
     if (object_provide_str(pool, &action_obj, agent_response, "action") == RESULT_OK) {
         // This is an action - dispatch it
-        if (agent_actions_dispatch(pool, agent, action_obj) != RESULT_OK) {
+        if (agent_actions_dispatch(pool, config, agent, action_obj) != RESULT_OK) {
             // If action fails, reset to thinking state
             if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
                 if (object_destroy(pool, response_obj) != RESULT_OK) {
@@ -51,15 +51,44 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
             }
         }
     } else {
-        // This might be a state transition - handle it with unified logic
-        // Use simple state update that handles both thinking and evaluating states
-        if (agent_state_update_and_log(pool, config, agent, agent_response) != RESULT_OK) {
-            // If state update fails, force reset to thinking
-            if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
-                if (object_destroy(pool, response_obj) != RESULT_OK) {
-                    RETURN_ERR("Failed to destroy response object after state update failure");
+        // This might be a state transition - check current state to decide how to handle it
+        object_t* current_state_obj = NULL;
+        if (object_provide_str(pool, &current_state_obj, agent->data, "state") == RESULT_OK && 
+            current_state_obj != NULL && current_state_obj->string != NULL) {
+            
+            // If we're currently in evaluating state, use special evaluation transition handler
+            if (string_equal_str(current_state_obj->string, "evaluating")) {
+                if (agent_state_handle_evaluation_transition(pool, config, agent, agent_response) != RESULT_OK) {
+                    // If evaluation transition fails, force reset to thinking
+                    if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                        if (object_destroy(pool, response_obj) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy response object after evaluation transition failure");
+                        }
+                        RETURN_ERR("Failed to reset to thinking after evaluation transition failure");
+                    }
                 }
-                RETURN_ERR("Failed to reset to thinking after state update failure");
+            } else {
+                // For other states, use the standard update and log function
+                if (agent_state_update_and_log(pool, config, agent, agent_response) != RESULT_OK) {
+                    // If state update fails, force reset to thinking
+                    if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                        if (object_destroy(pool, response_obj) != RESULT_OK) {
+                            RETURN_ERR("Failed to destroy response object after state update failure");
+                        }
+                        RETURN_ERR("Failed to reset to thinking after state update failure");
+                    }
+                }
+            }
+        } else {
+            // If we can't determine current state, use standard update
+            if (agent_state_update_and_log(pool, config, agent, agent_response) != RESULT_OK) {
+                // If state update fails, force reset to thinking
+                if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                    if (object_destroy(pool, response_obj) != RESULT_OK) {
+                        RETURN_ERR("Failed to destroy response object after state update failure");
+                    }
+                    RETURN_ERR("Failed to reset to thinking after state update failure");
+                }
             }
         }
     }

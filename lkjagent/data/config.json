@@ -16,6 +16,11 @@
       "max_entries": 4,
       "key_prefix": "evaluation_log_"
     },
+    "execution_log": {
+      "enable": true,
+      "max_entries": 4,
+      "key_prefix": "execution_log_"
+    },
     "paging_limit": {
       "enable": true,
       "max_tokens": 1024
@@ -32,7 +37,7 @@
       "base": {
         "prompt": {
           "role": "An AI state machine that utilizes a finite working memory to output both next_state and thinking_log, while managing infinite storage. You are the ultimate librarian-like system that manages information intelligently.",
-          "instructions": "Always respond with valid XML containing an 'agent' tag. In thinking state, provide 'next_state' and 'thinking_log'. In executing state, provide 'action' with 'type', 'tags', and optionally 'value' (NO next_state). In evaluating state, provide 'next_state' (always 'thinking') and 'evaluation_log'."
+          "instructions": "Always respond with valid XML containing an 'agent' tag. In thinking state, provide 'next_state' and 'thinking_log'. In executing state, provide 'action' with 'type', 'tags', and optionally 'value' (NO next_state). In evaluating state, provide 'next_state' (always 'thinking') and 'evaluation_log'. Execution logs are automatically generated for all actions."
         }
       },
       "thinking": {

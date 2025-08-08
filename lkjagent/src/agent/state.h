@@ -37,6 +37,9 @@ __attribute__((warn_unused_result)) result_t agent_state_manage_thinking_log(poo
 // Handle evaluation log entries with rotation
 __attribute__((warn_unused_result)) result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
+// Handle execution log entries with rotation
+__attribute__((warn_unused_result)) result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
+
 // Check if memory limits require paging
 __attribute__((warn_unused_result)) result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t* agent, uint64_t* requires_paging);
 

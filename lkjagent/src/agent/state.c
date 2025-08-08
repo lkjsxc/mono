@@ -470,6 +470,151 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent
     return RESULT_OK;
 }
 
+// Handle execution log entries with working memory integration
+result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message) {
+    object_t* config_execution_log = NULL;
+    object_t* max_entries_obj = NULL;
+    object_t* enable_obj = NULL;
+    object_t* key_prefix_obj = NULL;
+    uint64_t max_entries = 4;  // Default value
+    char key_prefix[32] = "execution_log_";  // Default prefix
+    uint64_t enable = 1;  // Default enabled
+    
+    // Get configuration values if available
+    if (config != NULL) {
+        if (object_provide_str(pool, &config_execution_log, config->data, "agent.execution_log") == RESULT_OK) {
+            // Check if enabled
+            if (object_provide_str(pool, &enable_obj, config_execution_log, "enable") == RESULT_OK) {
+                enable = strtoull(enable_obj->string->data, NULL, 10);
+            }
+            
+            // If disabled, skip processing
+            if (!enable) {
+                return RESULT_OK;
+            }
+            
+            // Get max entries
+            if (object_provide_str(pool, &max_entries_obj, config_execution_log, "max_entries") == RESULT_OK) {
+                max_entries = strtoull(max_entries_obj->string->data, NULL, 10);
+                if (max_entries == 0) max_entries = 4; // Fallback
+            }
+            
+            // Get key prefix
+            if (object_provide_str(pool, &key_prefix_obj, config_execution_log, "key_prefix") == RESULT_OK) {
+                if (key_prefix_obj->string != NULL && key_prefix_obj->string->size > 0) {
+                    snprintf(key_prefix, sizeof(key_prefix), "%s", key_prefix_obj->string->data);
+                }
+            }
+        }
+    }
+    
+    // Format execution log message
+    char execution_log_buffer[512];
+    snprintf(execution_log_buffer, sizeof(execution_log_buffer), 
+             "Action: %s, Tags: %s, Result: %s", 
+             action_type ? action_type : "unknown", 
+             tags ? tags : "none", 
+             result_message ? result_message : "no result");
+    
+    // Find the next available execution log slot in working memory
+    char log_key[64];
+    uint64_t next_index = 1;
+    
+    // Get working memory to check existing logs
+    object_t* working_memory = NULL;
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
+        RETURN_ERR("Failed to get working memory for execution log management");
+    }
+    
+    // Find the highest existing index in working memory
+    for (uint64_t i = 1; i <= max_entries; i++) {
+        snprintf(log_key, sizeof(log_key), "%s%03lu", key_prefix, (unsigned long)i);
+        object_t* existing_log = NULL;
+        if (object_provide_str(pool, &existing_log, working_memory, log_key) == RESULT_OK) {
+            next_index = i + 1;
+        }
+    }
+    
+    // If we've exceeded max entries, rotate (remove first, shift others)
+    if (next_index > max_entries) {
+        // Remove oldest entry from working memory before rotation
+        char oldest_wm_key[64];
+        snprintf(oldest_wm_key, sizeof(oldest_wm_key), "%s%03lu", key_prefix, (unsigned long)1);
+        string_t* oldest_wm_key_string = NULL;
+        string_t* empty_string = NULL;
+        if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
+            string_create_str(pool, &empty_string, "") == RESULT_OK) {
+            // Remove from working memory (ignore result as this is cleanup)
+            if (object_set_string(pool, working_memory, oldest_wm_key_string, empty_string) != RESULT_OK) {
+                printf("Error: Failed to clear old execution log from working memory\n");
+            }
+            if (string_destroy(pool, oldest_wm_key_string) != RESULT_OK) {
+                printf("Error: Failed to destroy oldest execution working memory key string\n");
+            }
+            if (string_destroy(pool, empty_string) != RESULT_OK) {
+                printf("Error: Failed to destroy empty string for execution log\n");
+            }
+        }
+        
+        // Rotate existing logs (shift them down)
+        for (uint64_t i = 1; i < max_entries; i++) {
+            char old_log_key[64];
+            char new_log_key[64];
+            snprintf(old_log_key, sizeof(old_log_key), "%s%03lu", key_prefix, (unsigned long)(i + 1));
+            snprintf(new_log_key, sizeof(new_log_key), "%s%03lu", key_prefix, (unsigned long)i);
+            
+            // Get the value from the next slot
+            object_t* old_log_obj = NULL;
+            if (object_provide_str(pool, &old_log_obj, working_memory, old_log_key) == RESULT_OK) {
+                string_t* new_log_key_string = NULL;
+                if (string_create_str(pool, &new_log_key_string, new_log_key) == RESULT_OK) {
+                    // Move the log entry
+                    if (object_set_string(pool, working_memory, new_log_key_string, old_log_obj->string) != RESULT_OK) {
+                        printf("Error: Failed to rotate execution log %s to %s\n", old_log_key, new_log_key);
+                    }
+                    if (string_destroy(pool, new_log_key_string) != RESULT_OK) {
+                        printf("Error: Failed to destroy new execution log key string during rotation\n");
+                    }
+                }
+            }
+        }
+        
+        // Replace the last entry
+        next_index = max_entries;
+    }
+    
+    // Add the new execution log entry - only to working memory
+    snprintf(log_key, sizeof(log_key), "%s%03lu", key_prefix, (unsigned long)next_index);
+    string_t* log_key_string = NULL;
+    string_t* log_value_string = NULL;
+    
+    if (string_create_str(pool, &log_key_string, log_key) != RESULT_OK) {
+        return RESULT_OK; // Don't fail on logging errors
+    }
+    
+    if (string_create_str(pool, &log_value_string, execution_log_buffer) != RESULT_OK) {
+        if (string_destroy(pool, log_key_string) != RESULT_OK) {
+            printf("Error: Failed to destroy execution log key string after value creation failure\n");
+        }
+        return RESULT_OK; // Don't fail on logging errors
+    }
+    
+    // Add to working memory only (working_memory already available from above)
+    if (object_set_string(pool, working_memory, log_key_string, log_value_string) != RESULT_OK) {
+        printf("Error: Failed to add execution log to working memory\n");
+    }
+    
+    // Clean up strings
+    if (string_destroy(pool, log_key_string) != RESULT_OK) {
+        printf("Error: Failed to destroy execution log key string\n");
+    }
+    if (string_destroy(pool, log_value_string) != RESULT_OK) {
+        printf("Error: Failed to destroy execution log value string\n");
+    }
+    
+    return RESULT_OK;
+}
+
 // Check if memory limits require paging
 result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t* agent, uint64_t* requires_paging) {
     uint64_t token_count = 0;

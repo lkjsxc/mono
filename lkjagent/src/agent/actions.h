@@ -9,19 +9,20 @@
 #include "utils/pool.h"
 #include "utils/object.h"
 #include "utils/file.h"
+#include "agent/state.h"
 
 // Action execution and memory management functions
 
 // Main action dispatcher - routes actions based on type
-__attribute__((warn_unused_result)) result_t agent_actions_dispatch(pool_t* pool, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
 
 // Working memory operations
-__attribute__((warn_unused_result)) result_t agent_actions_execute_working_memory_add(pool_t* pool, agent_t* agent, object_t* action_obj);
-__attribute__((warn_unused_result)) result_t agent_actions_execute_working_memory_remove(pool_t* pool, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
 
 // Storage operations
-__attribute__((warn_unused_result)) result_t agent_actions_execute_storage_load(pool_t* pool, agent_t* agent, object_t* action_obj);
-__attribute__((warn_unused_result)) result_t agent_actions_execute_storage_save(pool_t* pool, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
 
 // Memory persistence
 __attribute__((warn_unused_result)) result_t agent_actions_save_memory(pool_t* pool, agent_t* agent);
@@ -47,6 +48,6 @@ __attribute__((warn_unused_result)) result_t agent_actions_ensure_working_memory
 __attribute__((warn_unused_result)) result_t agent_actions_ensure_storage_exists(pool_t* pool, agent_t* agent);
 
 // Action result logging
-__attribute__((warn_unused_result)) result_t agent_actions_log_result(pool_t* pool, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
+__attribute__((warn_unused_result)) result_t agent_actions_log_result(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
 
 #endif
