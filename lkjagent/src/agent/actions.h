@@ -40,6 +40,8 @@ __attribute__((warn_unused_result)) result_t agent_actions_validate_action_param
 
 // Safe tag processing (convert spaces to underscores)
 __attribute__((warn_unused_result)) result_t agent_actions_process_tags(pool_t* pool, object_t* tags_obj, string_t** processed_tags);
+// Normalize storage tags: comma-separated, trimmed, lowercased, spaces->underscores, sorted ascending, deduped
+__attribute__((warn_unused_result)) result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, string_t** processed_tags);
 
 // Working memory access helpers
 __attribute__((warn_unused_result)) result_t agent_actions_get_working_memory(pool_t* pool, agent_t* agent, object_t** working_memory);

@@ -132,27 +132,22 @@ static __attribute__((warn_unused_result)) result_t lkjagent_deinit(lkjagent_t* 
 }
 
 int main() {
-    lkjagent_t* lkjagent = malloc(sizeof(lkjagent_t));
+    static lkjagent_t lkjagent;
 
-    if (!lkjagent) {
-        RETURN_ERR("Failed to allocate memory for lkjagent");
-    }
-
-    if (lkjagent_init(lkjagent) != RESULT_OK) {
+    if (lkjagent_init(&lkjagent) != RESULT_OK) {
         RETURN_ERR("Failed to initialize lkjagent");
     }
 
-    if (lkjagent_run(lkjagent) != RESULT_OK) {
+    if (lkjagent_run(&lkjagent) != RESULT_OK) {
         printf("LKJAgent execution completed with errors, but system was functional\n");
         // Don't treat this as fatal - the agent was working
     }
 
     printf("LKJAgent shutting down...\n");
-    if (lkjagent_deinit(lkjagent) != RESULT_OK) {
+    if (lkjagent_deinit(&lkjagent) != RESULT_OK) {
         printf("Warning: Cleanup had issues, but agent ran successfully\n");
     }
 
-    free(lkjagent);
     printf("LKJAgent shutdown complete\n");
     return RESULT_OK;
 }

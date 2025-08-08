@@ -249,7 +249,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
         RETURN_ERR("Failed to get working memory for load operation");
     }
 
-    if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
+    if (agent_actions_normalize_storage_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
         if (agent_actions_log_result(pool, config, agent, "storage_load", tags_obj ? tags_obj->string->data : "unknown", "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log storage_load tag processing failure\n");
         }
@@ -315,7 +315,7 @@ result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agen
         RETURN_ERR("Failed to get storage for save operation");
     }
 
-    if (agent_actions_process_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
+    if (agent_actions_normalize_storage_tags(pool, tags_obj, &processed_tags) != RESULT_OK) {
         if (agent_actions_log_result(pool, config, agent, "storage_save", tags_obj ? tags_obj->string->data : "unknown", "Failed to process tags") != RESULT_OK) {
             printf("Warning: Failed to log storage_save tag processing failure\n");
         }
@@ -793,6 +793,122 @@ result_t agent_actions_process_tags(pool_t* pool, object_t* tags_obj, string_t**
         }
     }
 
+    return RESULT_OK;
+}
+
+static int cmp_string_t_ptrs(const void* a, const void* b) {
+    const string_t* const* pa = (const string_t* const*)a;
+    const string_t* const* pb = (const string_t* const*)b;
+    const string_t* sa = *pa;
+    const string_t* sb = *pb;
+    size_t minlen = sa->size < sb->size ? sa->size : sb->size;
+    int c = memcmp(sa->data, sb->data, minlen);
+    if (c != 0) return c;
+    if (sa->size < sb->size) return -1;
+    if (sa->size > sb->size) return 1;
+    return 0;
+}
+
+result_t agent_actions_normalize_storage_tags(pool_t* pool, object_t* tags_obj, string_t** processed_tags) {
+    if (!tags_obj || !tags_obj->string || !tags_obj->string->data) {
+        RETURN_ERR("Invalid tags object");
+    }
+
+    // Collect normalized tokens into pool-backed strings
+    enum { MAX_TAGS = 64 };
+    string_t* parts[MAX_TAGS];
+    size_t count = 0;
+
+    const char* s = tags_obj->string->data;
+    size_t n = tags_obj->string->size;
+
+    size_t i = 0;
+    while (i < n && count < MAX_TAGS) {
+        size_t j = i;
+        while (j < n && s[j] != ',') j++;
+        size_t start = i;
+        while (start < j && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r')) start++;
+        size_t end = j;
+        while (end > start && (s[end - 1] == ' ' || s[end - 1] == '\t' || s[end - 1] == '\n' || s[end - 1] == '\r')) end--;
+
+        if (end > start) {
+            string_t* token = NULL;
+            if (string_create(pool, &token) != RESULT_OK) {
+                // cleanup created parts
+                for (size_t k = 0; k < count; k++) string_destroy(pool, parts[k]);
+                RETURN_ERR("Failed to create token string");
+            }
+
+            for (size_t k = start; k < end; k++) {
+                char c = s[k];
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+                if (c == ' ') c = '_';
+                if (string_append_char(pool, &token, c) != RESULT_OK) {
+                    for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
+                    string_destroy(pool, token);
+                    RETURN_ERR("Failed to append to token");
+                }
+            }
+
+            if (token->size > 0) {
+                parts[count++] = token;
+            } else {
+                string_destroy(pool, token);
+            }
+        }
+        i = (j < n) ? (j + 1) : j;
+    }
+
+    if (count == 0) {
+        // Fallback to underscore-normalized whole string
+        if (string_create_string(pool, processed_tags, tags_obj->string) != RESULT_OK) {
+            RETURN_ERR("Failed to create fallback tags string");
+        }
+        for (uint64_t k = 0; k < (*processed_tags)->size; k++) if ((*processed_tags)->data[k] == ' ') (*processed_tags)->data[k] = '_';
+        return RESULT_OK;
+    }
+
+    // Sort and deduplicate
+    qsort(parts, count, sizeof(string_t*), cmp_string_t_ptrs);
+    size_t uniq = 0;
+    for (size_t k = 0; k < count; k++) {
+        if (uniq == 0) {
+            parts[uniq++] = parts[k];
+        } else {
+            string_t* a = parts[uniq - 1];
+            string_t* b = parts[k];
+            if (!(a->size == b->size && memcmp(a->data, b->data, a->size) == 0)) {
+                parts[uniq++] = parts[k];
+            } else {
+                // drop duplicate
+                string_destroy(pool, parts[k]);
+            }
+        }
+    }
+    count = uniq;
+
+    if (string_create(pool, processed_tags) != RESULT_OK) {
+        for (size_t k = 0; k < count; k++) string_destroy(pool, parts[k]);
+        RETURN_ERR("Failed to create processed tags");
+    }
+
+    for (size_t k = 0; k < count; k++) {
+        if (k > 0) {
+            if (string_append_char(pool, processed_tags, ',') != RESULT_OK) {
+                for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
+                RETURN_ERR("Failed to append comma");
+            }
+        }
+        if (string_append_string(pool, processed_tags, parts[k]) != RESULT_OK) {
+            for (size_t m = 0; m < count; m++) string_destroy(pool, parts[m]);
+            RETURN_ERR("Failed to append tag");
+        }
+    }
+
+    // cleanup tokens
+    for (size_t k = 0; k < count; k++) {
+        string_destroy(pool, parts[k]);
+    }
     return RESULT_OK;
 }
 

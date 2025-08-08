@@ -46,13 +46,14 @@
             },
             "tags_conventions": {
               "allowed_chars": "a-z, 0-9, underscore",
-              "separator": "_",
+              "separator_within_tag": "_",
+              "collection_separator": ",",
+              "order_policy": "Order of tags does not matter; the system normalizes and sorts them.",
               "examples_of_tag_composition": {
-                "example_1": "character_alice_background",
-                "example_2": "story_plot_chapter1",
-                "example_3": "archived_thinking_session_001"
+                "single_tag_example": "character_alice_background",
+                "collection_example": "dictionary,terms,vagueness"
               },
-              "length_hint": "Keep tags concise (<= 64 chars)."
+              "length_hint": "Keep each tag concise (less than 64 chars)."
             },
             "storage_constraints": {
               "value_target_tokens": "Less than 100",
@@ -132,7 +133,7 @@
           "action_rules": {
             "single_action": "Emit exactly one action per response.",
             "no_next_state": "Do NOT emit next_state in executing state (the system will auto-transition to evaluating).",
-            "tags_format": "Use a single, underscore-separated 'tags' string as the key (lowercase ASCII, no spaces).",
+            "tags_format": "Use a single string of comma-separated tags as the key (e.g., 'dictionary,terms,vagueness'). Tags may be in any order; the system will lowercase, replace spaces with underscores, sort ascending, and deduplicate.",
             "value_requirement": "Include value only for working_memory_add and storage_save.",
             "no_structured_values": "Values must be plain strings, not JSON/XML/CSV or similar structured data.",
             "value_size_limit": "For storage_save, keep value around 100 tokens; summarize if longer.",
