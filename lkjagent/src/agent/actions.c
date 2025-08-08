@@ -27,7 +27,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
             }
             RETURN_ERR("Invalid parameters for working_memory_add action");
         }
-        return agent_actions_execute_working_memory_add(pool, config, agent, action_obj);
+        return agent_actions_command_working_memory_add(pool, config, agent, action_obj);
 
     } else if (string_equal_str(type_obj->string, "working_memory_remove")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "working_memory_remove", 0) != RESULT_OK) {
@@ -36,7 +36,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
             }
             RETURN_ERR("Invalid parameters for working_memory_remove action");
         }
-        return agent_actions_execute_working_memory_remove(pool, config, agent, action_obj);
+        return agent_actions_command_working_memory_remove(pool, config, agent, action_obj);
 
     } else if (string_equal_str(type_obj->string, "storage_load")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_load", 0) != RESULT_OK) {
@@ -45,7 +45,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
             }
             RETURN_ERR("Invalid parameters for storage_load action");
         }
-        return agent_actions_execute_storage_load(pool, config, agent, action_obj);
+        return agent_actions_command_storage_load(pool, config, agent, action_obj);
 
     } else if (string_equal_str(type_obj->string, "storage_save")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_save", 1) != RESULT_OK) {
@@ -54,7 +54,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
             }
             RETURN_ERR("Invalid parameters for storage_save action");
         }
-        return agent_actions_execute_storage_save(pool, config, agent, action_obj);
+        return agent_actions_command_storage_save(pool, config, agent, action_obj);
 
     } else if (string_equal_str(type_obj->string, "storage_search")) {
         if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_search", 0) != RESULT_OK) {
@@ -63,7 +63,7 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
             }
             RETURN_ERR("Invalid parameters for storage_search action");
         }
-        return agent_actions_execute_storage_search(pool, config, agent, action_obj);
+        return agent_actions_command_storage_search(pool, config, agent, action_obj);
 
     } else {
         if (agent_actions_log_result(pool, config, agent,
@@ -100,7 +100,7 @@ static uint64_t key_contains_all_tags(const string_t* key, string_t** tokens, si
     return 1;
 }
 
-result_t agent_actions_execute_storage_search(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+result_t agent_actions_command_storage_search(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
@@ -246,7 +246,7 @@ result_t agent_actions_execute_storage_search(pool_t* pool, config_t* config, ag
     return RESULT_OK;
 }
 
-result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+result_t agent_actions_command_working_memory_add(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
@@ -307,7 +307,7 @@ result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config
     return RESULT_OK;
 }
 
-result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+result_t agent_actions_command_working_memory_remove(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
@@ -384,7 +384,7 @@ result_t agent_actions_execute_working_memory_remove(pool_t* pool, config_t* con
     return RESULT_OK;
 }
 
-result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+result_t agent_actions_command_storage_load(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
@@ -466,7 +466,7 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
     return RESULT_OK;
 }
 
-result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+result_t agent_actions_command_storage_save(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
     object_t* type_obj = NULL;
     object_t* tags_obj = NULL;
     object_t* value_obj = NULL;
@@ -1245,8 +1245,8 @@ result_t agent_actions_log_result(pool_t* pool, config_t* config, agent_t* agent
         printf("Warning: Failed to ensure working memory exists before logging\n");
     }
 
-    if (agent_state_manage_execution_log(pool, config, agent, action_type, tags, result_message) != RESULT_OK) {
-        printf("Warning: Failed to manage execution log\n");
+    if (agent_state_manage_command_log(pool, config, agent, action_type, tags, result_message) != RESULT_OK) {
+        printf("Warning: Failed to manage command log\n");
     }
 
     return RESULT_OK;

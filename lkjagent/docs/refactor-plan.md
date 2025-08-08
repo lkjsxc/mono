@@ -21,13 +21,13 @@ Objective: Produce high-quality, robust code for `src/agent/*` while keeping `sr
 - Harden string handling: guard copies, cap buffers, always terminate
 - Add small helpers for repeated path strings ("state", "working_memory")
 - Centralize config accessors (already present in state.c)
-- Add structured execution log format (already present; could add timestamps later)
+- Add structured command log format (already present; could add timestamps later)
 
 ## Test Scenarios
 
 - thinking -> thinking with think_log
-- thinking -> executing (working_memory_add)
-- executing -> evaluating (auto) -> thinking
+- thinking -> commanding (working_memory_add)
+- commanding -> evaluating (auto) -> thinking
 - storage_save + storage_load round-trip
 - paging_limit reached triggers paging state path (still placeholder)
 - malformed response: parser sets default next_state and no actions

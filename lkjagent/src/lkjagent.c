@@ -99,7 +99,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
             printf("Warning: max_iterations not found, using default of 5\n");
         }
         
-        printf("Starting LKJAgent execution (%lu cycles)...\n", max_iterations);
+        printf("Starting LKJAgent command (%lu cycles)...\n", max_iterations);
         for (uint64_t i = 0; i < max_iterations; i++) {
             printf("Cycle %lu/%lu...\n", i + 1, max_iterations);
             if (lkjagent_agent(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
@@ -139,7 +139,7 @@ int main() {
     }
 
     if (lkjagent_run(&lkjagent) != RESULT_OK) {
-        printf("LKJAgent execution completed with errors, but system was functional\n");
+        printf("LKJAgent command completed with errors, but system was functional\n");
         // Don't treat this as fatal - the agent was working
     }
 

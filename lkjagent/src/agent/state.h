@@ -11,7 +11,7 @@
 
 // State management and transition functions
 
-// Automatic transition from executing state to evaluating state
+// Automatic transition from commanding state to evaluating state
 __attribute__((warn_unused_result)) result_t agent_state_auto_transition(pool_t* pool, config_t* config, agent_t* agent);
 
 // Regular state update with thinking log management
@@ -37,14 +37,14 @@ __attribute__((warn_unused_result)) result_t agent_state_manage_think_log(pool_t
 // Handle evaluation log entries with rotation
 __attribute__((warn_unused_result)) result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
-// Handle execution log entries with rotation
-__attribute__((warn_unused_result)) result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
+// Handle command log entries with rotation
+__attribute__((warn_unused_result)) result_t agent_state_manage_command_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message);
 
 // Check if memory limits require paging
 __attribute__((warn_unused_result)) result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t* agent, uint64_t* requires_paging);
 
-// Execute paging operation to manage memory overflow
-__attribute__((warn_unused_result)) result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* agent);
+// command paging operation to manage memory overflow
+__attribute__((warn_unused_result)) result_t agent_state_command_paging(pool_t* pool, config_t* config, agent_t* agent);
 
 // Synchronize all logs with working memory for consistent access
 __attribute__((warn_unused_result)) result_t agent_state_sync_logs_to_working_memory(pool_t* pool, agent_t* agent);

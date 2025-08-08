@@ -19,7 +19,7 @@ This describes the core runtime types and persisted schemas.
 - agent:
   - think_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - evaluation_log: { enable: bool|number, max_entries: number, key_prefix: string }
-  - execution_log: { enable: bool|number, max_entries: number, key_prefix: string }
+  - command_log: { enable: bool|number, max_entries: number, key_prefix: string }
   - paging_limit: { enable: bool|number, max_tokens: number }
   - hard_limit: { enable: bool|number, max_tokens: number }  // reserved; not actively enforced
   - iterate: { max_iterations: number }  // when missing or invalid, defaults to 5
@@ -27,7 +27,7 @@ This describes the core runtime types and persisted schemas.
   - state:
     - base.prompt: object (arbitrary keys)
     - thinking.prompt: object
-    - executing.prompt: object
+    - commanding.prompt: object
     - evaluating.prompt: object
     - paging.prompt: object
 
@@ -39,7 +39,7 @@ Notes:
 
 - working_memory: object (arbitrary kv)
 - storage: object (optional)
-- state: string (thinking|executing|evaluating|paging)
+- state: string (thinking|commanding|evaluating|paging)
 
 Persistence behavior:
 - After each cycle, the entire `agent.data` object is serialized and written to data/memory.json.

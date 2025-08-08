@@ -48,8 +48,8 @@ static result_t agent_core_preflight(pool_t* pool, config_t* config, agent_t* ag
     return RESULT_OK;
 }
 
-// Main execution function that processes LLM responses and executes agent actions
-result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, const string_t* recv) {
+// Main command function that processes LLM responses and commands agent actions
+result_t lkjagent_agent_command(pool_t* pool, config_t* config, agent_t* agent, const string_t* recv) {
     object_t* response_obj = NULL;
     object_t* agent_response = NULL;
     object_t* action_obj = NULL;
@@ -99,7 +99,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
             }
         }
     } else {
-        printf("[CORE] No action present in agent response (ok for non-executing states).\n");
+        printf("[CORE] No action present in agent response (ok for non-commanding states).\n");
         object_t* current_state_obj = NULL;
         if (object_provide_str(pool, &current_state_obj, agent->data, "state") == RESULT_OK &&
             current_state_obj != NULL && current_state_obj->string != NULL) {
@@ -141,7 +141,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
         printf("Warning: Failed to save memory\n");
     }
     if (object_destroy(pool, response_obj) != RESULT_OK) {
-        printf("Warning: Failed to destroy response_obj at end of execute\n");
+        printf("Warning: Failed to destroy response_obj at end of command\n");
     }
 
     return RESULT_OK;
@@ -166,11 +166,11 @@ result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
         RETURN_ERR("Failed to communicate with LLM");
     }
 
-    if (lkjagent_agent_execute(pool, config, agent, response_content) != RESULT_OK) {
+    if (lkjagent_agent_command(pool, config, agent, response_content) != RESULT_OK) {
         if (string_destroy(pool, prompt) != RESULT_OK || string_destroy(pool, response_content) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy resources after agent execution failure");
+            RETURN_ERR("Failed to destroy resources after agent command failure");
         }
-        RETURN_ERR("Failed to execute agent with received content");
+        RETURN_ERR("Failed to command agent with received content");
     }
 
     if (string_destroy(pool, prompt) != RESULT_OK) {

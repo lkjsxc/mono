@@ -13,13 +13,13 @@
     },
     "evaluation_log": {
       "enable": true,
-      "max_entries": 2,
+      "max_entries": 1,
       "key_prefix": "evaluation_log_"
     },
-    "execution_log": {
+    "command_log": {
       "enable": true,
-      "max_entries": 2,
-      "key_prefix": "execution_log_"
+      "max_entries": 1,
+      "key_prefix": "command_log_"
     },
     "paging_limit": {
       "enable": false,
@@ -81,7 +81,7 @@
         "prompt": {
           "goals": {
             "goal_1": "Analyze current working_memory and recent logs to determine the most useful next step.",
-            "goal_2": "Select next_state: 'thinking' to continue planning, 'executing' to perform an action, or 'evaluating' to reflect on results."
+            "goal_2": "Select next_state: 'thinking' to continue planning, 'commanding' to perform an action, or 'evaluating' to reflect on results."
           },
           "principles": {
             "parsimony": "Include only fields required by this state.",
@@ -89,7 +89,7 @@
             "traceability": "Use <think_log> sparingly to reference concrete keys or intended actions."
           },
           "decision_rubric": {
-            "choose_executing_when": {
+            "choose_commanding_when": {
               "case_1": "There is a clear, atomic action that advances the task",
               "case_2": "Information must be moved between storage and working_memory",
               "case_3": "A concise update to working_memory is beneficial"
@@ -104,7 +104,7 @@
           },
           "output_requirements": {
             "must_emit": {
-              "next_state": "Allowed values: thinking | executing | evaluating"
+              "next_state": "Allowed values: thinking | commanding | evaluating"
             },
             "may_emit": {
               "think_log": "Concise, factual reasoning about the chosen next step; reference keys when helpful"
@@ -117,7 +117,7 @@
           "continuity": "Maintain multi-step coherence across iterations; avoid contradicting established facts in working_memory."
         }
       },
-      "executing": {
+      "commanding": {
         "prompt": {
           "intent": "Perform exactly one atomic action that modifies working_memory or interacts with storage.",
           "allowed_actions": {
@@ -146,7 +146,7 @@
           },
           "action_rules": {
             "single_action": "Emit exactly one action per response.",
-            "no_next_state": "Do NOT emit next_state in executing state (the system will auto-transition to evaluating).",
+            "no_next_state": "Do NOT emit next_state in commanding state (the system will auto-transition to evaluating).",
             "tags_format": "Use a single string of comma-separated tags as the key (e.g., 'dictionary,terms,vagueness'). Tags may be in any order; the system will lowercase, replace spaces with underscores, sort ascending, and deduplicate.",
             "value_requirement": "Include value only for working_memory_add and storage_save.",
             "no_structured_values": "Values must be plain strings, not JSON/XML/CSV or similar structured data.",
@@ -252,7 +252,7 @@
       },
       "example_workflow": {
         "step1": "Working memory reaches 1024+ tokens",
-        "step2": "System auto-transitions from 'executing' to 'paging'",
+        "step2": "System auto-transitions from 'commanding' to 'paging'",
         "step3": "LLM analyzes working memory: todo, character_alice_about, think_log_00, think_log_01",
         "step4": "LLM decides: keep 'todo' (current task), archive old thinking logs",
         "step5": "LLM creates summary: 'Early session focused on Alice character development'",

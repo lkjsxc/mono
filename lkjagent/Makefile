@@ -2,7 +2,7 @@
 # Compiler and flags
 CC = gcc
 # Enhanced type checking and argument validation flags
-CFLAGS = -Werror -Wall -Wextra -std=c11 -O2 -g
+CFLAGS = -Werror -Wall -Wextra -std=c11 -O2 -march=native -g
 LDFLAGS = -static
 INCLUDES = -Isrc/
 LIBS = 

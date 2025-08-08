@@ -20,12 +20,12 @@ static result_t config_has_state(pool_t* pool, config_t* config, const string_t*
     return RESULT_OK;
 }
 
-// Log invalid next_state into working_memory and via execution log; proceed without failing
+// Log invalid next_state into working_memory and via command log; proceed without failing
 static void log_invalid_next_state(pool_t* pool, config_t* config, agent_t* agent, const char* requested_state) {
     if (!requested_state) requested_state = "(null)";
-    // Execution log entry (best-effort)
-    if (agent_state_manage_execution_log(pool, config, agent, "state_transition", requested_state, "Invalid next_state in config; defaulting to thinking") != RESULT_OK) {
-        printf("Warning: Failed to write execution log for invalid next_state\n");
+    // command log entry (best-effort)
+    if (agent_state_manage_command_log(pool, config, agent, "state_transition", requested_state, "Invalid next_state in config; defaulting to thinking") != RESULT_OK) {
+        printf("Warning: Failed to write command log for invalid next_state\n");
     }
 
     // Also set a lightweight key in working_memory
@@ -246,8 +246,8 @@ result_t agent_state_handle_evaluation_transition(pool_t* pool, config_t* config
             RETURN_ERR("Failed to transition to paging state");
         }
 
-        if (agent_state_execute_paging(pool, config, agent) != RESULT_OK) {
-            RETURN_ERR("Failed to execute paging operation");
+        if (agent_state_command_paging(pool, config, agent) != RESULT_OK) {
+            RETURN_ERR("Failed to command paging operation");
         }
 
         if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
@@ -573,24 +573,24 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent
     return RESULT_OK;
 }
 
-result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message) {
+result_t agent_state_manage_command_log(pool_t* pool, config_t* config, agent_t* agent, const char* action_type, const char* tags, const char* result_message) {
     uint64_t max_entries = 4;
-    char key_prefix[32] = "execution_log_";
+    char key_prefix[32] = "command_log_";
     uint64_t enable = 1;
 
     if (pool == NULL || agent == NULL) {
-        RETURN_ERR("Invalid parameters for execution log management");
+        RETURN_ERR("Invalid parameters for command log management");
     }
 
-    if (get_config_bool(pool, config, "agent.execution_log.enable", &enable) != RESULT_OK || !enable) {
+    if (get_config_bool(pool, config, "agent.command_log.enable", &enable) != RESULT_OK || !enable) {
         return RESULT_OK;
     }
 
-    get_config_uint64(pool, config, "agent.execution_log.max_entries", &max_entries, 4);
-    get_config_string(pool, config, "agent.execution_log.key_prefix", key_prefix, sizeof(key_prefix), "execution_log_");
+    get_config_uint64(pool, config, "agent.command_log.max_entries", &max_entries, 4);
+    get_config_string(pool, config, "agent.command_log.key_prefix", key_prefix, sizeof(key_prefix), "command_log_");
 
-    char execution_log_buffer[512];
-    snprintf(execution_log_buffer, sizeof(execution_log_buffer),
+    char command_log_buffer[512];
+    snprintf(command_log_buffer, sizeof(command_log_buffer),
              "Action: %s, Tags: %s, Result: %s",
              action_type ? action_type : "unknown",
              tags ? tags : "none",
@@ -601,7 +601,7 @@ result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_
 
     object_t* working_memory = NULL;
     if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
-        RETURN_ERR("Failed to get working memory for execution log management");
+        RETURN_ERR("Failed to get working memory for command log management");
     }
 
     for (uint64_t i = 1; i <= max_entries; i++) {
@@ -626,11 +626,11 @@ result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_
                 string_t* new_log_key_string = NULL;
                 if (string_create_str(pool, &new_log_key_string, new_log_key) == RESULT_OK) {
                     if (object_set_string(pool, working_memory, new_log_key_string, old_log_obj->string) != RESULT_OK) {
-                        printf("Error: Failed to rotate execution log %s to %s\n", old_log_key, new_log_key);
+                        printf("Error: Failed to rotate command log %s to %s\n", old_log_key, new_log_key);
                     }
                     result_t tmp = string_destroy(pool, new_log_key_string);
                     if (tmp != RESULT_OK) {
-                        printf("Warning: Failed to destroy new_log_key_string after execution log rotation\n");
+                        printf("Warning: Failed to destroy new_log_key_string after command log rotation\n");
                     }
                 }
             }
@@ -646,7 +646,7 @@ result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_
         return RESULT_OK;
     }
 
-    if (string_create_str(pool, &log_value_string, execution_log_buffer) != RESULT_OK) {
+    if (string_create_str(pool, &log_value_string, command_log_buffer) != RESULT_OK) {
         result_t tmp = string_destroy(pool, log_key_string);
         if (tmp != RESULT_OK) {
             printf("Warning: Failed to destroy log_key_string after log_value_string create error\n");
@@ -655,17 +655,17 @@ result_t agent_state_manage_execution_log(pool_t* pool, config_t* config, agent_
     }
 
     if (object_set_string(pool, working_memory, log_key_string, log_value_string) != RESULT_OK) {
-        printf("Error: Failed to add execution log to working memory\n");
+        printf("Error: Failed to add command log to working memory\n");
     }
 
     {
         result_t tmp1 = string_destroy(pool, log_key_string);
         if (tmp1 != RESULT_OK) {
-            printf("Warning: Failed to destroy log_key_string after execution log write\n");
+            printf("Warning: Failed to destroy log_key_string after command log write\n");
         }
         result_t tmp2 = string_destroy(pool, log_value_string);
         if (tmp2 != RESULT_OK) {
-            printf("Warning: Failed to destroy log_value_string after execution log write\n");
+            printf("Warning: Failed to destroy log_value_string after command log write\n");
         }
     }
 
@@ -700,12 +700,12 @@ result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t
     return RESULT_OK;
 }
 
-result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* agent) {
+result_t agent_state_command_paging(pool_t* pool, config_t* config, agent_t* agent) {
     (void)pool;
     (void)config;
     (void)agent;
 
-    printf("Paging operation executed (placeholder implementation)\n");
+    printf("Paging operation commandd (placeholder implementation)\n");
 
     return RESULT_OK;
 }

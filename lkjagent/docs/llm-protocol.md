@@ -46,7 +46,7 @@ Supported tags (any order; optional unless noted):
 
 Error tolerance and defaults:
 - Missing tags are ignored; next_state defaults to `thinking`
-- Unknown action types are logged as execution failures and ignored
+- Unknown action types are logged as command failures and ignored
 - Oversized fragments are clipped by conservative buffers (1–2 KB per field)
 
 ## Robustness Considerations
