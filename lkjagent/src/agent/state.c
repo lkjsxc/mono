@@ -12,7 +12,7 @@ result_t agent_state_auto_transition(pool_t* pool, config_t* config, agent_t* ag
 }
 
 // Regular state update with thinking log management
-result_t agent_state_update_and_log(pool_t* pool, agent_t* agent, object_t* response_obj) {
+result_t agent_state_update_and_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj) {
     object_t* next_state_obj = NULL;
     uint64_t successful_operations = 0;
     
@@ -42,7 +42,7 @@ result_t agent_state_update_and_log(pool_t* pool, agent_t* agent, object_t* resp
     object_t* thinking_log_obj = NULL;
     if (object_provide_str(pool, &thinking_log_obj, response_obj, "thinking_log") == RESULT_OK) {
         // Thinking log management is optional, don't fail if it doesn't work
-        result_t thinking_log_result = agent_state_manage_thinking_log(pool, NULL, agent, response_obj);
+        result_t thinking_log_result = agent_state_manage_thinking_log(pool, config, agent, response_obj);
         if (thinking_log_result == RESULT_OK) {
             successful_operations++;
         }
@@ -53,7 +53,7 @@ result_t agent_state_update_and_log(pool_t* pool, agent_t* agent, object_t* resp
     object_t* evaluation_log_obj = NULL;
     if (object_provide_str(pool, &evaluation_log_obj, response_obj, "evaluation_log") == RESULT_OK) {
         // Evaluation log management is optional, don't fail if it doesn't work
-        result_t evaluation_log_result = agent_state_manage_evaluation_log(pool, agent, response_obj);
+        result_t evaluation_log_result = agent_state_manage_evaluation_log(pool, config, agent, response_obj);
         if (evaluation_log_result == RESULT_OK) {
             successful_operations++;
         }
@@ -80,7 +80,7 @@ result_t agent_state_handle_evaluation_transition(pool_t* pool, config_t* config
     }
     
     // Handle evaluation log
-    if (agent_state_manage_evaluation_log(pool, agent, response_obj) != RESULT_OK) {
+    if (agent_state_manage_evaluation_log(pool, config, agent, response_obj) != RESULT_OK) {
         RETURN_ERR("Failed to manage evaluation log");
     }
     
@@ -332,8 +332,15 @@ result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t
 }
 
 // Handle evaluation log entries with working memory integration
-result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_t* response_obj) {
+result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj) {
     object_t* evaluation_log_obj = NULL;
+    object_t* config_evaluation_log = NULL;
+    object_t* max_entries_obj = NULL;
+    object_t* enable_obj = NULL;
+    object_t* key_prefix_obj = NULL;
+    uint64_t max_entries = 10;  // Default value
+    char key_prefix[32] = "evaluation_log_";  // Default prefix
+    uint64_t enable = 1;  // Default enabled
     
     // Extract evaluation log from response
     if (object_provide_str(pool, &evaluation_log_obj, response_obj, "evaluation_log") != RESULT_OK) {
@@ -341,7 +348,40 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
         return RESULT_OK;
     }
     
-    // Find the next available evaluation log slot (simple increment) in working memory
+    // Validate evaluation log object
+    if (evaluation_log_obj == NULL || evaluation_log_obj->string == NULL) {
+        return RESULT_OK; // Don't fail on invalid evaluation log
+    }
+    
+    // Get configuration values if available
+    if (config != NULL) {
+        if (object_provide_str(pool, &config_evaluation_log, config->data, "agent.evaluation_log") == RESULT_OK) {
+            // Check if enabled
+            if (object_provide_str(pool, &enable_obj, config_evaluation_log, "enable") == RESULT_OK) {
+                enable = strtoull(enable_obj->string->data, NULL, 10);
+            }
+            
+            // If disabled, skip processing
+            if (!enable) {
+                return RESULT_OK;
+            }
+            
+            // Get max entries
+            if (object_provide_str(pool, &max_entries_obj, config_evaluation_log, "max_entries") == RESULT_OK) {
+                max_entries = strtoull(max_entries_obj->string->data, NULL, 10);
+                if (max_entries == 0) max_entries = 10; // Fallback
+            }
+            
+            // Get key prefix
+            if (object_provide_str(pool, &key_prefix_obj, config_evaluation_log, "key_prefix") == RESULT_OK) {
+                if (key_prefix_obj->string != NULL && key_prefix_obj->string->size > 0) {
+                    snprintf(key_prefix, sizeof(key_prefix), "%s", key_prefix_obj->string->data);
+                }
+            }
+        }
+    }
+    
+    // Find the next available evaluation log slot in working memory
     char log_key[64];
     uint64_t next_index = 1;
     
@@ -352,19 +392,19 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
     }
     
     // Find the highest existing index in working memory
-    for (uint64_t i = 1; i <= 10; i++) {  // Check up to 10 evaluation logs
-        snprintf(log_key, sizeof(log_key), "evaluation_log_%03lu", (unsigned long)i);
+    for (uint64_t i = 1; i <= max_entries; i++) {
+        snprintf(log_key, sizeof(log_key), "%s%03lu", key_prefix, (unsigned long)i);
         object_t* existing_log = NULL;
         if (object_provide_str(pool, &existing_log, working_memory, log_key) == RESULT_OK) {
             next_index = i + 1;
         }
     }
     
-    // Limit evaluation logs to prevent memory overflow
-    if (next_index > 10) {
-        // Remove oldest entry from working memory before replacing
+    // If we've exceeded max entries, rotate (remove first, shift others)
+    if (next_index > max_entries) {
+        // Remove oldest entry from working memory before rotation
         char oldest_wm_key[64];
-        snprintf(oldest_wm_key, sizeof(oldest_wm_key), "evaluation_log_%03lu", (unsigned long)1);
+        snprintf(oldest_wm_key, sizeof(oldest_wm_key), "%s%03lu", key_prefix, (unsigned long)1);
         string_t* oldest_wm_key_string = NULL;
         string_t* empty_string = NULL;
         if (string_create_str(pool, &oldest_wm_key_string, oldest_wm_key) == RESULT_OK &&
@@ -381,12 +421,35 @@ result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_
             }
         }
         
+        // Rotate existing logs (shift them down)
+        for (uint64_t i = 1; i < max_entries; i++) {
+            char old_log_key[64];
+            char new_log_key[64];
+            snprintf(old_log_key, sizeof(old_log_key), "%s%03lu", key_prefix, (unsigned long)(i + 1));
+            snprintf(new_log_key, sizeof(new_log_key), "%s%03lu", key_prefix, (unsigned long)i);
+            
+            // Get the value from the next slot
+            object_t* old_log_obj = NULL;
+            if (object_provide_str(pool, &old_log_obj, working_memory, old_log_key) == RESULT_OK) {
+                string_t* new_log_key_string = NULL;
+                if (string_create_str(pool, &new_log_key_string, new_log_key) == RESULT_OK) {
+                    // Move the log entry
+                    if (object_set_string(pool, working_memory, new_log_key_string, old_log_obj->string) != RESULT_OK) {
+                        printf("Error: Failed to rotate evaluation log %s to %s\n", old_log_key, new_log_key);
+                    }
+                    if (string_destroy(pool, new_log_key_string) != RESULT_OK) {
+                        printf("Error: Failed to destroy new evaluation log key string during rotation\n");
+                    }
+                }
+            }
+        }
+        
         // Replace the last entry
-        next_index = 10;
+        next_index = max_entries;
     }
     
     // Add the new evaluation log entry - only to working memory
-    snprintf(log_key, sizeof(log_key), "evaluation_log_%03lu", (unsigned long)next_index);
+    snprintf(log_key, sizeof(log_key), "%s%03lu", key_prefix, (unsigned long)next_index);
     string_t* log_key_string = NULL;
     if (string_create_str(pool, &log_key_string, log_key) != RESULT_OK) {
         RETURN_ERR("Failed to create evaluation log key string");
@@ -438,9 +501,48 @@ result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t
 
 // Execute paging operation to manage memory overflow
 result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* agent) {
-    (void)config; // Mark parameter as intentionally unused
     object_t* working_memory = NULL;
     object_t* storage = NULL;
+    object_t* config_thinking_log = NULL;
+    object_t* config_evaluation_log = NULL;
+    object_t* thinking_prefix_obj = NULL;
+    object_t* evaluation_prefix_obj = NULL;
+    object_t* thinking_max_entries_obj = NULL;
+    object_t* evaluation_max_entries_obj = NULL;
+    
+    char thinking_prefix[32] = "thinking_log_";  // Default prefix
+    char evaluation_prefix[32] = "evaluation_log_";  // Default prefix
+    uint64_t thinking_max_entries = 4;  // Default value
+    uint64_t evaluation_max_entries = 10;  // Default value
+    
+    // Get configuration values if available
+    if (config != NULL) {
+        // Get thinking log configuration
+        if (object_provide_str(pool, &config_thinking_log, config->data, "agent.thinking_log") == RESULT_OK) {
+            if (object_provide_str(pool, &thinking_prefix_obj, config_thinking_log, "key_prefix") == RESULT_OK) {
+                if (thinking_prefix_obj->string != NULL && thinking_prefix_obj->string->size > 0) {
+                    snprintf(thinking_prefix, sizeof(thinking_prefix), "%s", thinking_prefix_obj->string->data);
+                }
+            }
+            if (object_provide_str(pool, &thinking_max_entries_obj, config_thinking_log, "max_entries") == RESULT_OK) {
+                thinking_max_entries = strtoull(thinking_max_entries_obj->string->data, NULL, 10);
+                if (thinking_max_entries == 0) thinking_max_entries = 4; // Fallback
+            }
+        }
+        
+        // Get evaluation log configuration
+        if (object_provide_str(pool, &config_evaluation_log, config->data, "agent.evaluation_log") == RESULT_OK) {
+            if (object_provide_str(pool, &evaluation_prefix_obj, config_evaluation_log, "key_prefix") == RESULT_OK) {
+                if (evaluation_prefix_obj->string != NULL && evaluation_prefix_obj->string->size > 0) {
+                    snprintf(evaluation_prefix, sizeof(evaluation_prefix), "%s", evaluation_prefix_obj->string->data);
+                }
+            }
+            if (object_provide_str(pool, &evaluation_max_entries_obj, config_evaluation_log, "max_entries") == RESULT_OK) {
+                evaluation_max_entries = strtoull(evaluation_max_entries_obj->string->data, NULL, 10);
+                if (evaluation_max_entries == 0) evaluation_max_entries = 10; // Fallback
+            }
+        }
+    }
     
     // Get working memory and storage
     if (object_provide_str(pool, &working_memory, agent->data, "working_memory") != RESULT_OK) {
@@ -481,9 +583,9 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
     // For this implementation, we'll move items with certain prefixes to storage
     
     // Find items to page out (example: old thinking logs and evaluation logs)
-    for (uint64_t i = 1; i <= 5; i++) {  // Page out older thinking logs
+    for (uint64_t i = 1; i <= (thinking_max_entries / 2); i++) {  // Page out older thinking logs
         char old_log_key[64];
-        snprintf(old_log_key, sizeof(old_log_key), "thinking_log_%03lu", (unsigned long)i);
+        snprintf(old_log_key, sizeof(old_log_key), "%s%03lu", thinking_prefix, (unsigned long)i);
         
         object_t* log_to_page = NULL;
         if (object_provide_str(pool, &log_to_page, working_memory, old_log_key) == RESULT_OK) {
@@ -532,9 +634,9 @@ result_t agent_state_execute_paging(pool_t* pool, config_t* config, agent_t* age
     }
     
     // Also page out older evaluation logs
-    for (uint64_t i = 1; i <= 5; i++) {  // Page out older evaluation logs
+    for (uint64_t i = 1; i <= (evaluation_max_entries / 2); i++) {  // Page out older evaluation logs
         char old_log_key[64];
-        snprintf(old_log_key, sizeof(old_log_key), "evaluation_log_%03lu", (unsigned long)i);
+        snprintf(old_log_key, sizeof(old_log_key), "%s%03lu", evaluation_prefix, (unsigned long)i);
         
         object_t* log_to_page = NULL;
         if (object_provide_str(pool, &log_to_page, working_memory, old_log_key) == RESULT_OK) {

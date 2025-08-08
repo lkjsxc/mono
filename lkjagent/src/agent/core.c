@@ -53,7 +53,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
     } else {
         // This might be a state transition - handle it with unified logic
         // Use simple state update that handles both thinking and evaluating states
-        if (agent_state_update_and_log(pool, agent, agent_response) != RESULT_OK) {
+        if (agent_state_update_and_log(pool, config, agent, agent_response) != RESULT_OK) {
             // If state update fails, force reset to thinking
             if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
                 if (object_destroy(pool, response_obj) != RESULT_OK) {

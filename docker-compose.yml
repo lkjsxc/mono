@@ -1,33 +1,33 @@
 services:
-  # lkjscript:
-  #   build: ./lkjscript
-  #   container_name: lkjscript
-  #   volumes:
-  #     - ./lkjscript/data:/data
-  # lkjsite:
-  #   build: ./lkjsite
-  #   container_name: lkjsite
-  #   volumes:
-  #     - ./lkjsite/data:/data
-  # lkjagent:
-  #   build: ./lkjagent
-  #   container_name: lkjagent
-  #   volumes:
-  #     - ./lkjagent/data:/data
-  # lkjvoxel:
-  #   build: ./lkjvoxel
-  #   container_name: lkjvoxel
-  #   volumes:
-  #     - ./lkjvoxel/data:/data
-  # turingcomplete:
-  #   build: ./turingcomplete
-  #   volumes:
-  #     - ./turingcomplete/output:/app/output
+  lkjscript:
+    build: ./lkjscript
+    container_name: lkjscript
+    volumes:
+      - ./lkjscript/data:/data
+  lkjsite:
+    build: ./lkjsite
+    container_name: lkjsite
+    volumes:
+      - ./lkjsite/data:/data
+  lkjagent:
+    build: ./lkjagent
+    container_name: lkjagent
+    volumes:
+      - ./lkjagent/data:/data
+  lkjvoxel:
+    build: ./lkjvoxel
+    container_name: lkjvoxel
+    volumes:
+      - ./lkjvoxel/data:/data
+  turingcomplete:
+    build: ./turingcomplete
+    volumes:
+      - ./turingcomplete/output:/app/output
   lkjnostrclient:
     build: ./lkjnostrclient
     container_name: lkjnostrclient
 
-networks:
-  default:
-    name: main
-    external: true
+# networks:
+#   default:
+#     name: main
+#     external: true

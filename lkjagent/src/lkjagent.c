@@ -80,6 +80,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
             printf("Cycle %lu/5...\n", i + 1);
             if (lkjagent_agent(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
                 printf("Cycle %lu completed with errors, but agent was functional\n", i + 1);
+                sleep(5);
             } else {
                 printf("Cycle %lu completed successfully\n", i + 1);
             }
@@ -103,6 +104,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(lkjagent_t* lkj
             printf("Cycle %lu/%lu...\n", i + 1, max_iterations);
             if (lkjagent_agent(&lkjagent->pool, &lkjagent->config, &lkjagent->agent) != RESULT_OK) {
                 printf("Cycle %lu completed with errors, but agent was functional\n", i + 1);
+                sleep(5);
             } else {
                 printf("Cycle %lu completed successfully\n", i + 1);
             }

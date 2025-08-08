@@ -15,7 +15,7 @@
 __attribute__((warn_unused_result)) result_t agent_state_auto_transition(pool_t* pool, config_t* config, agent_t* agent);
 
 // Regular state update with thinking log management
-__attribute__((warn_unused_result)) result_t agent_state_update_and_log(pool_t* pool, agent_t* agent, object_t* response_obj);
+__attribute__((warn_unused_result)) result_t agent_state_update_and_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
 // Memory-aware transition handling for evaluating state
 __attribute__((warn_unused_result)) result_t agent_state_handle_evaluation_transition(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
@@ -34,8 +34,8 @@ __attribute__((warn_unused_result)) result_t agent_state_update_state(pool_t* po
 // Handle thinking log entries with rotation
 __attribute__((warn_unused_result)) result_t agent_state_manage_thinking_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
-// Handle evaluation log entries
-__attribute__((warn_unused_result)) result_t agent_state_manage_evaluation_log(pool_t* pool, agent_t* agent, object_t* response_obj);
+// Handle evaluation log entries with rotation
+__attribute__((warn_unused_result)) result_t agent_state_manage_evaluation_log(pool_t* pool, config_t* config, agent_t* agent, object_t* response_obj);
 
 // Check if memory limits require paging
 __attribute__((warn_unused_result)) result_t agent_state_check_memory_limits(pool_t* pool, config_t* config, agent_t* agent, uint64_t* requires_paging);

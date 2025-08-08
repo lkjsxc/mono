@@ -11,6 +11,11 @@
       "max_entries": 4,
       "key_prefix": "thinking_log_"
     },
+    "evaluation_log": {
+      "enable": true,
+      "max_entries": 4,
+      "key_prefix": "evaluation_log_"
+    },
     "paging_limit": {
       "enable": true,
       "max_tokens": 1024
