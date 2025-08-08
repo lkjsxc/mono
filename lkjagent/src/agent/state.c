@@ -1,5 +1,54 @@
 #include "agent/state.h"
 
+// Validate that a state name exists under config.agent.state
+static result_t config_has_state(pool_t* pool, config_t* config, const string_t* state_name, uint64_t* exists) {
+    object_t* state_root = NULL;
+    object_t* state_def = NULL;
+    if (!exists) {
+        RETURN_ERR("exists out param is NULL");
+    }
+    *exists = 0;
+    if (!pool || !config || !config->data || !state_name || !state_name->data || state_name->size == 0) {
+        return RESULT_OK; // treat as not existing
+    }
+    if (object_provide_str(pool, &state_root, config->data, "agent.state") != RESULT_OK || !state_root) {
+        return RESULT_OK;
+    }
+    if (object_provide_string(&state_def, state_root, state_name) == RESULT_OK && state_def) {
+        *exists = 1;
+    }
+    return RESULT_OK;
+}
+
+// Log invalid next_state into working_memory and via execution log; proceed without failing
+static void log_invalid_next_state(pool_t* pool, config_t* config, agent_t* agent, const char* requested_state) {
+    if (!requested_state) requested_state = "(null)";
+    // Execution log entry (best-effort)
+    (void)agent_state_manage_execution_log(pool, config, agent, "state_transition", requested_state, "Invalid next_state in config; defaulting to thinking");
+
+    // Also set a lightweight key in working_memory
+    object_t* working_memory = NULL;
+    if (object_provide_str(pool, &working_memory, agent->data, "working_memory") == RESULT_OK && working_memory) {
+        string_t* key = NULL;
+        string_t* val = NULL;
+        if (string_create_str(pool, &key, "state_transition_invalid") == RESULT_OK) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "requested='%s', fallback='thinking'", requested_state);
+            if (string_create_str(pool, &val, buf) == RESULT_OK) {
+                if (object_set_string(pool, working_memory, key, val) != RESULT_OK) {
+                    // best-effort, ignore
+                }
+                if (string_destroy(pool, val) != RESULT_OK) {
+                    printf("Warning: Failed to destroy state invalid log value\n");
+                }
+            }
+            if (string_destroy(pool, key) != RESULT_OK) {
+                printf("Warning: Failed to destroy state invalid log key\n");
+            }
+        }
+    }
+}
+
 static result_t get_config_bool(pool_t* pool, config_t* config, const char* path, uint64_t* result) {
     object_t* config_obj = NULL;
 
@@ -110,7 +159,21 @@ result_t agent_state_update_and_log(pool_t* pool, config_t* config, agent_t* age
             RETURN_ERR("Failed to create state path string");
         }
 
-        if (object_set_string(pool, agent->data, state_path, next_state_obj->string) != RESULT_OK) {
+        uint64_t exists = 0;
+        if (config_has_state(pool, config, next_state_obj->string, &exists) != RESULT_OK) {
+            exists = 0; // be conservative
+        }
+
+        if (!exists) {
+            // Log and default to thinking
+            log_invalid_next_state(pool, config, agent, next_state_obj->string ? next_state_obj->string->data : "");
+            if (string_destroy(pool, state_path) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy state path string");
+            }
+            if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                RETURN_ERR("Failed to default to thinking after invalid next_state");
+            }
+        } else if (object_set_string(pool, agent->data, state_path, next_state_obj->string) != RESULT_OK) {
             result_t tmp = string_destroy(pool, state_path);
             if (tmp != RESULT_OK) {
                 printf("Warning: Failed to destroy state_path after failed state update\n");
@@ -118,8 +181,10 @@ result_t agent_state_update_and_log(pool_t* pool, config_t* config, agent_t* age
             RETURN_ERR("Failed to update agent state");
         }
 
-        if (string_destroy(pool, state_path) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy state path string");
+        if (exists) {
+            if (string_destroy(pool, state_path) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy state path string");
+            }
         }
 
         successful_operations++;
@@ -194,7 +259,21 @@ result_t agent_state_handle_evaluation_transition(pool_t* pool, config_t* config
                 RETURN_ERR("Failed to create state path string for evaluation transition");
             }
 
-            if (object_set_string(pool, agent->data, state_path, next_state_obj->string) != RESULT_OK) {
+            uint64_t exists = 0;
+            if (config_has_state(pool, config, next_state_obj->string, &exists) != RESULT_OK) {
+                exists = 0;
+            }
+
+            if (!exists) {
+                log_invalid_next_state(pool, config, agent, next_state_obj->string ? next_state_obj->string->data : "");
+                result_t tmp = string_destroy(pool, state_path);
+                if (tmp != RESULT_OK) {
+                    printf("Warning: Failed to destroy state_path after invalid next_state (evaluation)\n");
+                }
+                if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
+                    RETURN_ERR("Failed to default to thinking after invalid next_state (evaluation)");
+                }
+            } else if (object_set_string(pool, agent->data, state_path, next_state_obj->string) != RESULT_OK) {
                 result_t tmp = string_destroy(pool, state_path);
                 if (tmp != RESULT_OK) {
                     printf("Warning: Failed to destroy state_path after failed state update (evaluation)\n");
@@ -202,8 +281,10 @@ result_t agent_state_handle_evaluation_transition(pool_t* pool, config_t* config
                 RETURN_ERR("Failed to update agent state from response");
             }
 
-            if (string_destroy(pool, state_path) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy state path string");
+            if (exists) {
+                if (string_destroy(pool, state_path) != RESULT_OK) {
+                    RETURN_ERR("Failed to destroy state path string");
+                }
             }
         } else {
             if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
