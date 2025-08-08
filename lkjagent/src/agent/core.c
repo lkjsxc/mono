@@ -1,5 +1,53 @@
 #include "agent/core.h"
 
+static result_t agent_core_preflight(pool_t* pool, config_t* config, agent_t* agent) {
+    printf("[PRE] Preflight validation starting...\n");
+
+    // Ensure agent containers exist
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        printf("[PRE] Error: working_memory missing and could not be created.\n");
+    } else {
+        printf("[PRE] OK: working_memory available.\n");
+    }
+
+    if (agent_actions_ensure_storage_exists(pool, agent) != RESULT_OK) {
+        printf("[PRE] Error: storage missing and could not be created.\n");
+    } else {
+        printf("[PRE] OK: storage available.\n");
+    }
+
+    // Validate agent.state exists
+    object_t* state_obj = NULL;
+    if (object_provide_str(pool, &state_obj, agent->data, "state") != RESULT_OK || !state_obj || !state_obj->string) {
+        printf("[PRE] Error: agent.state missing or invalid.\n");
+    } else {
+        printf("[PRE] OK: agent.state=%.*s\n", (int)state_obj->string->size, state_obj->string->data);
+    }
+
+    // Validate config paths
+    object_t* tmp = NULL;
+    if (object_provide_str(pool, &tmp, config->data, "llm.endpoint") != RESULT_OK) {
+        printf("[PRE] Error: config.llm.endpoint missing.\n");
+    }
+    if (object_provide_str(pool, &tmp, config->data, "llm.model") != RESULT_OK) {
+        printf("[PRE] Error: config.llm.model missing.\n");
+    }
+    if (object_provide_str(pool, &tmp, config->data, "agent.state") != RESULT_OK) {
+        printf("[PRE] Error: config.agent.state missing.\n");
+    } else if (state_obj && state_obj->string) {
+        if (object_provide_string(&tmp, tmp, state_obj->string) != RESULT_OK) {
+            printf("[PRE] Error: config.agent.state.%.*s missing.\n", (int)state_obj->string->size, state_obj->string->data);
+        } else if (object_provide_str(pool, &tmp, tmp, "prompt") != RESULT_OK) {
+            printf("[PRE] Error: config.agent.state.%.*s.prompt missing.\n", (int)state_obj->string->size, state_obj->string->data);
+        } else {
+            printf("[PRE] OK: config.agent.state.%.*s.prompt present.\n", (int)state_obj->string->size, state_obj->string->data);
+        }
+    }
+
+    printf("[PRE] Preflight validation complete.\n");
+    return RESULT_OK;
+}
+
 // Main execution function that processes LLM responses and executes agent actions
 result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, const string_t* recv) {
     object_t* response_obj = NULL;
@@ -7,6 +55,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
     object_t* action_obj = NULL;
 
     if (agent_actions_parse_response(pool, recv, &response_obj) != RESULT_OK) {
+        printf("[CORE] Parse response failed. Content (first 1KB): %.*s\n", (int)((recv && recv->size < 1024) ? recv->size : 1024), recv ? recv->data : "");
         if (agent_state_update_state(pool, agent, "thinking") != RESULT_OK) {
             RETURN_ERR("Failed to reset state after parse failure");
         }
@@ -14,6 +63,14 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
     }
 
     if (object_provide_str(pool, &agent_response, response_obj, "agent") != RESULT_OK) {
+        printf("[CORE] Missing 'agent' in parsed response. Dump keys: \n");
+        object_t* child = response_obj->child;
+        while (child) {
+            if (child->string) {
+                printf("[CORE] resp key: %.*s\n", (int)child->string->size, child->string->data);
+            }
+            child = child->next;
+        }
         if (object_destroy(pool, response_obj) != RESULT_OK) {
             printf("Warning: Failed to destroy response_obj after agent extraction failure\n");
         }
@@ -42,6 +99,7 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
             }
         }
     } else {
+        printf("[CORE] No action present in agent response (ok for non-executing states).\n");
         object_t* current_state_obj = NULL;
         if (object_provide_str(pool, &current_state_obj, agent->data, "state") == RESULT_OK &&
             current_state_obj != NULL && current_state_obj->string != NULL) {
@@ -93,6 +151,9 @@ result_t lkjagent_agent_execute(pool_t* pool, config_t* config, agent_t* agent, 
 result_t lkjagent_agent(pool_t* pool, config_t* config, agent_t* agent) {
     string_t* prompt = NULL;
     string_t* response_content = NULL;
+
+    // Preflight to surface missing objects clearly each cycle
+    agent_core_preflight(pool, config, agent);
 
     if (agent_prompt_generate(pool, config, agent, &prompt) != RESULT_OK) {
         RETURN_ERR("Failed to create prompt for agent");

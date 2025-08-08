@@ -121,10 +121,22 @@ result_t agent_http_extract_response_content(pool_t* pool, const string_t* respo
     object_t* content_obj = NULL;
 
     if (object_parse_json(pool, &response_obj, response_json) != RESULT_OK) {
+        // Dump raw response for debugging
+        printf("[HTTP] Error: Failed to parse LLM response JSON. Raw size=%lu\n", (unsigned long)response_json->size);
+        printf("[HTTP] Raw: %.*s\n", (int)((response_json->size < 2048) ? response_json->size : 2048), response_json->data);
         RETURN_ERR("Failed to parse LLM response JSON");
     }
 
     if (object_provide_str(pool, &choices_array, response_obj, "choices") != RESULT_OK) {
+        printf("[HTTP] Error: Missing 'choices' in response. Top-level keys present will be printed below.\n");
+        // Try to print top-level keys
+        object_t* child = response_obj->child;
+        while (child) {
+            if (child->string && child->string->data) {
+                printf("[HTTP] Top key: %.*s\n", (int)child->string->size, child->string->data);
+            }
+            child = child->next;
+        }
         result_t tmp = object_destroy(pool, response_obj);
         if (tmp != RESULT_OK) {
             printf("Warning: Failed to destroy response_obj after missing choices\n");
@@ -133,6 +145,17 @@ result_t agent_http_extract_response_content(pool_t* pool, const string_t* respo
     }
 
     if (object_provide_str(pool, &first_choice, choices_array, "[0]") != RESULT_OK) {
+        printf("[HTTP] Error: Missing first element in 'choices'. Dumping choices..\n");
+        // Best-effort small dump
+        string_t* dump = NULL;
+        if (string_create(pool, &dump) == RESULT_OK) {
+            if (object_tostring_json(pool, &dump, choices_array) == RESULT_OK) {
+                printf("[HTTP] choices: %.*s\n", (int)((dump->size < 2048) ? dump->size : 2048), dump->data);
+            }
+            if (string_destroy(pool, dump) != RESULT_OK) {
+                printf("Warning: Failed to destroy dump string for choices\n");
+            }
+        }
         result_t tmp = object_destroy(pool, response_obj);
         if (tmp != RESULT_OK) {
             printf("Warning: Failed to destroy response_obj after missing first choice\n");
@@ -141,6 +164,16 @@ result_t agent_http_extract_response_content(pool_t* pool, const string_t* respo
     }
 
     if (object_provide_str(pool, &message_obj, first_choice, "message") != RESULT_OK) {
+        printf("[HTTP] Error: Missing 'message' in choice. Dump choice..\n");
+        string_t* dump = NULL;
+        if (string_create(pool, &dump) == RESULT_OK) {
+            if (object_tostring_json(pool, &dump, first_choice) == RESULT_OK) {
+                printf("[HTTP] choice[0]: %.*s\n", (int)((dump->size < 2048) ? dump->size : 2048), dump->data);
+            }
+            if (string_destroy(pool, dump) != RESULT_OK) {
+                printf("Warning: Failed to destroy dump string for choice[0]\n");
+            }
+        }
         result_t tmp = object_destroy(pool, response_obj);
         if (tmp != RESULT_OK) {
             printf("Warning: Failed to destroy response_obj after missing message\n");
@@ -149,6 +182,16 @@ result_t agent_http_extract_response_content(pool_t* pool, const string_t* respo
     }
 
     if (object_provide_str(pool, &content_obj, message_obj, "content") != RESULT_OK) {
+        printf("[HTTP] Error: Missing 'content' in message. Dump message..\n");
+        string_t* dump = NULL;
+        if (string_create(pool, &dump) == RESULT_OK) {
+            if (object_tostring_json(pool, &dump, message_obj) == RESULT_OK) {
+                printf("[HTTP] message: %.*s\n", (int)((dump->size < 2048) ? dump->size : 2048), dump->data);
+            }
+            if (string_destroy(pool, dump) != RESULT_OK) {
+                printf("Warning: Failed to destroy dump string for message\n");
+            }
+        }
         result_t tmp = object_destroy(pool, response_obj);
         if (tmp != RESULT_OK) {
             printf("Warning: Failed to destroy response_obj after missing content\n");

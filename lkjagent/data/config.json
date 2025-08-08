@@ -36,7 +36,7 @@
     "state": {
       "base": {
         "prompt": {
-          "purpose": "Deterministic agent loop that reads current state and working_memory, decides the next step, and outputs strictly formatted XML.",
+          "purpose": "Deterministic agent loop that reads current state and working_memory, decides the next step, and outputs strictly formatted simple markup.",
           "memory_model": {
             "working_memory": "Volatile key-value space that holds the active context for this session.",
             "storage": "Persistent key-value store. Multiple conceptual tags must be combined into a single 'tags' string key. Use lowercase ASCII, underscores for separators, and no spaces (spaces will be converted to underscores). Values are plain strings.",

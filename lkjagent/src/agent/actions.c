@@ -221,6 +221,13 @@ result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agen
         RETURN_ERR("Failed to extract parameters for storage_load");
     }
 
+    if (agent_actions_ensure_storage_exists(pool, agent) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_load", tags_obj ? tags_obj->string->data : "unknown", "Failed to ensure storage exists") != RESULT_OK) {
+            printf("Warning: Failed to log storage_load storage existence failure\n");
+        }
+        RETURN_ERR("Failed to ensure storage exists for load operation");
+    }
+
     if (agent_actions_get_storage(pool, agent, &storage) != RESULT_OK) {
         if (agent_actions_log_result(pool, config, agent, "storage_load", tags_obj ? tags_obj->string->data : "unknown", "Failed to get storage") != RESULT_OK) {
             printf("Warning: Failed to log storage_load storage access failure\n");
@@ -489,15 +496,67 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
         }
     }
 
-    const char* action_start = strstr(content, "<action>");
+    // Support <action> and <action ...attributes...>
+    const char* action_open = strstr(content, "<action");
     const char* action_end = strstr(content, "</action>");
 
-    if (action_start && action_end && action_end > action_start) {
-        action_start += strlen("<action>");
+    if (action_open && action_end && action_end > action_open) {
+        // Find end of opening tag '>'
+        const char* open_tag_end = strchr(action_open, '>');
+        if (!open_tag_end || open_tag_end > action_end) {
+            // malformed; skip action parsing
+            open_tag_end = NULL;
+        }
+
+        // Content inside action is after the '>' of opening tag
+        const char* action_start = open_tag_end ? (open_tag_end + 1) : NULL;
         object_t* action_obj2 = NULL;
         if (object_create(pool, &action_obj2) == RESULT_OK) {
+            // Extract optional attribute type="..." from the opening tag
+            if (open_tag_end) {
+                const char* attrs_begin = action_open + strlen("<action");
+                const char* attrs_end = open_tag_end;
+                const char* type_attr = strstr(attrs_begin, "type=");
+                if (type_attr && type_attr < attrs_end) {
+                    // Determine quote char '"' or '\''
+                    const char* q = strchr(type_attr, '"');
+                    char quote = '"';
+                    if (!q || q > attrs_end) {
+                        q = strchr(type_attr, '\'');
+                        quote = '\'';
+                    }
+                    if (q && q < attrs_end) {
+                        const char* val_start = q + 1;
+                        const char* val_end = strchr(val_start, quote);
+                        if (val_end && val_end <= attrs_end && val_end > val_start) {
+                            size_t len = (size_t)(val_end - val_start);
+                            if (len > 0 && len <= 1024) {
+                                char buf[1025];
+                                size_t cpy2 = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+                                strncpy(buf, val_start, cpy2);
+                                buf[cpy2] = '\0';
+                                string_t* type_val_attr = NULL;
+                                if (string_create_str(pool, &type_val_attr, buf) == RESULT_OK) {
+                                    string_t* key = NULL;
+                                    if (string_create_str(pool, &key, "type") == RESULT_OK) {
+                                        if (object_set_string(pool, action_obj2, key, type_val_attr) != RESULT_OK) {
+                                            printf("Warning: Failed to set action.type from attribute\n");
+                                        }
+                                        if (string_destroy(pool, key) != RESULT_OK) {
+                                            printf("Warning: Failed to destroy key (type)\n");
+                                        }
+                                    }
+                                    if (string_destroy(pool, type_val_attr) != RESULT_OK) {
+                                        printf("Warning: Failed to destroy type_val_attr\n");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             string_t* type_val = NULL;
-            {
+            if (action_start) {
                 char open_tag[32];
                 char close_tag[32];
                 snprintf(open_tag, sizeof(open_tag), "<%s>", "type");
@@ -520,7 +579,7 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
             }
 
             string_t* tags_val = NULL;
-            {
+            if (action_start) {
                 char open_tag[32];
                 char close_tag[32];
                 snprintf(open_tag, sizeof(open_tag), "<%s>", "tags");
@@ -543,7 +602,7 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
             }
 
             string_t* value_val = NULL;
-            {
+            if (action_start) {
                 char open_tag[32];
                 char close_tag[32];
                 snprintf(open_tag, sizeof(open_tag), "<%s>", "value");
@@ -619,6 +678,7 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
                     }
                 }
             } else {
+                printf("[ACTIONS] Parsed <action> block but found no fields. Content snippet: %.*s\n", 128, response_content && response_content->data ? response_content->data : "");
                 if (object_destroy(pool, action_obj2) != RESULT_OK) {
                     printf("Warning: Failed to destroy empty action_obj2\n");
                 }
@@ -679,14 +739,17 @@ result_t agent_actions_parse_response(pool_t* pool, const string_t* response_con
 
 result_t agent_actions_extract_action_params(pool_t* pool, object_t* action_obj, object_t** type_obj, object_t** tags_obj, object_t** value_obj) {
     if (object_provide_str(pool, type_obj, action_obj, "type") != RESULT_OK) {
+        printf("[ACTIONS] Missing action.type in parsed response.\n");
         RETURN_ERR("Failed to extract action type");
     }
 
     if (object_provide_str(pool, tags_obj, action_obj, "tags") != RESULT_OK) {
+        printf("[ACTIONS] Missing action.tags in parsed response.\n");
         RETURN_ERR("Failed to extract action tags");
     }
 
     if (object_provide_str(pool, value_obj, action_obj, "value") != RESULT_OK) {
+        // optional; log only when required later
         *value_obj = NULL;
     }
 
@@ -753,6 +816,39 @@ result_t agent_actions_ensure_storage_exists(pool_t* pool, agent_t* agent) {
     object_t* storage = NULL;
 
     if (object_provide_str(pool, &storage, agent->data, "storage") == RESULT_OK) {
+        // If storage exists but is not a container (e.g., "null" or a plain string), replace it with an empty object
+        if (storage->child != NULL) {
+            return RESULT_OK; // already a container
+        }
+
+        // Treat any non-container (including string "null") as uninitialized
+        object_t* new_storage2 = NULL;
+        if (object_create(pool, &new_storage2) != RESULT_OK) {
+            RETURN_ERR("Failed to create replacement storage object");
+        }
+
+        string_t* storage_path2 = NULL;
+        if (string_create_str(pool, &storage_path2, "storage") != RESULT_OK) {
+            if (object_destroy(pool, new_storage2) != RESULT_OK) {
+                printf("Warning: Failed to destroy new_storage2 after storage_path create failure\n");
+            }
+            RETURN_ERR("Failed to create storage path string (replacement)");
+        }
+
+        if (object_set(pool, agent->data, storage_path2, new_storage2) != RESULT_OK) {
+            if (string_destroy(pool, storage_path2) != RESULT_OK) {
+                printf("Warning: Failed to destroy storage_path2 after set failure\n");
+            }
+            if (object_destroy(pool, new_storage2) != RESULT_OK) {
+                printf("Warning: Failed to destroy new_storage2 after set failure\n");
+            }
+            RETURN_ERR("Failed to replace non-container storage with object");
+        }
+
+        if (string_destroy(pool, storage_path2) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy storage path string (replacement)");
+        }
+
         return RESULT_OK;
     }
 
