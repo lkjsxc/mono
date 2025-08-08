@@ -23,6 +23,7 @@ __attribute__((warn_unused_result)) result_t agent_actions_execute_working_memor
 // Storage operations
 __attribute__((warn_unused_result)) result_t agent_actions_execute_storage_load(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
 __attribute__((warn_unused_result)) result_t agent_actions_execute_storage_save(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
+__attribute__((warn_unused_result)) result_t agent_actions_execute_storage_search(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj);
 
 // Memory persistence
 __attribute__((warn_unused_result)) result_t agent_actions_save_memory(pool_t* pool, agent_t* agent);

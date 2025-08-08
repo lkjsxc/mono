@@ -52,6 +52,15 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
         }
         return agent_actions_execute_storage_save(pool, config, agent, action_obj);
 
+    } else if (string_equal_str(type_obj->string, "storage_search")) {
+        if (agent_actions_validate_action_params(type_obj, tags_obj, value_obj, "storage_search", 0) != RESULT_OK) {
+            if (agent_actions_log_result(pool, config, agent, "storage_search", tags_obj ? tags_obj->string->data : "unknown", "Invalid parameters for storage_search action") != RESULT_OK) {
+                printf("Warning: Failed to log storage_search validation failure\n");
+            }
+            RETURN_ERR("Invalid parameters for storage_search action");
+        }
+        return agent_actions_execute_storage_search(pool, config, agent, action_obj);
+
     } else {
         if (agent_actions_log_result(pool, config, agent,
                                            type_obj ? type_obj->string->data : "unknown",
@@ -61,6 +70,176 @@ result_t agent_actions_dispatch(pool_t* pool, config_t* config, agent_t* agent, 
         }
         RETURN_ERR("Unknown action type");
     }
+}
+
+// Check if key contains all query tags (exact tag matching on comma-separated tokens)
+static uint64_t key_contains_all_tags(const string_t* key, string_t** tokens, size_t token_count) {
+    if (!key) return 0;
+    const char* kd = key->data;
+    uint64_t ks = key->size;
+    for (size_t t = 0; t < token_count; t++) {
+        const char* td = tokens[t]->data;
+        uint64_t ts = tokens[t]->size;
+        uint64_t i = 0;
+        uint64_t found = 0;
+        if (ts == 0) return 0;
+        while (i + ts <= ks) {
+            if (memcmp(kd + i, td, ts) == 0) {
+                if ((i == 0 || kd[i - 1] == ',') && (i + ts == ks || kd[i + ts] == ',')) {
+                    found = 1; break;
+                }
+            }
+            i++;
+        }
+        if (!found) return 0;
+    }
+    return 1;
+}
+
+result_t agent_actions_execute_storage_search(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {
+    object_t* type_obj = NULL;
+    object_t* tags_obj = NULL;
+    object_t* value_obj = NULL;
+    object_t* storage = NULL;
+    object_t* working_memory = NULL;
+    string_t* normalized_query = NULL;
+
+    if (agent_actions_ensure_storage_exists(pool, agent) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_search", "unknown", "Failed to ensure storage exists") != RESULT_OK) {
+            printf("Warning: Failed to log storage_search storage existence failure\n");
+        }
+        RETURN_ERR("Failed to ensure storage exists for search");
+    }
+    if (agent_actions_get_storage(pool, agent, &storage) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_search", "unknown", "Failed to get storage") != RESULT_OK) {
+            printf("Warning: Failed to log storage_search storage access failure\n");
+        }
+        RETURN_ERR("Failed to get storage for search");
+    }
+    if (agent_actions_ensure_working_memory_exists(pool, agent) != RESULT_OK) {
+        printf("Warning: Failed to ensure working memory exists before storage_search logging\n");
+    }
+    if (agent_actions_get_working_memory(pool, agent, &working_memory) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_search", "unknown", "Failed to get working memory") != RESULT_OK) {
+            printf("Warning: Failed to log storage_search working memory access failure\n");
+        }
+        RETURN_ERR("Failed to get working memory for search");
+    }
+
+    if (agent_actions_extract_action_params(pool, action_obj, &type_obj, &tags_obj, &value_obj) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_search", "unknown", "Failed to extract action parameters") != RESULT_OK) {
+            printf("Warning: Failed to log storage_search parameter extraction failure\n");
+        }
+        RETURN_ERR("Failed to extract parameters for storage_search");
+    }
+
+    if (agent_actions_normalize_storage_tags(pool, tags_obj, &normalized_query) != RESULT_OK) {
+        if (agent_actions_log_result(pool, config, agent, "storage_search", tags_obj ? tags_obj->string->data : "unknown", "Failed to normalize tags") != RESULT_OK) {
+            printf("Warning: Failed to log storage_search tag normalization failure\n");
+        }
+        RETURN_ERR("Failed to normalize tags for storage_search");
+    }
+
+    // Tokenize normalized_query into tokens[]
+    enum { MAX_Q = 64 };
+    string_t* tokens[MAX_Q];
+    size_t token_count = 0;
+    const char* qd = normalized_query->data;
+    uint64_t qs = normalized_query->size;
+    uint64_t i = 0;
+    while (i < qs && token_count < MAX_Q) {
+        uint64_t j = i;
+        while (j < qs && qd[j] != ',') j++;
+        if (j > i) {
+            string_t* tok = NULL;
+            if (string_create(pool, &tok) != RESULT_OK) {
+                destroy_string_with_warning(pool, normalized_query, "search token create failure cleanup");
+                RETURN_ERR("Failed to create search token");
+            }
+            for (uint64_t k = i; k < j; k++) {
+                if (string_append_char(pool, &tok, qd[k]) != RESULT_OK) {
+                    destroy_string_with_warning(pool, tok, "search token append failure");
+                    destroy_string_with_warning(pool, normalized_query, "search token append failure cleanup");
+                    RETURN_ERR("Failed to append to search token");
+                }
+            }
+            tokens[token_count++] = tok;
+        }
+        i = (j < qs) ? (j + 1) : j;
+    }
+
+    // Build result list of keys
+    string_t* result_list = NULL;
+    if (string_create(pool, &result_list) != RESULT_OK) {
+        destroy_string_array_with_warning(pool, tokens, token_count, "result_list create failure cleanup");
+        destroy_string_with_warning(pool, normalized_query, "result_list create failure cleanup");
+        RETURN_ERR("Failed to create result list");
+    }
+
+    uint64_t matches = 0;
+    for (object_t* child = storage->child; child; child = child->next) {
+        if (!child->string) continue; // skip malformed
+        if (key_contains_all_tags(child->string, tokens, token_count)) {
+            if (matches > 0) {
+                if (string_append_char(pool, &result_list, ',') != RESULT_OK) {
+                    destroy_string_with_warning(pool, result_list, "append comma failure");
+                    destroy_string_array_with_warning(pool, tokens, token_count, "append comma failure cleanup");
+                    destroy_string_with_warning(pool, normalized_query, "append comma failure cleanup");
+                    RETURN_ERR("Failed to append comma to result list");
+                }
+            }
+            if (string_append_string(pool, &result_list, child->string) != RESULT_OK) {
+                destroy_string_with_warning(pool, result_list, "append key failure");
+                destroy_string_array_with_warning(pool, tokens, token_count, "append key failure cleanup");
+                destroy_string_with_warning(pool, normalized_query, "append key failure cleanup");
+                RETURN_ERR("Failed to append key to result list");
+            }
+            matches++;
+        }
+    }
+
+    // Write results under working_memory: search_results.<normalized_query>
+    string_t* result_path = NULL;
+    if (string_create_str(pool, &result_path, "search_results") != RESULT_OK) {
+        destroy_string_with_warning(pool, result_list, "result_path create failure cleanup (base)");
+        destroy_string_array_with_warning(pool, tokens, token_count, "result_path create failure cleanup");
+        destroy_string_with_warning(pool, normalized_query, "result_path create failure cleanup");
+        RETURN_ERR("Failed to create base result path");
+    }
+    if (string_append_char(pool, &result_path, '.') != RESULT_OK ||
+        string_append_string(pool, &result_path, normalized_query) != RESULT_OK) {
+        destroy_string_with_warning(pool, result_path, "result_path append failure");
+        destroy_string_with_warning(pool, result_list, "result_path append failure cleanup");
+        destroy_string_array_with_warning(pool, tokens, token_count, "result_path append failure cleanup");
+        destroy_string_with_warning(pool, normalized_query, "result_path append failure cleanup");
+        RETURN_ERR("Failed to build result path");
+    }
+
+    if (object_set_string(pool, working_memory, result_path, result_list) != RESULT_OK) {
+        destroy_string_with_warning(pool, result_path, "result_path after set failure");
+        destroy_string_with_warning(pool, result_list, "result_list after set failure");
+        destroy_string_array_with_warning(pool, tokens, token_count, "set failure cleanup");
+        destroy_string_with_warning(pool, normalized_query, "set failure cleanup");
+        RETURN_ERR("Failed to write search results to working memory");
+    }
+
+    if (agent_actions_log_result(pool, config, agent, "storage_search", normalized_query->data, matches == 0 ? "No matches" : "Search completed") != RESULT_OK) {
+        printf("Warning: Failed to log storage_search result\n");
+    }
+
+    // Cleanup
+    if (string_destroy(pool, result_path) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy result path");
+    }
+    if (string_destroy(pool, result_list) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy result list");
+    }
+    destroy_string_array_with_warning(pool, tokens, token_count, "final tokens cleanup (search)");
+    if (string_destroy(pool, normalized_query) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy normalized query");
+    }
+
+    return RESULT_OK;
 }
 
 result_t agent_actions_execute_working_memory_add(pool_t* pool, config_t* config, agent_t* agent, object_t* action_obj) {

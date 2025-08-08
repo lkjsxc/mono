@@ -123,7 +123,8 @@
             "working_memory_add": true,
             "working_memory_remove": true,
             "storage_load": true,
-            "storage_save": true
+            "storage_save": true,
+            "storage_search": true
           },
           "principles": {
             "parsimony": "Only emit <action> with required children; nothing else.",
@@ -134,9 +135,9 @@
             "exact_xml_only": "Output exactly one XML block with the following structure and lowercase tag names; no prose, no backticks, no JSON:",
             "template": "<action>\n  <type>a</type>\n  <tags>b</tags>\n  <value>c</value>\n</action>",
             "rules": {
-              "type_values": "a must be one of: working_memory_add | working_memory_remove | storage_load | storage_save",
+              "type_values": "a must be one of: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search",
               "tags_required": "b is a single string of comma-separated tags (the system will normalize: lowercase, replace spaces with underscores, sort, dedupe)",
-              "value_required_for": "Include <value> only for working_memory_add and storage_save; omit the <value> element entirely for working_memory_remove and storage_load",
+              "value_required_for": "Include <value> only for working_memory_add and storage_save; omit the <value> element entirely for working_memory_remove, storage_load, and storage_search",
               "no_other_fields": "Do not emit any other elements or attributes.",
               "whitespace": "Whitespace and indentation are flexible; tag names and structure must match exactly."
             }
