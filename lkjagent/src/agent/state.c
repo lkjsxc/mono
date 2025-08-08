@@ -24,7 +24,9 @@ static result_t config_has_state(pool_t* pool, config_t* config, const string_t*
 static void log_invalid_next_state(pool_t* pool, config_t* config, agent_t* agent, const char* requested_state) {
     if (!requested_state) requested_state = "(null)";
     // Execution log entry (best-effort)
-    (void)agent_state_manage_execution_log(pool, config, agent, "state_transition", requested_state, "Invalid next_state in config; defaulting to thinking");
+    if (agent_state_manage_execution_log(pool, config, agent, "state_transition", requested_state, "Invalid next_state in config; defaulting to thinking") != RESULT_OK) {
+        printf("Warning: Failed to write execution log for invalid next_state\n");
+    }
 
     // Also set a lightweight key in working_memory
     object_t* working_memory = NULL;
