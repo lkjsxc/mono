@@ -1,11 +1,8 @@
-# include <stdio.h>
+#include <stdio.h>
+#include <unistd.h>
 
 int main() {
-    printf("Good Morning, World!\n");
+    printf("Good Morning World!\n");
 
-    while(1) {
-        sleep(1);
-    }
-    
     return 0;
 }

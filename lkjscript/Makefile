@@ -1,16 +1,15 @@
 # Makefile for lkjscript
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -O2 -g
+# Enhanced type checking and argument validation flags
+CFLAGS = -Werror -Wall -Wextra -std=c11 -O2 -march=native -g
 LDFLAGS = -static
-DEBUG_CFLAGS = -Wall -Wextra -std=c11 -O0 -g3 -DDEBUG
-RELEASE_CFLAGS = -Wall -Wextra -std=c11 -O2 -DNDEBUG -flto
-INCLUDES = -Isrc/include
+INCLUDES = -Isrc/
 LIBS = 
 
 # Directories
 SRC_DIR = src
-INCLUDE_DIR = src/include
+INCLUDE_DIR = src/
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
@@ -26,7 +25,7 @@ TARGET = $(BUILD_DIR)/lkjscript
 # Header dependencies
 HEADERS = $(wildcard $(INCLUDE_DIR)/*.h)
 
-# Default target
+# Default and only target
 all: $(TARGET)
 
 # Create directories if they don't exist
@@ -45,40 +44,5 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) | $(OBJ_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-# Clean build files
-clean:
-	rm -rf $(BUILD_DIR)
-
-# Rebuild everything
-rebuild: clean all
-
-# Install (optional)
-install: $(TARGET)
-	cp $(TARGET) /usr/local/bin/
-
-# Uninstall (optional)
-uninstall:
-	rm -f /usr/local/bin/lkjscript
-
-# Run the program
-run: $(TARGET)
-	./$(TARGET)
-
-# Debug build
-debug: CFLAGS = $(DEBUG_CFLAGS)
-debug: $(TARGET)
-
-# Release build
-release: CFLAGS = $(RELEASE_CFLAGS)
-release: $(TARGET)
-
-# Static analysis with cppcheck
-check:
-	cppcheck --enable=all --std=c11 $(SRC_DIR)/
-
-# Memory check with valgrind
-memcheck: $(TARGET)
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
-
 # Phony targets
-.PHONY: all clean rebuild install uninstall run debug release check memcheck help
+.PHONY: all
