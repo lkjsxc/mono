@@ -68,9 +68,6 @@ result_t pool_data_alloc(pool_t* pool, data_t** data, uint64_t capacity) {
     }
 }
 result_t pool_data_free(pool_t* pool, data_t* data) {
-    if (!data) {
-        RETURN_ERR("Cannot free null data");
-    }
     if (data->capacity == 16) {
         pool->data16_freelist_data[pool->data16_freelist_count++] = data;
         if (pool->data16_freelist_count > POOL_data16_MAXCOUNT) {
