@@ -43,26 +43,26 @@ typedef struct data_t {
     uint64_t size;
 } data_t;
 typedef struct pool_t {
-    char data16_data[POOL_data16_MAXCOUNT * 16];
-    data_t data16[POOL_data16_MAXCOUNT];
-    data_t* data16_freelist_data[POOL_data16_MAXCOUNT];
     uint64_t data16_freelist_count;
-    char data256_data[POOL_data256_MAXCOUNT * 256];
-    data_t data256[POOL_data256_MAXCOUNT];
-    data_t* data256_freelist_data[POOL_data256_MAXCOUNT];
     uint64_t data256_freelist_count;
-    char data4096_data[POOL_data4096_MAXCOUNT * 4096];
-    data_t data4096[POOL_data4096_MAXCOUNT];
-    data_t* data4096_freelist_data[POOL_data4096_MAXCOUNT];
     uint64_t data4096_freelist_count;
-    char data65536_data[POOL_data65536_MAXCOUNT * 65536];
-    data_t data65536[POOL_data65536_MAXCOUNT];
-    data_t* data65536_freelist_data[POOL_data65536_MAXCOUNT];
     uint64_t data65536_freelist_count;
-    char data1048576_data[POOL_data1048576_MAXCOUNT * 1048576];
-    data_t data1048576[POOL_data1048576_MAXCOUNT];
-    data_t* data1048576_freelist_data[POOL_data1048576_MAXCOUNT];
     uint64_t data1048576_freelist_count;
+    data_t data16[POOL_data16_MAXCOUNT];
+    data_t data256[POOL_data256_MAXCOUNT];
+    data_t data4096[POOL_data4096_MAXCOUNT];
+    data_t data65536[POOL_data65536_MAXCOUNT];
+    data_t data1048576[POOL_data1048576_MAXCOUNT];
+    data_t* data16_freelist_data[POOL_data16_MAXCOUNT];
+    data_t* data256_freelist_data[POOL_data256_MAXCOUNT];
+    data_t* data4096_freelist_data[POOL_data4096_MAXCOUNT];
+    data_t* data65536_freelist_data[POOL_data65536_MAXCOUNT];
+    data_t* data1048576_freelist_data[POOL_data1048576_MAXCOUNT];
+    char data16_data[POOL_data16_MAXCOUNT * 16];
+    char data256_data[POOL_data256_MAXCOUNT * 256];
+    char data4096_data[POOL_data4096_MAXCOUNT * 4096];
+    char data65536_data[POOL_data65536_MAXCOUNT * 65536];
+    char data1048576_data[POOL_data1048576_MAXCOUNT * 1048576];
 } pool_t;
 
 // Macros
