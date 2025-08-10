@@ -24,11 +24,13 @@
 #include <unistd.h>
 
 // Constants
-#define POOL_data16_MAXCOUNT 1048576
-#define POOL_data256_MAXCOUNT 65536
-#define POOL_data4096_MAXCOUNT 4096
-#define POOL_data65536_MAXCOUNT 256
-#define POOL_data1048576_MAXCOUNT 16
+#define POOL_SIZE_BIAS 16
+
+#define POOL_data16_MAXCOUNT (65536 * POOL_SIZE_BIAS)
+#define POOL_data256_MAXCOUNT (4096 * POOL_SIZE_BIAS)
+#define POOL_data4096_MAXCOUNT (256 * POOL_SIZE_BIAS)
+#define POOL_data65536_MAXCOUNT (16 * POOL_SIZE_BIAS)
+#define POOL_data1048576_MAXCOUNT (1 * POOL_SIZE_BIAS)
 
 // Types
 typedef enum result_t {
@@ -40,7 +42,7 @@ typedef struct data_t {
     uint64_t capacity;
     uint64_t size;
 } data_t;
-typedef struct {
+typedef struct pool_t {
     char data16_data[POOL_data16_MAXCOUNT * 16];
     data_t data16[POOL_data16_MAXCOUNT];
     data_t* data16_freelist_data[POOL_data16_MAXCOUNT];
@@ -69,9 +71,9 @@ typedef struct {
 #define RETURN_ERR2(n) RETURN_ERR3(n)
 #define RETURN_ERR(error_message)                                                   \
     {                                                                               \
-        _Pragma("GCC diagnostic push")                                              \
-            _Pragma("GCC diagnostic ignored \"-Wunused-result\"")                   \
-                write(STDERR_FILENO, "Error: { file: \"", 17);                      \
+        _Pragma("GCC diagnostic push");                                             \
+        _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
+        write(STDERR_FILENO, "Error: { file: \"", 17);                              \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
         write(STDERR_FILENO, "\", func: \"", 11);                                   \
         write(STDERR_FILENO, __func__, sizeof(__func__));                           \
@@ -80,7 +82,8 @@ typedef struct {
         write(STDERR_FILENO, "\", message: \"", 13);                                \
         write(STDERR_FILENO, error_message, sizeof(error_message));                 \
         write(STDERR_FILENO, "\" }\n", 4);                                          \
-        _Pragma("GCC diagnostic pop") return RESULT_ERR;                            \
+        return RESULT_ERR;                                                          \
+        _Pragma("GCC diagnostic pop");                                              \
     }
 
 // Pool

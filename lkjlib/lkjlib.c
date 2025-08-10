@@ -9,6 +9,14 @@ static void pool_data_init(char* data, data_t* datalist, data_t** freelist, uint
     }
     *freelist_count = count;
 }
+result_t pool_init(pool_t* pool) {
+    pool_data_init(pool->data16_data, pool->data16, pool->data16_freelist_data, &pool->data16_freelist_count, 16, POOL_data16_MAXCOUNT);
+    pool_data_init(pool->data256_data, pool->data256, pool->data256_freelist_data, &pool->data256_freelist_count, 256, POOL_data256_MAXCOUNT);
+    pool_data_init(pool->data4096_data, pool->data4096, pool->data4096_freelist_data, &pool->data4096_freelist_count, 4096, POOL_data4096_MAXCOUNT);
+    pool_data_init(pool->data65536_data, pool->data65536, pool->data65536_freelist_data, &pool->data65536_freelist_count, 65536, POOL_data65536_MAXCOUNT);
+    pool_data_init(pool->data1048576_data, pool->data1048576, pool->data1048576_freelist_data, &pool->data1048576_freelist_count, 1048576, POOL_data1048576_MAXCOUNT);
+    return RESULT_OK;
+}
 result_t pool_data16_alloc(pool_t* pool, data_t** data) {
     if (pool->data16_freelist_count == 0) {
         RETURN_ERR("No available data16 in pool");
@@ -62,18 +70,33 @@ result_t pool_data_alloc(pool_t* pool, data_t** data, uint64_t capacity) {
 result_t pool_data_free(pool_t* pool, data_t* data) {
     if (data->capacity == 16) {
         pool->data16_freelist_data[pool->data16_freelist_count++] = data;
+        if (pool->data16_freelist_count > POOL_data16_MAXCOUNT) {
+            RETURN_ERR("Freelist overflow for data16");
+        }
         return RESULT_OK;
     } else if (data->capacity == 256) {
         pool->data256_freelist_data[pool->data256_freelist_count++] = data;
+        if (pool->data256_freelist_count > POOL_data256_MAXCOUNT) {
+            RETURN_ERR("Freelist overflow for data256");
+        }
         return RESULT_OK;
     } else if (data->capacity == 4096) {
         pool->data4096_freelist_data[pool->data4096_freelist_count++] = data;
+        if (pool->data4096_freelist_count > POOL_data4096_MAXCOUNT) {
+            RETURN_ERR("Freelist overflow for data4096");
+        }
         return RESULT_OK;
     } else if (data->capacity == 65536) {
         pool->data65536_freelist_data[pool->data65536_freelist_count++] = data;
+        if (pool->data65536_freelist_count > POOL_data65536_MAXCOUNT) {
+            RETURN_ERR("Freelist overflow for data65536");
+        }
         return RESULT_OK;
     } else if (data->capacity == 1048576) {
         pool->data1048576_freelist_data[pool->data1048576_freelist_count++] = data;
+        if (pool->data1048576_freelist_count > POOL_data1048576_MAXCOUNT) {
+            RETURN_ERR("Freelist overflow for data1048576");
+        }
         return RESULT_OK;
     } else {
         RETURN_ERR("Invalid data capacity requested");
@@ -86,14 +109,6 @@ result_t pool_data_realloc(pool_t* pool, data_t** data, uint64_t capacity) {
     if (pool_data_alloc(pool, data, capacity) != RESULT_OK) {
         RETURN_ERR("Failed to allocate data with sufficient capacity");
     }
-    return RESULT_OK;
-}
-result_t pool_init(pool_t* pool) {
-    pool_data_init(pool->data16_data, pool->data16, pool->data16_freelist_data, &pool->data16_freelist_count, 16, POOL_data16_MAXCOUNT);
-    pool_data_init(pool->data256_data, pool->data256, pool->data256_freelist_data, &pool->data256_freelist_count, 256, POOL_data256_MAXCOUNT);
-    pool_data_init(pool->data4096_data, pool->data4096, pool->data4096_freelist_data, &pool->data4096_freelist_count, 4096, POOL_data4096_MAXCOUNT);
-    pool_data_init(pool->data65536_data, pool->data65536, pool->data65536_freelist_data, &pool->data65536_freelist_count, 65536, POOL_data65536_MAXCOUNT);
-    pool_data_init(pool->data1048576_data, pool->data1048576, pool->data1048576_freelist_data, &pool->data1048576_freelist_count, 1048576, POOL_data1048576_MAXCOUNT);
     return RESULT_OK;
 }
 
@@ -161,32 +176,62 @@ result_t data_copy_str(pool_t* pool, data_t** data, const char* str) {
 }
 result_t data_append_data(pool_t* pool, data_t** data1, const data_t* data2) {
     if ((*data1)->size + data2->size > (*data1)->capacity) {
-        if (pool_data_realloc(pool, data1, (*data1)->size + data2->size) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate data with sufficient capacity");
+        data_t* data_old = *data1;
+        data_t* data_new;
+        if (pool_data_alloc(pool, &data_new, data_old->size + data2->size) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate data with sufficient capacity");
         }
+        memcpy(data_new->data, data_old->data, data_old->size);
+        memcpy(data_new->data + data_old->size, data2->data, data2->size);
+        data_new->size = data_old->size + data2->size;
+        *data1 = data_new;
+        if (pool_data_free(pool, data_old) != RESULT_OK) {
+            RETURN_ERR("Failed to free old data");
+        }
+    } else {
+        memcpy((*data1)->data + (*data1)->size, data2->data, data2->size);
+        (*data1)->size += data2->size;
     }
-    memcpy((*data1)->data + (*data1)->size, data2->data, data2->size);
-    (*data1)->size += data2->size;
     return RESULT_OK;
 }
 result_t data_append_str(pool_t* pool, data_t** data, const char* str) {
-    size_t len = strlen(str);
-    if ((*data)->size + len > (*data)->capacity) {
-        if (pool_data_realloc(pool, data, (*data)->size + len) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate data with sufficient capacity");
+    size_t str_len = strlen(str);
+    if ((*data)->size + str_len > (*data)->capacity) {
+        data_t* data_old = *data;
+        data_t* data_new;
+        if (pool_data_alloc(pool, &data_new, (*data)->size + str_len) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate data with sufficient capacity");
         }
+        memcpy(data_new->data, data_old->data, data_old->size);
+        memcpy(data_new->data + data_old->size, str, str_len);
+        data_new->size = data_old->size + str_len;
+        *data = data_new;
+        if (pool_data_free(pool, data_old) != RESULT_OK) {
+            RETURN_ERR("Failed to free old data");
+        }
+    } else {
+        memcpy((*data)->data + (*data)->size, str, str_len);
+        (*data)->size += str_len;
     }
-    memcpy((*data)->data + (*data)->size, str, len);
-    (*data)->size += len;
     return RESULT_OK;
 }
 result_t data_append_char(pool_t* pool, data_t** data, char c) {
     if ((*data)->size + 1 >= (*data)->capacity) {
-        if (pool_data_realloc(pool, data, (*data)->size + 1) != RESULT_OK) {
-            RETURN_ERR("Failed to reallocate data with sufficient capacity");
+        data_t* data_old = *data;
+        data_t* data_new;
+        if (pool_data_alloc(pool, &data_new, (*data)->size + 1) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate data with sufficient capacity");
         }
+        memcpy(data_new->data, data_old->data, data_old->size);
+        data_new->data[data_old->size] = c; // Append the new character
+        data_new->size = data_old->size + 1;
+        *data = data_new;
+        if (pool_data_free(pool, data_old) != RESULT_OK) {
+            RETURN_ERR("Failed to free old data");
+        }
+    } else {
+        (*data)->data[(*data)->size++] = c;
     }
-    (*data)->data[(*data)->size++] = c;
     return RESULT_OK;
 }
 result_t data_escape(pool_t* pool, data_t** data) {
