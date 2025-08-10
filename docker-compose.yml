@@ -14,6 +14,11 @@ services:
     container_name: lkjagent
     volumes:
       - ./lkjagent/data:/data
+  lkjlm:
+    build: ./lkjlm
+    container_name: lkjlm
+    volumes:
+      - ./lkjlm/data:/data
   lkjvoxel:
     build: ./lkjvoxel
     container_name: lkjvoxel
