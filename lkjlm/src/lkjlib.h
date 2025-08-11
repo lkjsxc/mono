@@ -31,6 +31,7 @@
 #define POOL_data4096_MAXCOUNT (256 * POOL_SIZE_BIAS)
 #define POOL_data65536_MAXCOUNT (16 * POOL_SIZE_BIAS)
 #define POOL_data1048576_MAXCOUNT (1 * POOL_SIZE_BIAS)
+#define POOL_OBJECT_MAXCOUNT (4096 * POOL_SIZE_BIAS)
 
 // Types
 typedef enum result_t {
@@ -42,6 +43,12 @@ typedef struct data_t {
     uint64_t capacity;
     uint64_t size;
 } data_t;
+// JSON-like object tree node
+typedef struct object_t {
+    data_t* data;
+    struct object_t* child;
+    struct object_t* next;
+} object_t;
 typedef struct pool_t {
     uint64_t data16_freelist_count;
     uint64_t data256_freelist_count;
@@ -63,6 +70,9 @@ typedef struct pool_t {
     char data4096_data[POOL_data4096_MAXCOUNT * 4096];
     char data65536_data[POOL_data65536_MAXCOUNT * 65536];
     char data1048576_data[POOL_data1048576_MAXCOUNT * 1048576];
+    object_t object_data[POOL_OBJECT_MAXCOUNT];
+    object_t* object_freelist_data[POOL_OBJECT_MAXCOUNT];
+    uint64_t object_freelist_count;
 } pool_t;
 
 // Macros
@@ -96,6 +106,8 @@ __attribute__((warn_unused_result)) result_t pool_data1048576_alloc(pool_t* pool
 __attribute__((warn_unused_result)) result_t pool_data_alloc(pool_t* pool, data_t** data, uint64_t capacity);
 __attribute__((warn_unused_result)) result_t pool_data_free(pool_t* pool, data_t* data);
 __attribute__((warn_unused_result)) result_t pool_data_realloc(pool_t* pool, data_t** data, uint64_t capacity);
+__attribute__((warn_unused_result)) result_t pool_object_alloc(pool_t* pool, object_t** obj);
+__attribute__((warn_unused_result)) result_t pool_object_free(pool_t* pool, object_t* obj);
 
 // data
 __attribute__((warn_unused_result)) result_t data_create(pool_t* pool, data_t** data);
@@ -119,5 +131,14 @@ int64_t data_find_char(const data_t* data, char c, uint64_t index);
 // File
 __attribute__((warn_unused_result)) result_t file_read(pool_t* pool, data_t** data, const char* path);
 __attribute__((warn_unused_result)) result_t file_write(const char* path, const data_t* data);
+
+// Object
+__attribute__((warn_unused_result)) result_t object_create(pool_t* pool, object_t** dst);
+__attribute__((warn_unused_result)) result_t object_destroy(pool_t* pool, object_t* object);
+__attribute__((warn_unused_result)) result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path);
 
 #endif

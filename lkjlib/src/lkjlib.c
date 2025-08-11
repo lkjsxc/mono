@@ -19,7 +19,7 @@ result_t pool_init(pool_t* pool) {
     // Initialize object freelist
     for (uint64_t i = 0; i < POOL_OBJECT_MAXCOUNT; i++) {
         pool->object_freelist_data[i] = &pool->object_data[i];
-        pool->object_data[i].string = NULL;
+        pool->object_data[i].data = NULL;
         pool->object_data[i].child = NULL;
         pool->object_data[i].next = NULL;
     }
@@ -39,7 +39,7 @@ result_t pool_object_alloc(pool_t* pool, object_t** obj) {
         RETURN_ERR("No available object in pool");
     }
     *obj = pool->object_freelist_data[--pool->object_freelist_count];
-    (*obj)->string = NULL;
+    (*obj)->data = NULL;
     (*obj)->child = NULL;
     (*obj)->next = NULL;
     return RESULT_OK;
@@ -327,31 +327,9 @@ result_t data_destroy(pool_t* pool, data_t* data) {
 }
 
 // ---------------- Object (JSON) ----------------
-// Minimal string helpers using data_t
-static uint64_t string_equal_str_local(const data_t* s, const char* str) {
-    size_t len = strlen(str);
-    if (!s) return 0;
-    if (s->size != len) return 0;
-    return memcmp(s->data, str, len) == 0;
-}
-static result_t string_create_local(pool_t* pool, data_t** s) {
-    return data_create(pool, s);
-}
-static result_t string_create_str_local(pool_t* pool, data_t** s, const char* str) {
-    return data_create_str(pool, s, str);
-}
-static result_t string_append_char_local(pool_t* pool, data_t** s, char c) {
-    return data_append_char(pool, s, c);
-}
-static result_t string_append_str_local(pool_t* pool, data_t** s, const char* str) {
-    return data_append_str(pool, s, str);
-}
-static result_t string_append_string_local(pool_t* pool, data_t** s, const data_t* add) {
-    return data_append_data(pool, s, add);
-}
 
-// Escape a JSON string
-static result_t escape_json_string_local(pool_t* pool, const data_t* input, data_t** output) {
+// Escape a JSON data
+static result_t escape_json_data(pool_t* pool, const data_t* input, data_t** output) {
     // Worst case allocate 2x size
     uint64_t cap = (input ? input->size : 0) * 2 + 2;
     if (pool_data_alloc(pool, output, cap) != RESULT_OK) {
@@ -362,20 +340,20 @@ static result_t escape_json_string_local(pool_t* pool, const data_t* input, data
     for (uint64_t i = 0; i < input->size; i++) {
         unsigned char ch = (unsigned char)input->data[i];
         switch (ch) {
-            case '"': if (data_append_str(pool, output, "\\\"") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\\': if (data_append_str(pool, output, "\\\\") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\b': if (data_append_str(pool, output, "\\b") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\f': if (data_append_str(pool, output, "\\f") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\n': if (data_append_str(pool, output, "\\n") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\r': if (data_append_str(pool, output, "\\r") != RESULT_OK) RETURN_ERR("esc"); break;
-            case '\t': if (data_append_str(pool, output, "\\t") != RESULT_OK) RETURN_ERR("esc"); break;
+            case '"': if (data_append_str(pool, output, "\\\"") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\\': if (data_append_str(pool, output, "\\\\") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\b': if (data_append_str(pool, output, "\\b") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\f': if (data_append_str(pool, output, "\\f") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\n': if (data_append_str(pool, output, "\\n") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\r': if (data_append_str(pool, output, "\\r") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
+            case '\t': if (data_append_str(pool, output, "\\t") != RESULT_OK) RETURN_ERR("Failed to append escaped sequence while escaping JSON string"); break;
             default:
                 if (ch < 0x20) {
                     char buf[7];
                     snprintf(buf, sizeof(buf), "\\u%04x", ch);
-                    if (data_append_str(pool, output, buf) != RESULT_OK) RETURN_ERR("esc");
+                    if (data_append_str(pool, output, buf) != RESULT_OK) RETURN_ERR("Failed to append Unicode escape while escaping JSON string");
                 } else {
-                    if (data_append_char(pool, output, (char)ch) != RESULT_OK) RETURN_ERR("esc");
+                    if (data_append_char(pool, output, (char)ch) != RESULT_OK) RETURN_ERR("Failed to append character while escaping JSON string");
                 }
         }
     }
@@ -387,10 +365,10 @@ static const char* skip_ws(const char* p, const char* end) {
     while (p < end && (*p==' '||*p=='\n'||*p=='\r'||*p=='\t')) p++;
     return p;
 }
-static result_t parse_json_string_local(pool_t* pool, const char** json, const char* end, data_t** out) {
+static result_t parse_json_data(pool_t* pool, const char** json, const char* end, data_t** out) {
     const char* p = *json;
-    if (p >= end) RETURN_ERR("Unexpected end");
-    if (*p != '"') RETURN_ERR("Expected quote");
+    if (p >= end) RETURN_ERR("Unexpected end of JSON while parsing string");
+    if (*p != '\"') RETURN_ERR("Expected '\"' to start JSON string");
     p++;
     const char* start = p;
     // find end quote, honoring escapes
@@ -399,42 +377,42 @@ static result_t parse_json_string_local(pool_t* pool, const char** json, const c
         if (*p == '\\' && p+1 < end) { p += 2; continue; }
         p++;
     }
-    if (p >= end || *p != '"') RETURN_ERR("Unterminated string");
+    if (p >= end || *p != '"') RETURN_ERR("Unterminated JSON string");
     // decode escapes into output
     // First copy raw into temp and then unescape simple sequences
     size_t raw_len = (size_t)(p - start);
-    if (pool_data_alloc(pool, out, raw_len + 1) != RESULT_OK) RETURN_ERR("alloc str");
+    if (pool_data_alloc(pool, out, raw_len + 1) != RESULT_OK) RETURN_ERR("Failed to allocate buffer for JSON string");
     (*out)->size = raw_len;
     memcpy((*out)->data, start, raw_len);
     // process backslash escapes in place into new buffer
     data_t* decoded;
-    if (pool_data_alloc(pool, &decoded, raw_len + 1) != RESULT_OK) RETURN_ERR("alloc dec");
+    if (pool_data_alloc(pool, &decoded, raw_len + 1) != RESULT_OK) RETURN_ERR("Failed to allocate buffer for decoded JSON string");
     decoded->size = 0;
     for (size_t i = 0; i < raw_len; ) {
         char c = (*out)->data[i];
         if (c == '\\' && i + 1 < raw_len) {
             char e = (*out)->data[i+1];
             switch (e) {
-                case '"': data_append_char(pool, &decoded, '"'); break;
-                case '\\': data_append_char(pool, &decoded, '\\'); break;
-                case '/': data_append_char(pool, &decoded, '/'); break;
-                case 'b': data_append_char(pool, &decoded, '\b'); break;
-                case 'f': data_append_char(pool, &decoded, '\f'); break;
-                case 'n': data_append_char(pool, &decoded, '\n'); break;
-                case 'r': data_append_char(pool, &decoded, '\r'); break;
-                case 't': data_append_char(pool, &decoded, '\t'); break;
-                default: data_append_char(pool, &decoded, e); break;
+                case '"': if (data_append_char(pool, &decoded, '"') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case '\\': if (data_append_char(pool, &decoded, '\\') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case '/': if (data_append_char(pool, &decoded, '/') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case 'b': if (data_append_char(pool, &decoded, '\b') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case 'f': if (data_append_char(pool, &decoded, '\f') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case 'n': if (data_append_char(pool, &decoded, '\n') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case 'r': if (data_append_char(pool, &decoded, '\r') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                case 't': if (data_append_char(pool, &decoded, '\t') != RESULT_OK) RETURN_ERR("Failed to append character while decoding JSON escape"); break;
+                default: if (data_append_char(pool, &decoded, e) != RESULT_OK) RETURN_ERR("Failed to append literal after backslash in JSON string"); break;
             }
             i += 2;
         } else {
-            data_append_char(pool, &decoded, c);
+            if (data_append_char(pool, &decoded, c) != RESULT_OK) RETURN_ERR("Failed to append character to decoded JSON string");
             i++;
         }
     }
     // move decoded into out
     data_t* tmp = *out;
     *out = decoded;
-    pool_data_free(pool, tmp);
+    if (pool_data_free(pool, tmp) != RESULT_OK) RETURN_ERR("Failed to free temporary JSON buffer");
     *json = p + 1;
     return RESULT_OK;
 }
@@ -443,22 +421,22 @@ static result_t parse_json_value_local(pool_t* pool, const char** json, const ch
 
 static result_t parse_json_array_local(pool_t* pool, const char** json, const char* end, object_t** out) {
     const char* p = *json; // points at '['
-    if (p >= end || *p != '[') RETURN_ERR("Expected [");
+    if (p >= end || *p != '[') RETURN_ERR("Expected '[' at start of JSON array");
     p++; p = skip_ws(p, end);
-    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("obj alloc");
-    (*out)->string = NULL; (*out)->child = NULL; (*out)->next = NULL;
+    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("Failed to allocate array object from pool");
+    (*out)->data = NULL; (*out)->child = NULL; (*out)->next = NULL;
     object_t* first = NULL; object_t* last = NULL;
     if (p < end && *p == ']') { *json = p + 1; return RESULT_OK; }
     while (p < end) {
         object_t* elem;
-        if (parse_json_value_local(pool, &p, end, &elem) != RESULT_OK) RETURN_ERR("elem");
+    if (parse_json_value_local(pool, &p, end, &elem) != RESULT_OK) RETURN_ERR("Failed to parse JSON array element");
         if (!first) { first = last = elem; } else { last->next = elem; last = elem; }
         p = skip_ws(p, end);
         if (p < end && *p == ',') { p++; p = skip_ws(p, end); continue; }
         if (p < end && *p == ']') break;
-        RETURN_ERR("Expected , or ] in array");
+    RETURN_ERR("Expected ',' or ']' while parsing JSON array");
     }
-    if (p >= end || *p != ']') RETURN_ERR("Unterminated array");
+    if (p >= end || *p != ']') RETURN_ERR("Unterminated JSON array");
     (*out)->child = first;
     *json = p + 1;
     return RESULT_OK;
@@ -466,29 +444,29 @@ static result_t parse_json_array_local(pool_t* pool, const char** json, const ch
 
 static result_t parse_json_object_local(pool_t* pool, const char** json, const char* end, object_t** out) {
     const char* p = *json; // at '{'
-    if (p >= end || *p != '{') RETURN_ERR("Expected {");
+    if (p >= end || *p != '{') RETURN_ERR("Expected '{' at start of JSON object");
     p++; p = skip_ws(p, end);
-    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("obj alloc");
-    (*out)->string = NULL; (*out)->child = NULL; (*out)->next = NULL;
+    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("Failed to allocate object from pool");
+    (*out)->data = NULL; (*out)->child = NULL; (*out)->next = NULL;
     object_t* first = NULL; object_t* last = NULL;
     if (p < end && *p == '}') { *json = p + 1; return RESULT_OK; }
     while (p < end) {
         p = skip_ws(p, end);
         data_t* key;
-        if (*p != '"') RETURN_ERR("Key must be string");
-        if (parse_json_string_local(pool, &p, end, &key) != RESULT_OK) RETURN_ERR("key");
-        p = skip_ws(p, end); if (p >= end || *p != ':') RETURN_ERR("Expected :"); p++; p = skip_ws(p, end);
+    if (*p != '"') RETURN_ERR("Expected string key in JSON object");
+    if (parse_json_data(pool, &p, end, &key) != RESULT_OK) RETURN_ERR("Failed to parse JSON object key");
+    p = skip_ws(p, end); if (p >= end || *p != ':') RETURN_ERR("Expected ':' after object key"); p++; p = skip_ws(p, end);
         object_t* val;
-        if (parse_json_value_local(pool, &p, end, &val) != RESULT_OK) RETURN_ERR("val");
-        object_t* pair; if (pool_object_alloc(pool, &pair) != RESULT_OK) RETURN_ERR("pair");
-        pair->string = key; pair->child = val; pair->next = NULL;
+    if (parse_json_value_local(pool, &p, end, &val) != RESULT_OK) RETURN_ERR("Failed to parse JSON object value");
+    object_t* pair; if (pool_object_alloc(pool, &pair) != RESULT_OK) RETURN_ERR("Failed to allocate key-value node from pool");
+        pair->data = key; pair->child = val; pair->next = NULL;
         if (!first) { first = last = pair; } else { last->next = pair; last = pair; }
         p = skip_ws(p, end);
         if (p < end && *p == ',') { p++; p = skip_ws(p, end); continue; }
         if (p < end && *p == '}') break;
-        RETURN_ERR("Expected , or } in object");
+    RETURN_ERR("Expected ',' or '}' while parsing JSON object");
     }
-    if (p >= end || *p != '}') RETURN_ERR("Unterminated object");
+    if (p >= end || *p != '}') RETURN_ERR("Unterminated JSON object");
     (*out)->child = first;
     *json = p + 1;
     return RESULT_OK;
@@ -498,9 +476,9 @@ static result_t parse_primitive_local(pool_t* pool, const char** json, const cha
     const char* p = *json;
     const char* start = p;
     while (p < end && *p != ',' && *p != '}' && *p != ']' && *p!=' ' && *p!='\t' && *p!='\n' && *p!='\r') p++;
-    if (p == start) RETURN_ERR("Invalid primitive");
+    if (p == start) RETURN_ERR("Invalid JSON primitive literal");
     size_t len = (size_t)(p - start);
-    if (pool_data_alloc(pool, out, len) != RESULT_OK) RETURN_ERR("alloc prim");
+    if (pool_data_alloc(pool, out, len) != RESULT_OK) RETURN_ERR("Failed to allocate buffer for JSON primitive");
     (*out)->size = len; memcpy((*out)->data, start, len);
     *json = p;
     return RESULT_OK;
@@ -508,33 +486,33 @@ static result_t parse_primitive_local(pool_t* pool, const char** json, const cha
 
 static result_t parse_json_value_local(pool_t* pool, const char** json, const char* end, object_t** out) {
     const char* p = skip_ws(*json, end);
-    if (p >= end) RETURN_ERR("Unexpected end");
+    if (p >= end) RETURN_ERR("Unexpected end of JSON input");
     if (*p == '"') {
-        if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("obj");
-        if (parse_json_string_local(pool, &p, end, &((*out)->string)) != RESULT_OK) RETURN_ERR("str");
+    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("Failed to allocate object from pool");
+    if (parse_json_data(pool, &p, end, &((*out)->data)) != RESULT_OK) RETURN_ERR("Failed to parse JSON string value");
         (*out)->child = NULL; (*out)->next = NULL; *json = p; return RESULT_OK;
     } else if (*p == '{') {
         *json = p; return parse_json_object_local(pool, json, end, out);
     } else if (*p == '[') {
         *json = p; return parse_json_array_local(pool, json, end, out);
     } else {
-        if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("obj");
-        if (parse_primitive_local(pool, &p, end, &((*out)->string)) != RESULT_OK) RETURN_ERR("prim");
+    if (pool_object_alloc(pool, out) != RESULT_OK) RETURN_ERR("Failed to allocate object from pool");
+    if (parse_primitive_local(pool, &p, end, &((*out)->data)) != RESULT_OK) RETURN_ERR("Failed to parse JSON primitive value");
         (*out)->child = NULL; (*out)->next = NULL; *json = p; return RESULT_OK;
     }
 }
 
 result_t object_create(pool_t* pool, object_t** dst) {
-    if (pool_object_alloc(pool, dst) != RESULT_OK) RETURN_ERR("obj alloc");
-    (*dst)->string = NULL; (*dst)->child = NULL; (*dst)->next = NULL;
+    if (pool_object_alloc(pool, dst) != RESULT_OK) RETURN_ERR("Failed to allocate object from pool");
+    (*dst)->data = NULL; (*dst)->child = NULL; (*dst)->next = NULL;
     return RESULT_OK;
 }
 
 static result_t object_destroy_recursive(pool_t* pool, object_t* obj) {
     if (!obj) return RESULT_OK;
-    if (obj->string) {
-        if (data_destroy(pool, obj->string) != RESULT_OK) RETURN_ERR("free str");
-        obj->string = NULL;
+    if (obj->data) {
+        if (data_destroy(pool, obj->data) != RESULT_OK) RETURN_ERR("free str");
+        obj->data = NULL;
     }
     if (obj->child) {
         object_t* c = obj->child;
@@ -555,7 +533,7 @@ result_t object_destroy(pool_t* pool, object_t* object) {
 }
 
 result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src) {
-    if (!src || src->size == 0) RETURN_ERR("Empty JSON string");
+    if (!src || src->size == 0) RETURN_ERR("Empty JSON data");
     const char* json = src->data;
     const char* end = src->data + src->size;
     const char* p = skip_ws(json, end);
@@ -565,7 +543,7 @@ result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src) {
 
 static int is_json_primitive_local(const data_t* s) {
     if (!s || s->size == 0) return 0;
-    if (string_equal_str_local(s, "null") || string_equal_str_local(s, "true") || string_equal_str_local(s, "false")) return 1;
+    if (data_equal_str(s, "null") || data_equal_str(s, "true") || data_equal_str(s, "false")) return 1;
     // number simple check
     const char* d = s->data; size_t n = s->size; size_t i = 0;
     if (d[i] == '-' ) i++;
@@ -581,59 +559,59 @@ static int is_json_primitive_local(const data_t* s) {
 
 static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const object_t* obj) {
     if (!obj) return data_append_str(pool, dst, "null");
-    if (obj->string && !obj->child) {
+    if (obj->data && !obj->child) {
         // leaf
-        if (is_json_primitive_local(obj->string)) {
-            return string_append_string_local(pool, dst, obj->string);
+        if (is_json_primitive_local(obj->data)) {
+            return data_append_data(pool, dst, obj->data);
         } else {
-            data_t* esc; if (escape_json_string_local(pool, obj->string, &esc) != RESULT_OK) RETURN_ERR("esc out");
-            if (string_append_char_local(pool, dst, '"') != RESULT_OK) RETURN_ERR("add");
-            if (string_append_string_local(pool, dst, esc) != RESULT_OK) RETURN_ERR("add");
-            if (data_destroy(pool, esc) != RESULT_OK) RETURN_ERR("free esc");
-            if (string_append_char_local(pool, dst, '"') != RESULT_OK) RETURN_ERR("add");
+            data_t* esc; if (escape_json_data(pool, obj->data, &esc) != RESULT_OK) RETURN_ERR("Failed to escape string for JSON output");
+            if (data_append_char(pool, dst, '"') != RESULT_OK) RETURN_ERR("Failed to append to JSON output");
+            if (data_append_data(pool, dst, esc) != RESULT_OK) RETURN_ERR("Failed to append to JSON output");
+            if (data_destroy(pool, esc) != RESULT_OK) RETURN_ERR("Failed to free escaped buffer");
+            if (data_append_char(pool, dst, '"') != RESULT_OK) RETURN_ERR("Failed to append to JSON output");
             return RESULT_OK;
         }
     }
     // container: determine if object or array
-    if (!obj->string && obj->child && obj->child->string && obj->child->child) {
+    if (!obj->data && obj->child && obj->child->data && obj->child->child) {
         // This node is an object (children are key-value pairs)
-        if (string_append_char_local(pool, dst, '{') != RESULT_OK) RETURN_ERR("{");
+    if (data_append_char(pool, dst, '{') != RESULT_OK) RETURN_ERR("Failed to append '{' to JSON output");
         const object_t* ch = obj->child; int first = 1;
         while (ch) {
-            if (!first) { if (string_append_char_local(pool, dst, ',') != RESULT_OK) RETURN_ERR(","); }
+            if (!first) { if (data_append_char(pool, dst, ',') != RESULT_OK) RETURN_ERR("Failed to append ',' to JSON output"); }
             first = 0;
-            data_t* esc_key; if (escape_json_string_local(pool, ch->string, &esc_key) != RESULT_OK) RETURN_ERR("esk");
-            if (string_append_char_local(pool, dst, '"') != RESULT_OK) RETURN_ERR("add");
-            if (string_append_string_local(pool, dst, esc_key) != RESULT_OK) RETURN_ERR("add");
-            if (data_destroy(pool, esc_key) != RESULT_OK) RETURN_ERR("free");
-            if (string_append_str_local(pool, dst, "\":") != RESULT_OK) RETURN_ERR("colon");
-            if (object_to_json_recursive_local(pool, dst, ch->child) != RESULT_OK) RETURN_ERR("val");
+            data_t* esc_key; if (escape_json_data(pool, ch->data, &esc_key) != RESULT_OK) RETURN_ERR("Failed to escape object key for JSON output");
+            if (data_append_char(pool, dst, '"') != RESULT_OK) RETURN_ERR("Failed to append to JSON output");
+            if (data_append_data(pool, dst, esc_key) != RESULT_OK) RETURN_ERR("Failed to append to JSON output");
+            if (data_destroy(pool, esc_key) != RESULT_OK) RETURN_ERR("Failed to free escaped key buffer");
+            if (data_append_str(pool, dst, "\":") != RESULT_OK) RETURN_ERR("Failed to append ':' to JSON output");
+            if (object_to_json_recursive_local(pool, dst, ch->child) != RESULT_OK) RETURN_ERR("Failed to serialize JSON value");
             ch = ch->next;
         }
-        if (string_append_char_local(pool, dst, '}') != RESULT_OK) RETURN_ERR("}");
+    if (data_append_char(pool, dst, '}') != RESULT_OK) RETURN_ERR("Failed to append '}' to JSON output");
         return RESULT_OK;
-    } else if (!obj->string && obj->child) {
+    } else if (!obj->data && obj->child) {
         // array
-        if (string_append_char_local(pool, dst, '[') != RESULT_OK) RETURN_ERR("[");
+    if (data_append_char(pool, dst, '[') != RESULT_OK) RETURN_ERR("Failed to append '[' to JSON output");
         const object_t* ch = obj->child; int first = 1;
         while (ch) {
-            if (!first) { if (string_append_char_local(pool, dst, ',') != RESULT_OK) RETURN_ERR(","); }
+            if (!first) { if (data_append_char(pool, dst, ',') != RESULT_OK) RETURN_ERR("Failed to append ',' to JSON output"); }
             first = 0;
-            if (object_to_json_recursive_local(pool, dst, ch) != RESULT_OK) RETURN_ERR("elem");
+            if (object_to_json_recursive_local(pool, dst, ch) != RESULT_OK) RETURN_ERR("Failed to serialize JSON array element");
             ch = ch->next;
         }
-        if (string_append_char_local(pool, dst, ']') != RESULT_OK) RETURN_ERR("]");
+    if (data_append_char(pool, dst, ']') != RESULT_OK) RETURN_ERR("Failed to append ']' to JSON output");
         return RESULT_OK;
     }
     // empty or null
     return data_append_str(pool, dst, "null");
 }
 
-result_t object_tostring_json(pool_t* pool, data_t** dst, const object_t* src) {
+result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src) {
     if (!*dst) {
-        if (data_create(pool, dst) != RESULT_OK) RETURN_ERR("dst create");
+    if (data_create(pool, dst) != RESULT_OK) RETURN_ERR("Failed to create destination data buffer");
     } else {
-        if (data_clean(pool, dst) != RESULT_OK) RETURN_ERR("dst clear");
+    if (data_clean(pool, dst) != RESULT_OK) RETURN_ERR("Failed to clear destination data buffer");
     }
     return object_to_json_recursive_local(pool, dst, src);
 }
@@ -641,10 +619,10 @@ result_t object_tostring_json(pool_t* pool, data_t** dst, const object_t* src) {
 // dot-path traversal supporting object keys and array indices (e.g., "a.b.0.c")
 result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path) {
     (void)pool; // pool unused except for signature symmetry
-    if (!object || !path) RETURN_ERR("invalid args");
+    if (!object || !path) RETURN_ERR("Invalid arguments: object and path are required");
     const object_t* cur = object;
     // if root is a container, dive into its child list
-    if (cur->string == NULL && cur->child) cur = cur; // no-op
+    if (cur->data == NULL && cur->child) cur = cur; // no-op
     const char* p = path;
     while (*p) {
         // extract segment until '.'
@@ -659,18 +637,18 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
             size_t idx = (size_t)strtoull(seg, NULL, 10);
             const object_t* child = cur->child; size_t k = 0;
             while (child && k < idx) { child = child->next; k++; }
-            if (!child) RETURN_ERR("index out of range");
+            if (!child) RETURN_ERR("Array index out of range in path traversal");
             cur = child;
         } else {
             // find key in object
             const object_t* child = cur->child; int found = 0;
             while (child) {
-                if (child->string && child->child) {
-                    if (child->string->size == si && memcmp(child->string->data, seg, si) == 0) { cur = child->child; found = 1; break; }
+                if (child->data && child->child) {
+                    if (child->data->size == si && memcmp(child->data->data, seg, si) == 0) { cur = child->child; found = 1; break; }
                 }
                 child = child->next;
             }
-            if (!found) RETURN_ERR("key not found");
+            if (!found) RETURN_ERR("Key not found in object during path traversal");
         }
     }
     *dst = (object_t*)cur; // cast away const for API
@@ -784,10 +762,10 @@ static result_t parse_xml_content_local(pool_t* pool, const char** xml, const ch
                 if (parse_xml_tag_name_local(pool, &p, end, &closing) != RESULT_OK) RETURN_ERR("close name");
                 // compare
                 if (closing->size != tag_name->size || memcmp(closing->data, tag_name->data, tag_name->size) != 0) {
-                    pool_data_free(pool, closing);
+                    if (pool_data_free(pool, closing) != RESULT_OK) RETURN_ERR("free closing");
                     RETURN_ERR("closing mismatch");
                 }
-                pool_data_free(pool, closing);
+                if (pool_data_free(pool, closing) != RESULT_OK) RETURN_ERR("free closing");
                 p = skip_xml_ws_local(p, end);
                 if (p >= end || *p != '>') RETURN_ERR("expected > after closing");
                 p++; break;
@@ -804,14 +782,20 @@ static result_t parse_xml_content_local(pool_t* pool, const char** xml, const ch
             if (parse_xml_text_local(pool, &p, end, &text) != RESULT_OK) RETURN_ERR("text");
             if (text && text->size > 0) {
                 if (!text_acc) { text_acc = text; }
-                else { if (data_append_data(pool, &text_acc, text) != RESULT_OK) { pool_data_free(pool, text); RETURN_ERR("append text"); } pool_data_free(pool, text); }
+                else {
+                    if (data_append_data(pool, &text_acc, text) != RESULT_OK) {
+                        if (pool_data_free(pool, text) != RESULT_OK) RETURN_ERR("free text");
+                        RETURN_ERR("append text");
+                    }
+                    if (pool_data_free(pool, text) != RESULT_OK) RETURN_ERR("free text");
+                }
             } else if (text) {
-                pool_data_free(pool, text);
+                if (pool_data_free(pool, text) != RESULT_OK) RETURN_ERR("free text");
             }
         }
     }
     if (text_acc && first) RETURN_ERR("mixed content unsupported");
-    if (text_acc) { (*content)->string = text_acc; }
+    if (text_acc) { (*content)->data = text_acc; }
     else if (first) { (*content)->child = first; }
     *xml = p; return RESULT_OK;
 }
@@ -822,11 +806,11 @@ static result_t parse_xml_element_local(pool_t* pool, const char** xml, const ch
     p++;
     data_t* tag;
     if (parse_xml_tag_name_local(pool, &p, end, &tag) != RESULT_OK) RETURN_ERR("tag");
-    object_t* content; if (pool_object_alloc(pool, &content) != RESULT_OK) { pool_data_free(pool, tag); RETURN_ERR("alloc content"); }
-    content->string = NULL; content->child = NULL; content->next = NULL;
-    if (parse_xml_content_local(pool, &p, end, tag, &content) != RESULT_OK) { pool_data_free(pool, tag); RETURN_ERR("content"); }
-    if (pool_object_alloc(pool, out) != RESULT_OK) { pool_data_free(pool, tag); RETURN_ERR("alloc pair"); }
-    (*out)->string = tag; (*out)->child = content; (*out)->next = NULL; *xml = p; return RESULT_OK;
+    object_t* content; if (pool_object_alloc(pool, &content) != RESULT_OK) { if (pool_data_free(pool, tag) != RESULT_OK) RETURN_ERR("free tag"); RETURN_ERR("alloc content"); }
+    content->data = NULL; content->child = NULL; content->next = NULL;
+    if (parse_xml_content_local(pool, &p, end, tag, &content) != RESULT_OK) { if (pool_data_free(pool, tag) != RESULT_OK) RETURN_ERR("free tag"); RETURN_ERR("content"); }
+    if (pool_object_alloc(pool, out) != RESULT_OK) { if (pool_data_free(pool, tag) != RESULT_OK) RETURN_ERR("free tag"); RETURN_ERR("alloc pair"); }
+    (*out)->data = tag; (*out)->child = content; (*out)->next = NULL; *xml = p; return RESULT_OK;
 }
 
 result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
@@ -840,7 +824,7 @@ result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
         p = skip_xml_ws_local(p, end);
     }
     if (pool_object_alloc(pool, dst) != RESULT_OK) RETURN_ERR("alloc root");
-    (*dst)->string = NULL; (*dst)->child = NULL; (*dst)->next = NULL;
+    (*dst)->data = NULL; (*dst)->child = NULL; (*dst)->next = NULL;
     object_t* first = NULL; object_t* last = NULL;
     while (p < end) {
         p = skip_xml_ws_local(p, end);
@@ -861,7 +845,7 @@ result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
 }
 
 // escape data bytes for XML text/element names
-static result_t escape_xml_string_local(pool_t* pool, const data_t* in, data_t** out) {
+static result_t escape_xml_data(pool_t* pool, const data_t* in, data_t** out) {
     size_t est = in ? in->size * 6 + 1 : 1;
     if (pool_data_alloc(pool, out, est) != RESULT_OK) RETURN_ERR("alloc esc xml");
     (*out)->size = 0; if (!in) return RESULT_OK;
@@ -885,11 +869,15 @@ static result_t escape_xml_string_local(pool_t* pool, const data_t* in, data_t**
 }
 
 static int data_lexcmp_local(const data_t* a, const data_t* b) {
-    if (!a && !b) return 0; if (!a) return -1; if (!b) return 1;
+    if (!a && !b) return 0;
+    if (!a) return -1;
+    if (!b) return 1;
     uint64_t min = a->size < b->size ? a->size : b->size;
     int cmp = memcmp(a->data, b->data, min);
     if (cmp != 0) return cmp;
-    if (a->size < b->size) return -1; if (a->size > b->size) return 1; return 0;
+    if (a->size < b->size) return -1;
+    if (a->size > b->size) return 1;
+    return 0;
 }
 
 static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const object_t* src, const char* element_name) {
@@ -899,48 +887,54 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
         if (data_append_str(pool, dst, "/>") != RESULT_OK) RETURN_ERR("xml");
         return RESULT_OK;
     }
-    if (src->string && !src->child) {
-        data_t* esc; if (escape_xml_string_local(pool, src->string, &esc) != RESULT_OK) RETURN_ERR("esc");
+    if (src->data && !src->child) {
+        data_t* esc; if (escape_xml_data(pool, src->data, &esc) != RESULT_OK) RETURN_ERR("esc");
         if (data_append_str(pool, dst, "<") != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
-        if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
-        if (data_append_data(pool, dst, esc) != RESULT_OK) RETURN_ERR("xml");
-        if (data_append_str(pool, dst, "</") != RESULT_OK) RETURN_ERR("xml");
-        if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
-        if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
-        pool_data_free(pool, esc); return RESULT_OK;
+    if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
+    if (data_append_data(pool, dst, esc) != RESULT_OK) RETURN_ERR("xml");
+    if (data_append_str(pool, dst, "</") != RESULT_OK) RETURN_ERR("xml");
+    if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
+    if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
+    if (pool_data_free(pool, esc) != RESULT_OK) RETURN_ERR("free esc");
+    return RESULT_OK;
     }
     // container
     object_t* first = src->child;
-    if (first && first->string) {
+    if (first && first->data) {
         // object
         if (data_append_str(pool, dst, "<") != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
         const data_t* prev_key = NULL; const object_t* prev_child = NULL; size_t emitted = 0; size_t count = 0;
-        { for (object_t* c = first; c; c = c->next) if (c->string) count++; }
+        { for (object_t* c = first; c; c = c->next) if (c->data) count++; }
         while (emitted < count) {
             object_t* best = NULL;
             for (object_t* c = first; c; c = c->next) {
-                if (!c->string) continue;
+                if (!c->data) continue;
                 if (!prev_key) {
-                    int rel = data_lexcmp_local(c->string, best ? best->string : NULL);
+                    int rel = data_lexcmp_local(c->data, best ? best->data : NULL);
                     if (!best || rel < 0 || (rel == 0 && c < best)) best = c;
                 } else {
-                    int cmp_prev = data_lexcmp_local(c->string, prev_key);
+                    int cmp_prev = data_lexcmp_local(c->data, prev_key);
                     if (cmp_prev < 0) continue;
                     if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
-                    int rel = data_lexcmp_local(c->string, best ? best->string : NULL);
+                    int rel = data_lexcmp_local(c->data, best ? best->data : NULL);
                     if (!best || rel < 0 || (rel == 0 && c < best)) best = c;
                 }
             }
             if (!best) break;
-            data_t* key_esc; if (escape_xml_string_local(pool, best->string, &key_esc) != RESULT_OK) RETURN_ERR("esk");
-            data_t* key_cstr; if (pool_data_alloc(pool, &key_cstr, key_esc->size + 1) != RESULT_OK) { pool_data_free(pool, key_esc); RETURN_ERR("alloc"); }
+            data_t* key_esc; if (escape_xml_data(pool, best->data, &key_esc) != RESULT_OK) RETURN_ERR("esk");
+            data_t* key_cstr; if (pool_data_alloc(pool, &key_cstr, key_esc->size + 1) != RESULT_OK) { if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc"); RETURN_ERR("alloc"); }
             memcpy(key_cstr->data, key_esc->data, key_esc->size); key_cstr->data[key_esc->size] = '\0'; key_cstr->size = key_esc->size;
-            if (object_to_xml_recursive_local(pool, dst, best->child, key_cstr->data) != RESULT_OK) { pool_data_free(pool, key_cstr); pool_data_free(pool, key_esc); RETURN_ERR("child"); }
-            pool_data_free(pool, key_cstr); pool_data_free(pool, key_esc);
-            prev_key = best->string; prev_child = best; emitted++;
+            if (object_to_xml_recursive_local(pool, dst, best->child, key_cstr->data) != RESULT_OK) {
+                if (pool_data_free(pool, key_cstr) != RESULT_OK) RETURN_ERR("free key_cstr");
+                if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc");
+                RETURN_ERR("child");
+            }
+            if (pool_data_free(pool, key_cstr) != RESULT_OK) RETURN_ERR("free key_cstr");
+            if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc");
+            prev_key = best->data; prev_child = best; emitted++;
         }
         if (data_append_str(pool, dst, "</") != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
@@ -967,31 +961,36 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
     }
 }
 
-result_t object_tostring_xml(pool_t* pool, data_t** dst, const object_t* src) {
+result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src) {
     if (!*dst) { if (data_create(pool, dst) != RESULT_OK) RETURN_ERR("dst"); }
     else { if (data_clean(pool, dst) != RESULT_OK) RETURN_ERR("clear"); }
     if (src && src->child) {
         object_t* first = src->child;
-        if (first && first->string) {
+        if (first && first->data) {
             const data_t* prev_key = NULL; const object_t* prev_child = NULL; size_t emitted = 0; size_t count = 0;
-            { for (object_t* c = first; c; c = c->next) if (c->string) count++; }
+            { for (object_t* c = first; c; c = c->next) if (c->data) count++; }
             while (emitted < count) {
                 object_t* best = NULL;
                 for (object_t* c = first; c; c = c->next) {
-                    if (!c->string) continue;
-                    if (!prev_key) { int rel = data_lexcmp_local(c->string, best ? best->string : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c; }
+                    if (!c->data) continue;
+                    if (!prev_key) { int rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c; }
                     else {
-                        int cmp_prev = data_lexcmp_local(c->string, prev_key); if (cmp_prev < 0) continue; if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
-                        int rel = data_lexcmp_local(c->string, best ? best->string : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c;
+                        int cmp_prev = data_lexcmp_local(c->data, prev_key); if (cmp_prev < 0) continue; if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
+                        int rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c;
                     }
                 }
                 if (!best) break;
-                data_t* key_esc; if (escape_xml_string_local(pool, best->string, &key_esc) != RESULT_OK) RETURN_ERR("esk");
-                data_t* key_cstr; if (pool_data_alloc(pool, &key_cstr, key_esc->size + 1) != RESULT_OK) { pool_data_free(pool, key_esc); RETURN_ERR("alloc"); }
+                data_t* key_esc; if (escape_xml_data(pool, best->data, &key_esc) != RESULT_OK) RETURN_ERR("esk");
+                data_t* key_cstr; if (pool_data_alloc(pool, &key_cstr, key_esc->size + 1) != RESULT_OK) { if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc"); RETURN_ERR("alloc"); }
                 memcpy(key_cstr->data, key_esc->data, key_esc->size); key_cstr->data[key_esc->size] = '\0'; key_cstr->size = key_esc->size;
-                if (object_to_xml_recursive_local(pool, dst, best->child, key_cstr->data) != RESULT_OK) { pool_data_free(pool, key_cstr); pool_data_free(pool, key_esc); RETURN_ERR("child"); }
-                pool_data_free(pool, key_cstr); pool_data_free(pool, key_esc);
-                prev_key = best->string; prev_child = best; emitted++;
+                if (object_to_xml_recursive_local(pool, dst, best->child, key_cstr->data) != RESULT_OK) {
+                    if (pool_data_free(pool, key_cstr) != RESULT_OK) RETURN_ERR("free key_cstr");
+                    if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc");
+                    RETURN_ERR("child");
+                }
+                if (pool_data_free(pool, key_cstr) != RESULT_OK) RETURN_ERR("free key_cstr");
+                if (pool_data_free(pool, key_esc) != RESULT_OK) RETURN_ERR("free key_esc");
+                prev_key = best->data; prev_child = best; emitted++;
             }
             return RESULT_OK;
         } else {

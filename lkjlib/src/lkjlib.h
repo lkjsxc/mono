@@ -45,7 +45,7 @@ typedef struct data_t {
 } data_t;
 // JSON-like object tree node
 typedef struct object_t {
-    data_t* string;
+    data_t* data;
     struct object_t* child;
     struct object_t* next;
 } object_t;
@@ -136,9 +136,9 @@ __attribute__((warn_unused_result)) result_t file_write(const char* path, const 
 __attribute__((warn_unused_result)) result_t object_create(pool_t* pool, object_t** dst);
 __attribute__((warn_unused_result)) result_t object_destroy(pool_t* pool, object_t* object);
 __attribute__((warn_unused_result)) result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src);
-__attribute__((warn_unused_result)) result_t object_tostring_json(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src);
 __attribute__((warn_unused_result)) result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src);
-__attribute__((warn_unused_result)) result_t object_tostring_xml(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src);
 __attribute__((warn_unused_result)) result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path);
 
 #endif
