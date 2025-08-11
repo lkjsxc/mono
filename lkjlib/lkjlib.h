@@ -45,9 +45,9 @@ typedef struct data_t {
 } data_t;
 // JSON-like object tree node
 typedef struct object_t {
-    data_t* string;          // For string/primitive value, or key when this node is a key-value pair inside an object
-    struct object_t* child;  // For containers: first child; for key-value pair: value
-    struct object_t* next;   // Sibling pointer
+    data_t* string;
+    struct object_t* child;
+    struct object_t* next;
 } object_t;
 typedef struct pool_t {
     uint64_t data16_freelist_count;
@@ -132,7 +132,7 @@ int64_t data_find_char(const data_t* data, char c, uint64_t index);
 __attribute__((warn_unused_result)) result_t file_read(pool_t* pool, data_t** data, const char* path);
 __attribute__((warn_unused_result)) result_t file_write(const char* path, const data_t* data);
 
-// Object (JSON-like) APIs (ported from lkjagent/src/utils/object)
+// Object
 __attribute__((warn_unused_result)) result_t object_create(pool_t* pool, object_t** dst);
 __attribute__((warn_unused_result)) result_t object_destroy(pool_t* pool, object_t* object);
 __attribute__((warn_unused_result)) result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src);
