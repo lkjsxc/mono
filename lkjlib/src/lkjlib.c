@@ -541,13 +541,13 @@ result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src) {
     return RESULT_OK;
 }
 
-static int is_json_primitive_local(const data_t* s) {
+static int32_t is_json_primitive_local(const data_t* s) {
     if (!s || s->size == 0) return 0;
     if (data_equal_str(s, "null") || data_equal_str(s, "true") || data_equal_str(s, "false")) return 1;
     // number simple check
     const char* d = s->data; size_t n = s->size; size_t i = 0;
     if (d[i] == '-' ) i++;
-    int has_digit = 0;
+    int32_t has_digit = 0;
     while (i < n && isdigit((unsigned char)d[i])) { has_digit = 1; i++; }
     if (i < n && d[i] == '.') { i++; while (i < n && isdigit((unsigned char)d[i])) { has_digit = 1; i++; } }
     if (!has_digit) return 0;
@@ -576,7 +576,7 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
     if (!obj->data && obj->child && obj->child->data && obj->child->child) {
         // This node is an object (children are key-value pairs)
     if (data_append_char(pool, dst, '{') != RESULT_OK) RETURN_ERR("Failed to append '{' to JSON output");
-        const object_t* ch = obj->child; int first = 1;
+        const object_t* ch = obj->child; int32_t first = 1;
         while (ch) {
             if (!first) { if (data_append_char(pool, dst, ',') != RESULT_OK) RETURN_ERR("Failed to append ',' to JSON output"); }
             first = 0;
@@ -593,7 +593,7 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
     } else if (!obj->data && obj->child) {
         // array
     if (data_append_char(pool, dst, '[') != RESULT_OK) RETURN_ERR("Failed to append '[' to JSON output");
-        const object_t* ch = obj->child; int first = 1;
+        const object_t* ch = obj->child; int32_t first = 1;
         while (ch) {
             if (!first) { if (data_append_char(pool, dst, ',') != RESULT_OK) RETURN_ERR("Failed to append ',' to JSON output"); }
             first = 0;
@@ -631,7 +631,7 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
         seg[si] = '\0';
         if (*p == '.') p++;
         // decide if index
-        int is_index = 1; for (size_t i = 0; i < si; i++) { if (!isdigit((unsigned char)seg[i])) { is_index = 0; break; } }
+        int32_t is_index = 1; for (size_t i = 0; i < si; i++) { if (!isdigit((unsigned char)seg[i])) { is_index = 0; break; } }
         if (is_index && si > 0) {
             // array index
             size_t idx = (size_t)strtoull(seg, NULL, 10);
@@ -641,7 +641,7 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
             cur = child;
         } else {
             // find key in object
-            const object_t* child = cur->child; int found = 0;
+            const object_t* child = cur->child; int32_t found = 0;
             while (child) {
                 if (child->data && child->child) {
                     if (child->data->size == si && memcmp(child->data->data, seg, si) == 0) { cur = child->child; found = 1; break; }
@@ -868,12 +868,12 @@ static result_t escape_xml_data(pool_t* pool, const data_t* in, data_t** out) {
     return RESULT_OK;
 }
 
-static int data_lexcmp_local(const data_t* a, const data_t* b) {
+static int32_t data_lexcmp_local(const data_t* a, const data_t* b) {
     if (!a && !b) return 0;
     if (!a) return -1;
     if (!b) return 1;
     uint64_t min = a->size < b->size ? a->size : b->size;
-    int cmp = memcmp(a->data, b->data, min);
+    int32_t cmp = memcmp(a->data, b->data, min);
     if (cmp != 0) return cmp;
     if (a->size < b->size) return -1;
     if (a->size > b->size) return 1;
@@ -913,13 +913,13 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
             for (object_t* c = first; c; c = c->next) {
                 if (!c->data) continue;
                 if (!prev_key) {
-                    int rel = data_lexcmp_local(c->data, best ? best->data : NULL);
+                    int32_t rel = data_lexcmp_local(c->data, best ? best->data : NULL);
                     if (!best || rel < 0 || (rel == 0 && c < best)) best = c;
                 } else {
-                    int cmp_prev = data_lexcmp_local(c->data, prev_key);
+                    int32_t cmp_prev = data_lexcmp_local(c->data, prev_key);
                     if (cmp_prev < 0) continue;
                     if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
-                    int rel = data_lexcmp_local(c->data, best ? best->data : NULL);
+                    int32_t rel = data_lexcmp_local(c->data, best ? best->data : NULL);
                     if (!best || rel < 0 || (rel == 0 && c < best)) best = c;
                 }
             }
@@ -945,7 +945,7 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
         if (data_append_str(pool, dst, "<") != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, element_name) != RESULT_OK) RETURN_ERR("xml");
         if (data_append_str(pool, dst, ">") != RESULT_OK) RETURN_ERR("xml");
-        int index = 0; for (object_t* c = first; c; c = c->next, index++) {
+        int32_t index = 0; for (object_t* c = first; c; c = c->next, index++) {
             char item_name[32]; snprintf(item_name, sizeof(item_name), "item%d", index);
             if (object_to_xml_recursive_local(pool, dst, c, item_name) != RESULT_OK) RETURN_ERR("elem");
         }
@@ -973,10 +973,10 @@ result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src) {
                 object_t* best = NULL;
                 for (object_t* c = first; c; c = c->next) {
                     if (!c->data) continue;
-                    if (!prev_key) { int rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c; }
+                    if (!prev_key) { int32_t rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c; }
                     else {
-                        int cmp_prev = data_lexcmp_local(c->data, prev_key); if (cmp_prev < 0) continue; if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
-                        int rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c;
+                        int32_t cmp_prev = data_lexcmp_local(c->data, prev_key); if (cmp_prev < 0) continue; if (cmp_prev == 0 && prev_child && c <= prev_child) continue;
+                        int32_t rel = data_lexcmp_local(c->data, best ? best->data : NULL); if (!best || rel < 0 || (rel==0 && c < best)) best = c;
                     }
                 }
                 if (!best) break;
@@ -994,7 +994,7 @@ result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src) {
             }
             return RESULT_OK;
         } else {
-            int index = 0; for (object_t* c = first; c; c = c->next, index++) {
+            int32_t index = 0; for (object_t* c = first; c; c = c->next, index++) {
                 char item_name[32]; snprintf(item_name, sizeof(item_name), "item%d", index);
                 if (object_to_xml_recursive_local(pool, dst, c, item_name) != RESULT_OK) RETURN_ERR("elem");
             }
