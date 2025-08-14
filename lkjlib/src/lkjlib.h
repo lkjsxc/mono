@@ -1,4 +1,4 @@
-// lkjlib version 0002
+// lkjlib version 0003
 
 #ifndef LKJLIB_H
 #define LKJLIB_H
@@ -82,7 +82,7 @@ typedef struct pool_t {
     {                                                                               \
         _Pragma("GCC diagnostic push");                                             \
         _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
-        write(STDERR_FILENO, "Error: { file: \"", 17);                              \
+        write(STDERR_FILENO, "{kind: \"error\", file: \"", 17);                     \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
         write(STDERR_FILENO, "\", func: \"", 11);                                   \
         write(STDERR_FILENO, __func__, sizeof(__func__));                           \
@@ -93,6 +93,23 @@ typedef struct pool_t {
         write(STDERR_FILENO, "\" }\n", 4);                                          \
         return RESULT_ERR;                                                          \
         _Pragma("GCC diagnostic pop");                                              \
+    }
+#define PRINT_ERR3(n) #n
+#define PRINT_ERR2(n) PRINT_ERR3(n)
+#define PRINT_ERR(error_message)                                                  \
+    {                                                                             \
+        _Pragma("GCC diagnostic push");                                           \
+        _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                    \
+        write(STDERR_FILENO, "{kind: \"error\", file: \"", 17);                   \
+        write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                         \
+        write(STDERR_FILENO, "\", func: \"", 11);                                 \
+        write(STDERR_FILENO, __func__, sizeof(__func__));                         \
+        write(STDERR_FILENO, "\", line: ", 10);                                   \
+        write(STDERR_FILENO, PRINT_ERR2(__LINE__), sizeof(PRINT_ERR2(__LINE__))); \
+        write(STDERR_FILENO, "\", message: \"", 13);                              \
+        write(STDERR_FILENO, error_message, sizeof(error_message));               \
+        write(STDERR_FILENO, "\" }\n", 4);                                        \
+        _Pragma("GCC diagnostic pop");                                            \
     }
 
 // Pool
