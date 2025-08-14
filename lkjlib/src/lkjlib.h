@@ -1,4 +1,4 @@
-// lkjlib version 0001
+// lkjlib version 0002
 
 #ifndef LKJLIB_H
 #define LKJLIB_H
@@ -43,7 +43,6 @@ typedef struct data_t {
     uint64_t capacity;
     uint64_t size;
 } data_t;
-// JSON-like object tree node
 typedef struct object_t {
     data_t* data;
     struct object_t* child;

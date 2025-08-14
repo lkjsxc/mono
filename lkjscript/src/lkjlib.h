@@ -1,4 +1,4 @@
-// lkjlib version 0001
+// lkjlib version 0002
 
 #ifndef LKJLIB_H
 #define LKJLIB_H
@@ -24,11 +24,14 @@
 #include <unistd.h>
 
 // Constants
-#define POOL_data16_MAXCOUNT 1048576
-#define POOL_data256_MAXCOUNT 65536
-#define POOL_data4096_MAXCOUNT 4096
-#define POOL_data65536_MAXCOUNT 256
-#define POOL_data1048576_MAXCOUNT 16
+#define POOL_SIZE_BIAS 16
+
+#define POOL_data16_MAXCOUNT (65536 * POOL_SIZE_BIAS)
+#define POOL_data256_MAXCOUNT (4096 * POOL_SIZE_BIAS)
+#define POOL_data4096_MAXCOUNT (256 * POOL_SIZE_BIAS)
+#define POOL_data65536_MAXCOUNT (16 * POOL_SIZE_BIAS)
+#define POOL_data1048576_MAXCOUNT (1 * POOL_SIZE_BIAS)
+#define POOL_OBJECT_MAXCOUNT (4096 * POOL_SIZE_BIAS)
 
 // Types
 typedef enum result_t {
@@ -40,27 +43,35 @@ typedef struct data_t {
     uint64_t capacity;
     uint64_t size;
 } data_t;
-typedef struct {
-    char data16_data[POOL_data16_MAXCOUNT * 16];
-    data_t data16[POOL_data16_MAXCOUNT];
-    data_t* data16_freelist_data[POOL_data16_MAXCOUNT];
+typedef struct object_t {
+    data_t* data;
+    struct object_t* child;
+    struct object_t* next;
+} object_t;
+typedef struct pool_t {
     uint64_t data16_freelist_count;
-    char data256_data[POOL_data256_MAXCOUNT * 256];
-    data_t data256[POOL_data256_MAXCOUNT];
-    data_t* data256_freelist_data[POOL_data256_MAXCOUNT];
     uint64_t data256_freelist_count;
-    char data4096_data[POOL_data4096_MAXCOUNT * 4096];
-    data_t data4096[POOL_data4096_MAXCOUNT];
-    data_t* data4096_freelist_data[POOL_data4096_MAXCOUNT];
     uint64_t data4096_freelist_count;
-    char data65536_data[POOL_data65536_MAXCOUNT * 65536];
-    data_t data65536[POOL_data65536_MAXCOUNT];
-    data_t* data65536_freelist_data[POOL_data65536_MAXCOUNT];
     uint64_t data65536_freelist_count;
-    char data1048576_data[POOL_data1048576_MAXCOUNT * 1048576];
-    data_t data1048576[POOL_data1048576_MAXCOUNT];
-    data_t* data1048576_freelist_data[POOL_data1048576_MAXCOUNT];
     uint64_t data1048576_freelist_count;
+    data_t data16[POOL_data16_MAXCOUNT];
+    data_t data256[POOL_data256_MAXCOUNT];
+    data_t data4096[POOL_data4096_MAXCOUNT];
+    data_t data65536[POOL_data65536_MAXCOUNT];
+    data_t data1048576[POOL_data1048576_MAXCOUNT];
+    data_t* data16_freelist_data[POOL_data16_MAXCOUNT];
+    data_t* data256_freelist_data[POOL_data256_MAXCOUNT];
+    data_t* data4096_freelist_data[POOL_data4096_MAXCOUNT];
+    data_t* data65536_freelist_data[POOL_data65536_MAXCOUNT];
+    data_t* data1048576_freelist_data[POOL_data1048576_MAXCOUNT];
+    char data16_data[POOL_data16_MAXCOUNT * 16];
+    char data256_data[POOL_data256_MAXCOUNT * 256];
+    char data4096_data[POOL_data4096_MAXCOUNT * 4096];
+    char data65536_data[POOL_data65536_MAXCOUNT * 65536];
+    char data1048576_data[POOL_data1048576_MAXCOUNT * 1048576];
+    object_t object_data[POOL_OBJECT_MAXCOUNT];
+    object_t* object_freelist_data[POOL_OBJECT_MAXCOUNT];
+    uint64_t object_freelist_count;
 } pool_t;
 
 // Macros
@@ -69,9 +80,9 @@ typedef struct {
 #define RETURN_ERR2(n) RETURN_ERR3(n)
 #define RETURN_ERR(error_message)                                                   \
     {                                                                               \
-        _Pragma("GCC diagnostic push")                                              \
-            _Pragma("GCC diagnostic ignored \"-Wunused-result\"")                   \
-                write(STDERR_FILENO, "Error: { file: \"", 17);                      \
+        _Pragma("GCC diagnostic push");                                             \
+        _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
+        write(STDERR_FILENO, "Error: { file: \"", 17);                              \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
         write(STDERR_FILENO, "\", func: \"", 11);                                   \
         write(STDERR_FILENO, __func__, sizeof(__func__));                           \
@@ -80,7 +91,8 @@ typedef struct {
         write(STDERR_FILENO, "\", message: \"", 13);                                \
         write(STDERR_FILENO, error_message, sizeof(error_message));                 \
         write(STDERR_FILENO, "\" }\n", 4);                                          \
-        _Pragma("GCC diagnostic pop") return RESULT_ERR;                            \
+        return RESULT_ERR;                                                          \
+        _Pragma("GCC diagnostic pop");                                              \
     }
 
 // Pool
@@ -93,6 +105,8 @@ __attribute__((warn_unused_result)) result_t pool_data1048576_alloc(pool_t* pool
 __attribute__((warn_unused_result)) result_t pool_data_alloc(pool_t* pool, data_t** data, uint64_t capacity);
 __attribute__((warn_unused_result)) result_t pool_data_free(pool_t* pool, data_t* data);
 __attribute__((warn_unused_result)) result_t pool_data_realloc(pool_t* pool, data_t** data, uint64_t capacity);
+__attribute__((warn_unused_result)) result_t pool_object_alloc(pool_t* pool, object_t** obj);
+__attribute__((warn_unused_result)) result_t pool_object_free(pool_t* pool, object_t* obj);
 
 // data
 __attribute__((warn_unused_result)) result_t data_create(pool_t* pool, data_t** data);
@@ -116,5 +130,14 @@ int64_t data_find_char(const data_t* data, char c, uint64_t index);
 // File
 __attribute__((warn_unused_result)) result_t file_read(pool_t* pool, data_t** data, const char* path);
 __attribute__((warn_unused_result)) result_t file_write(const char* path, const data_t* data);
+
+// Object
+__attribute__((warn_unused_result)) result_t object_create(pool_t* pool, object_t** dst);
+__attribute__((warn_unused_result)) result_t object_destroy(pool_t* pool, object_t* object);
+__attribute__((warn_unused_result)) result_t object_parse_json(pool_t* pool, object_t** dst, const data_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src);
+__attribute__((warn_unused_result)) result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src);
+__attribute__((warn_unused_result)) result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path);
 
 #endif
