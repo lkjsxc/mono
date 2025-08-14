@@ -82,7 +82,7 @@ typedef struct pool_t {
     {                                                                               \
         _Pragma("GCC diagnostic push");                                             \
         _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
-        write(STDERR_FILENO, "{kind: \"error\", file: \"", 17);                     \
+        write(STDERR_FILENO, "{kind: \"error\", file: \"", 23);                     \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
         write(STDERR_FILENO, "\", func: \"", 11);                                   \
         write(STDERR_FILENO, __func__, sizeof(__func__));                           \
@@ -100,7 +100,7 @@ typedef struct pool_t {
     {                                                                             \
         _Pragma("GCC diagnostic push");                                           \
         _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                    \
-        write(STDERR_FILENO, "{kind: \"error\", file: \"", 17);                   \
+        write(STDERR_FILENO, "{kind: \"error\", file: \"", 23);                   \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                         \
         write(STDERR_FILENO, "\", func: \"", 11);                                 \
         write(STDERR_FILENO, __func__, sizeof(__func__));                         \
