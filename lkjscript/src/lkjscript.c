@@ -59,7 +59,7 @@ int main() {
     }
 
     if (lkjscript_run(&pool, SOURCECODE_PATH) != RESULT_OK) {
-        RETURN_ERR("Failed to run LScript");
+        RETURN_ERR("Failed to run lkjcript");
     }
 
     return 0;
