@@ -82,13 +82,13 @@ typedef struct pool_t {
     {                                                                               \
         _Pragma("GCC diagnostic push");                                             \
         _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
-        write(STDERR_FILENO, "{kind: \"error\", file: \"", 23);                     \
+        write(STDERR_FILENO, "{\"kind\": \"error\", \"file\": \"", 27);             \
         write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
-        write(STDERR_FILENO, "\", func: \"", 11);                                   \
-        write(STDERR_FILENO, __func__, sizeof(__func__));                           \
-        write(STDERR_FILENO, "\", line: ", 10);                                     \
+        write(STDERR_FILENO, "\", \"line\": ", 11);                                 \
         write(STDERR_FILENO, RETURN_ERR2(__LINE__), sizeof(RETURN_ERR2(__LINE__))); \
-        write(STDERR_FILENO, "\", message: \"", 13);                                \
+        write(STDERR_FILENO, ", \"func\": \"", 11);                                 \
+        write(STDERR_FILENO, __func__, sizeof(__func__));                           \
+        write(STDERR_FILENO, "\", \"message\": \"", 15);                            \
         write(STDERR_FILENO, error_message, sizeof(error_message));                 \
         write(STDERR_FILENO, "\" }\n", 4);                                          \
         return RESULT_ERR;                                                          \
@@ -96,20 +96,20 @@ typedef struct pool_t {
     }
 #define PRINT_ERR3(n) #n
 #define PRINT_ERR2(n) PRINT_ERR3(n)
-#define PRINT_ERR(error_message)                                                  \
-    {                                                                             \
-        _Pragma("GCC diagnostic push");                                           \
-        _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                    \
-        write(STDERR_FILENO, "{kind: \"error\", file: \"", 23);                   \
-        write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                         \
-        write(STDERR_FILENO, "\", func: \"", 11);                                 \
-        write(STDERR_FILENO, __func__, sizeof(__func__));                         \
-        write(STDERR_FILENO, "\", line: ", 10);                                   \
-        write(STDERR_FILENO, PRINT_ERR2(__LINE__), sizeof(PRINT_ERR2(__LINE__))); \
-        write(STDERR_FILENO, "\", message: \"", 13);                              \
-        write(STDERR_FILENO, error_message, sizeof(error_message));               \
-        write(STDERR_FILENO, "\" }\n", 4);                                        \
-        _Pragma("GCC diagnostic pop");                                            \
+#define PRINT_ERR(error_message)                                                    \
+    {                                                                               \
+        _Pragma("GCC diagnostic push");                                             \
+        _Pragma("GCC diagnostic ignored \"-Wunused-result\"");                      \
+        write(STDERR_FILENO, "{\"kind\": \"error\", \"file\": \"", 27);             \
+        write(STDERR_FILENO, __FILE__, sizeof(__FILE__));                           \
+        write(STDERR_FILENO, "\", \"line\": ", 11);                                 \
+        write(STDERR_FILENO, RETURN_ERR2(__LINE__), sizeof(RETURN_ERR2(__LINE__))); \
+        write(STDERR_FILENO, ", \"func\": \"", 11);                                 \
+        write(STDERR_FILENO, __func__, sizeof(__func__));                           \
+        write(STDERR_FILENO, "\", \"message\": \"", 15);                            \
+        write(STDERR_FILENO, error_message, sizeof(error_message));                 \
+        write(STDERR_FILENO, "\" }\n", 4);                                          \
+        _Pragma("GCC diagnostic pop");                                              \
     }
 
 // Pool
@@ -155,6 +155,6 @@ __attribute__((warn_unused_result)) result_t object_parse_json(pool_t* pool, obj
 __attribute__((warn_unused_result)) result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src);
 __attribute__((warn_unused_result)) result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src);
 __attribute__((warn_unused_result)) result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src);
-__attribute__((warn_unused_result)) result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path);
+__attribute__((warn_unused_result)) result_t object_provide_str(object_t** dst, const object_t* object, const char* path);
 
 #endif

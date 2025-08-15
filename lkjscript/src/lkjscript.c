@@ -6,6 +6,9 @@ static __attribute__((warn_unused_result)) result_t lkjscript_compile1(pool_t* p
     if (!pool || !sourcecode || !bytecode) {
         return RESULT_ERR;
     }
+    if (data_create(pool, bytecode) != RESULT_OK) {
+        RETURN_ERR("Failed to create bytecode");
+    }
     return RESULT_OK;
 }
 

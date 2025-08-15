@@ -95,7 +95,7 @@ result_t pool_data_alloc(pool_t* pool, data_t** data, uint64_t capacity) {
     }
 }
 result_t pool_data_free(pool_t* pool, data_t* data) {
-    if (!data) {
+    if (data == NULL) {
         RETURN_ERR("Cannot free null data");
     }
     if (data->capacity == 16) {
@@ -155,9 +155,6 @@ static const char* data_find(const char* str1, const char* str2, size_t size1, s
     return NULL;
 }
 result_t data_create(pool_t* pool, data_t** data) {
-    if (data != NULL) {
-        RETURN_ERR("Data pointer is not NULL");
-    }
     if (pool_data_alloc(pool, data, 16) != RESULT_OK) {
         RETURN_ERR("Failed to allocate data with capacity 16");
     }
@@ -895,7 +892,7 @@ result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src) {
     return object_to_json_recursive_local(pool, dst, src);
 }
 
-result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path) {
+result_t object_provide_str(object_t** dst, const object_t* object, const char* path) {
     if (!object || !path) {
         RETURN_ERR("Invalid arguments: object and path are required");
     }
