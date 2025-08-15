@@ -10,13 +10,11 @@ static void pool_data_init(char* data, data_t* datalist, data_t** freelist, uint
     *freelist_count = count;
 }
 result_t pool_init(pool_t* pool) {
-    // Initialize data pools
     pool_data_init(pool->data16_data, pool->data16, pool->data16_freelist_data, &pool->data16_freelist_count, 16, POOL_data16_MAXCOUNT);
     pool_data_init(pool->data256_data, pool->data256, pool->data256_freelist_data, &pool->data256_freelist_count, 256, POOL_data256_MAXCOUNT);
     pool_data_init(pool->data4096_data, pool->data4096, pool->data4096_freelist_data, &pool->data4096_freelist_count, 4096, POOL_data4096_MAXCOUNT);
     pool_data_init(pool->data65536_data, pool->data65536, pool->data65536_freelist_data, &pool->data65536_freelist_count, 65536, POOL_data65536_MAXCOUNT);
     pool_data_init(pool->data1048576_data, pool->data1048576, pool->data1048576_freelist_data, &pool->data1048576_freelist_count, 1048576, POOL_data1048576_MAXCOUNT);
-    // Initialize object freelist
     for (uint64_t i = 0; i < POOL_OBJECT_MAXCOUNT; i++) {
         pool->object_freelist_data[i] = &pool->object_data[i];
         pool->object_data[i].data = NULL;
@@ -258,7 +256,7 @@ result_t data_append_char(pool_t* pool, data_t** data, char c) {
             RETURN_ERR("Failed to allocate data with sufficient capacity");
         }
         memcpy(data_new->data, data_old->data, data_old->size);
-        data_new->data[data_old->size] = c;  // Append the new character
+        data_new->data[data_old->size] = c;
         data_new->size = data_old->size + 1;
         *data = data_new;
         if (pool_data_free(pool, data_old) != RESULT_OK) {
@@ -331,11 +329,60 @@ result_t data_destroy(pool_t* pool, data_t* data) {
     return RESULT_OK;
 }
 
-// ---------------- Object (JSON) ----------------
+// File
+result_t file_read(pool_t* pool, data_t** data, const char* path) {
+    FILE* file = fopen(path, "r");
+    if (!file) {
+        RETURN_ERR("Failed to open file for reading");
+    }
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fclose(file);
+        RETURN_ERR("Failed to seek to end of file");
+    }
+    long file_size = ftell(file);
+    if (file_size < 0) {
+        fclose(file);
+        RETURN_ERR("Failed to get file size");
+    }
+    if (fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        RETURN_ERR("Failed to seek to start of file");
+    }
+    if (pool_data_alloc(pool, data, file_size) != RESULT_OK) {
+        fclose(file);
+        RETURN_ERR("Failed to allocate data for file data");
+    }
+    size_t read_size = fread((*data)->data, 1, file_size, file);
+    if (read_size != (uint64_t)file_size) {
+        if (pool_data_free(pool, *data)) {
+            fclose(file);
+            RETURN_ERR("Failed to free data after partial read");
+        }
+        fclose(file);
+        RETURN_ERR("Failed to read entire file");
+    }
+    (*data)->size = file_size;
+    fclose(file);
+    return RESULT_OK;
+}
+result_t file_write(const char* path, const data_t* data) {
+    FILE* file = fopen(path, "w");
+    if (!file) {
+        RETURN_ERR("Failed to open file for writing");
+    }
+    size_t written_size = fwrite(data->data, 1, data->size, file);
+    if (written_size != data->size) {
+        fclose(file);
+        RETURN_ERR("Failed to write entire data to file");
+    }
+    if (fclose(file) != 0) {
+        RETURN_ERR("Failed to close file after writing");
+    }
+    return RESULT_OK;
+}
 
-// Escape a JSON data
+// Object
 static result_t escape_json_data(pool_t* pool, const data_t* input, data_t** output) {
-    // Worst case allocate 2x size
     uint64_t cap = (input ? input->size : 0) * 2 + 2;
     if (pool_data_alloc(pool, output, cap) != RESULT_OK) {
         RETURN_ERR("Failed to allocate buffer for JSON-escaped string");
@@ -398,7 +445,6 @@ static result_t escape_json_data(pool_t* pool, const data_t* input, data_t** out
     return RESULT_OK;
 }
 
-// JSON parsing helpers
 static const char* skip_ws(const char* p, const char* end) {
     while (p < end && (*p == ' ' || *p == '\n' || *p == '\r' || *p == '\t'))
         p++;
@@ -414,7 +460,6 @@ static result_t parse_json_data(pool_t* pool, const char** json, const char* end
     }
     p++;
     const char* start = p;
-    // find end quote, honoring escapes
     while (p < end) {
         if (*p == '"')
             break;
@@ -427,15 +472,12 @@ static result_t parse_json_data(pool_t* pool, const char** json, const char* end
     if (p >= end || *p != '"') {
         RETURN_ERR("Unterminated JSON string literal");
     }
-    // decode escapes into output
-    // First copy raw into temp and then unescape simple sequences
     size_t raw_len = (size_t)(p - start);
     if (pool_data_alloc(pool, out, raw_len + 1) != RESULT_OK) {
         RETURN_ERR("Failed to allocate buffer for raw JSON string");
     }
     (*out)->size = raw_len;
     memcpy((*out)->data, start, raw_len);
-    // process backslash escapes in place into new buffer
     data_t* decoded = NULL;
     if (pool_data_alloc(pool, &decoded, raw_len + 1) != RESULT_OK) {
         RETURN_ERR("Failed to allocate buffer for decoded JSON string");
@@ -500,7 +542,6 @@ static result_t parse_json_data(pool_t* pool, const char** json, const char* end
             i++;
         }
     }
-    // move decoded into out
     data_t* tmp = *out;
     *out = decoded;
     if (pool_data_free(pool, tmp) != RESULT_OK)
@@ -512,7 +553,7 @@ static result_t parse_json_data(pool_t* pool, const char** json, const char* end
 static result_t parse_json_value_local(pool_t* pool, const char** json, const char* end, object_t** out);
 
 static result_t parse_json_array_local(pool_t* pool, const char** json, const char* end, object_t** out) {
-    const char* p = *json;  // points at '['
+    const char* p = *json;
     if (p >= end || *p != '[') {
         RETURN_ERR("Expected '[' at start of JSON array");
     }
@@ -560,7 +601,7 @@ static result_t parse_json_array_local(pool_t* pool, const char** json, const ch
 }
 
 static result_t parse_json_object_local(pool_t* pool, const char** json, const char* end, object_t** out) {
-    const char* p = *json;  // at '{'
+    const char* p = *json;
     if (p >= end || *p != '{') {
         RETURN_ERR("Expected '{' at start of JSON object");
     }
@@ -742,7 +783,6 @@ static int32_t is_json_primitive_local(const data_t* s) {
         return 0;
     if (data_equal_str(s, "null") || data_equal_str(s, "true") || data_equal_str(s, "false"))
         return 1;
-    // number simple check
     const char* d = s->data;
     size_t n = s->size;
     size_t i = 0;
@@ -776,7 +816,6 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
     if (!obj)
         return data_append_str(pool, dst, "null");
     if (obj->data && !obj->child) {
-        // leaf
         if (is_json_primitive_local(obj->data)) {
             return data_append_data(pool, dst, obj->data);
         } else {
@@ -794,9 +833,7 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
             return RESULT_OK;
         }
     }
-    // container: determine if object or array
     if (!obj->data && obj->child && obj->child->data && obj->child->child) {
-        // This node is an object (children are key-value pairs)
         if (data_append_char(pool, dst, '{') != RESULT_OK)
             RETURN_ERR("Failed to append '{' to JSON output");
         const object_t* ch = obj->child;
@@ -826,7 +863,6 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
             RETURN_ERR("Failed to append '}' to JSON output");
         return RESULT_OK;
     } else if (!obj->data && obj->child) {
-        // array
         if (data_append_char(pool, dst, '[') != RESULT_OK)
             RETURN_ERR("Failed to append '[' to JSON output");
         const object_t* ch = obj->child;
@@ -845,7 +881,6 @@ static result_t object_to_json_recursive_local(pool_t* pool, data_t** dst, const
             RETURN_ERR("Failed to append ']' to JSON output");
         return RESULT_OK;
     }
-    // empty or null
     return data_append_str(pool, dst, "null");
 }
 
@@ -860,19 +895,15 @@ result_t object_todata_json(pool_t* pool, data_t** dst, const object_t* src) {
     return object_to_json_recursive_local(pool, dst, src);
 }
 
-// dot-path traversal supporting object keys and array indices (e.g., "a.b.0.c")
 result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object, const char* path) {
-    (void)pool;  // pool unused except for signature symmetry
     if (!object || !path) {
         RETURN_ERR("Invalid arguments: object and path are required");
     }
     const object_t* cur = object;
-    // if root is a container, dive into its child list
     if (cur->data == NULL && cur->child)
-        cur = cur;  // no-op
+        cur = cur;
     const char* p = path;
     while (*p) {
-        // extract segment until '.'
         char seg[256];
         size_t si = 0;
         while (*p && *p != '.' && si + 1 < sizeof(seg))
@@ -880,7 +911,6 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
         seg[si] = '\0';
         if (*p == '.')
             p++;
-        // decide if index
         int32_t is_index = 1;
         for (size_t i = 0; i < si; i++) {
             if (!isdigit((unsigned char)seg[i])) {
@@ -889,7 +919,6 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
             }
         }
         if (is_index && si > 0) {
-            // array index
             size_t idx = (size_t)strtoull(seg, NULL, 10);
             const object_t* child = cur->child;
             size_t k = 0;
@@ -902,7 +931,6 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
             }
             cur = child;
         } else {
-            // find key in object
             const object_t* child = cur->child;
             int32_t found = 0;
             while (child) {
@@ -920,64 +948,10 @@ result_t object_provide_str(pool_t* pool, object_t** dst, const object_t* object
             }
         }
     }
-    *dst = (object_t*)cur;  // cast away const for API
+    *dst = (object_t*)cur;
     return RESULT_OK;
 }
 
-// File
-result_t file_read(pool_t* pool, data_t** data, const char* path) {
-    FILE* file = fopen(path, "r");
-    if (!file) {
-        RETURN_ERR("Failed to open file for reading");
-    }
-    if (fseek(file, 0, SEEK_END) != 0) {
-        fclose(file);
-        RETURN_ERR("Failed to seek to end of file");
-    }
-    long file_size = ftell(file);
-    if (file_size < 0) {
-        fclose(file);
-        RETURN_ERR("Failed to get file size");
-    }
-    if (fseek(file, 0, SEEK_SET) != 0) {
-        fclose(file);
-        RETURN_ERR("Failed to seek to start of file");
-    }
-    if (pool_data_alloc(pool, data, file_size) != RESULT_OK) {
-        fclose(file);
-        RETURN_ERR("Failed to allocate data for file data");
-    }
-    size_t read_size = fread((*data)->data, 1, file_size, file);
-    if (read_size != (uint64_t)file_size) {
-        if (pool_data_free(pool, *data)) {
-            fclose(file);
-            RETURN_ERR("Failed to free data after partial read");
-        }
-        fclose(file);
-        RETURN_ERR("Failed to read entire file");
-    }
-    (*data)->size = file_size;
-    fclose(file);
-    return RESULT_OK;
-}
-result_t file_write(const char* path, const data_t* data) {
-    FILE* file = fopen(path, "w");
-    if (!file) {
-        RETURN_ERR("Failed to open file for writing");
-    }
-    size_t written_size = fwrite(data->data, 1, data->size, file);
-    if (written_size != data->size) {
-        fclose(file);
-        RETURN_ERR("Failed to write entire data to file");
-    }
-    if (fclose(file) != 0) {
-        RETURN_ERR("Failed to close file after writing");
-    }
-    return RESULT_OK;
-}
-
-// ---------------- Object (XML) ----------------
-// Minimal helpers for XML using data_t
 static const char* skip_xml_ws_local(const char* p, const char* end) {
     while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
         p++;
@@ -1006,7 +980,6 @@ static result_t parse_xml_text_local(pool_t* pool, const char** xml, const char*
     while (p < end && *p != '<')
         p++;
     size_t len = (size_t)(p - start);
-    // trim
     while (len > 0 && (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r')) {
         start++;
         len--;
@@ -1033,7 +1006,6 @@ static result_t parse_xml_element_local(pool_t* pool, const char** xml, const ch
 static result_t parse_xml_content_local(pool_t* pool, const char** xml, const char* end, const data_t* tag_name, object_t** content) {
     const char* p = *xml;
     p = skip_xml_ws_local(p, end);
-    // self-closing
     if (p < end && *p == '/') {
         p++;
         p = skip_xml_ws_local(p, end);
@@ -1058,14 +1030,12 @@ static result_t parse_xml_content_local(pool_t* pool, const char** xml, const ch
         if (*p == '<') {
             p++;
             if (p < end && *p == '/') {
-                // closing
                 p++;
                 p = skip_xml_ws_local(p, end);
                 data_t* closing = NULL;
                 if (parse_xml_tag_name_local(pool, &p, end, &closing) != RESULT_OK) {
                     RETURN_ERR("Failed to parse closing tag name");
                 }
-                // compare
                 if (closing->size != tag_name->size || memcmp(closing->data, tag_name->data, tag_name->size) != 0) {
                     if (pool_data_free(pool, closing) != RESULT_OK) {
                         RETURN_ERR("Failed to free closing tag buffer");
@@ -1082,8 +1052,7 @@ static result_t parse_xml_content_local(pool_t* pool, const char** xml, const ch
                 p++;
                 break;
             } else {
-                // child element
-                p--;  // include '<'
+                p--;
                 object_t* child;
                 if (parse_xml_element_local(pool, &p, end, &child) != RESULT_OK) {
                     RETURN_ERR("Failed to parse child XML element");
@@ -1096,7 +1065,6 @@ static result_t parse_xml_content_local(pool_t* pool, const char** xml, const ch
                 }
             }
         } else {
-            // text
             data_t* text = NULL;
             if (parse_xml_text_local(pool, &p, end, &text) != RESULT_OK) {
                 RETURN_ERR("Failed to parse XML text node");
@@ -1181,7 +1149,6 @@ result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
     const char* xml = src->data;
     const char* end = src->data + src->size;
     const char* p = skip_xml_ws_local(xml, end);
-    // skip declaration <? ... ?>
     if (p < end && *p == '<' && p + 1 < end && p[1] == '?') {
         while (p < end && !(p[0] == '?' && p + 1 < end && p[1] == '>'))
             p++;
@@ -1202,7 +1169,6 @@ result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
         if (p >= end)
             break;
         if (*p == '<') {
-            // skip comments <!-- ... --> and declarations <! ...>
             if (p + 4 <= end && strncmp(p, "<!--", 4) == 0) {
                 p += 4;
                 while (p + 3 <= end && strncmp(p, "-->", 3) != 0)
@@ -1237,7 +1203,6 @@ result_t object_parse_xml(pool_t* pool, object_t** dst, const data_t* src) {
     return RESULT_OK;
 }
 
-// escape data bytes for XML text/element names
 static result_t escape_xml_data(pool_t* pool, const data_t* in, data_t** out) {
     size_t est = in ? in->size * 6 + 1 : 1;
     if (pool_data_alloc(pool, out, est) != RESULT_OK) {
@@ -1276,7 +1241,6 @@ static result_t escape_xml_data(pool_t* pool, const data_t* in, data_t** out) {
                 break;
             default:
                 if ((unsigned char)ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r') {
-                    // skip control
                 } else {
                     if (data_append_char(pool, out, ch) != RESULT_OK) {
                         RETURN_ERR("Failed to append raw character during XML escape");
@@ -1349,10 +1313,8 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
         }
         return RESULT_OK;
     }
-    // container
     object_t* first = src->child;
     if (first && first->data) {
-        // object
         if (data_append_str(pool, dst, "<") != RESULT_OK) {
             RETURN_ERR("Failed to append '<' while serializing object start");
         }
@@ -1431,7 +1393,6 @@ static result_t object_to_xml_recursive_local(pool_t* pool, data_t** dst, const 
         }
         return RESULT_OK;
     } else if (first) {
-        // array
         if (data_append_str(pool, dst, "<") != RESULT_OK) {
             RETURN_ERR("Failed to append '<' while serializing array start");
         }
