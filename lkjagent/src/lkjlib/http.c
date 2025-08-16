@@ -227,7 +227,7 @@ static result_t extract_response_body(pool_t* pool, const data_t* raw_response, 
         uint64_t body_len = raw_response->size - body_start;
         if (body_len > 0) {
             // Create a temporary data to hold the body data
-            data_t* temp_body;
+            data_t* temp_body = NULL;
             if (data_create(pool, &temp_body) != RESULT_OK) {
                 RETURN_ERR("Failed to create temporary body data");
             }

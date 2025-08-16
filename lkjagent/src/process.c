@@ -1,9 +1,113 @@
 #include "lkjagent.h"
+#include "action/action.h"
+
+static result_t extract_content_from_llm_response(pool_t* pool, const data_t* json_response, data_t** content) {
+    object_t* response_obj = NULL;
+    object_t* choices_obj = NULL;
+    object_t* message_obj = NULL;
+    object_t* content_obj = NULL;
+    
+    // Parse the JSON response
+    if (object_parse_json(pool, &response_obj, json_response) != RESULT_OK) {
+        RETURN_ERR("Failed to parse LLM response JSON");
+    }
+    
+    // Navigate to choices[0].message.content
+    if (object_provide_str(&choices_obj, response_obj, "choices") != RESULT_OK) {
+        result_t cleanup = object_destroy(pool, response_obj);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup response object after choices extraction error");
+        }
+        RETURN_ERR("Failed to get choices array from LLM response");
+    }
+    
+    // Get first element of choices array (choices[0])
+    if (!choices_obj->child) {
+        result_t cleanup = object_destroy(pool, response_obj);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup response object after choices child error");
+        }
+        RETURN_ERR("Choices array is empty in LLM response");
+    }
+    
+    // Get message object from choices[0]
+    if (object_provide_str(&message_obj, choices_obj->child, "message") != RESULT_OK) {
+        result_t cleanup = object_destroy(pool, response_obj);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup response object after message extraction error");
+        }
+        RETURN_ERR("Failed to get message from first choice in LLM response");
+    }
+    
+    // Get content from message
+    if (object_provide_str(&content_obj, message_obj, "content") != RESULT_OK) {
+        result_t cleanup = object_destroy(pool, response_obj);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup response object after content extraction error");
+        }
+        RETURN_ERR("Failed to get content from message in LLM response");
+    }
+    
+    // Create a copy of the content data
+    if (data_create_data(pool, content, content_obj->data) != RESULT_OK) {
+        result_t cleanup = object_destroy(pool, response_obj);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup response object after content copy error");
+        }
+        RETURN_ERR("Failed to copy content data from LLM response");
+    }
+    
+    // Cleanup the parsed JSON object
+    if (object_destroy(pool, response_obj) != RESULT_OK) {
+        RETURN_ERR("Failed to cleanup response object");
+    }
+    
+    return RESULT_OK;
+}
+
+static result_t process_xml_content(pool_t* pool, lkjagent_t* lkjagent, const data_t* xml_content, uint64_t iteration) {
+    object_t* xml_obj = NULL;
+    object_t* action_obj = NULL;
+    action_t action = {0};
+    
+    // Parse the XML content into an object structure
+    if (object_parse_xml(pool, &xml_obj, xml_content) != RESULT_OK) {
+        RETURN_ERR("Failed to parse XML content from LLM response");
+    }
+    
+    // Check if this is an action XML
+    if (object_provide_str(&action_obj, xml_obj, "action") == RESULT_OK) {
+    }
+    
+    // Cleanup the XML object
+    if (object_destroy(pool, xml_obj) != RESULT_OK) {
+        RETURN_ERR("Failed to cleanup XML object");
+    }
+    
+    return RESULT_OK;
+}
 
 __attribute__((warn_unused_result)) result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* src, uint64_t iteration) {
-    // Placeholder for processing logic
-    if(!pool || !lkjagent || !src || iteration == 0) {
-        RETURN_ERR("Invalid arguments");
+    data_t* xml_content = NULL;
+    
+    // Extract XML content from the LLM JSON response
+    if (extract_content_from_llm_response(pool, src, &xml_content) != RESULT_OK) {
+        RETURN_ERR("Failed to extract content from LLM response");
     }
+
+    // Process the XML content
+    if (process_xml_content(pool, lkjagent, xml_content, iteration) != RESULT_OK) {
+        result_t cleanup = data_destroy(pool, xml_content);
+        if (cleanup != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup XML content after processing error");
+        }
+        RETURN_ERR("Failed to process XML content");
+    }
+    
+    // Cleanup the extracted content
+    if (data_destroy(pool, xml_content) != RESULT_OK) {
+        RETURN_ERR("Failed to cleanup XML content");
+    }
+    
     return RESULT_OK;
 }

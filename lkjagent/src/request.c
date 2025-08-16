@@ -251,5 +251,11 @@ result_t lkjagent_request(pool_t* pool, lkjagent_t* lkjagent, data_t** dst) {
         }
         RETURN_ERR("Failed to send HTTP POST request");
     }
+    if(data_destroy(pool, content_type) != RESULT_OK) {
+        PRINT_ERR("Failed to destroy content type data");
+    }
+    if(data_destroy(pool, request) != RESULT_OK) {
+        PRINT_ERR("Failed to destroy request data");
+    }
     return RESULT_OK;
 }
