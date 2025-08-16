@@ -1,12 +1,4 @@
-#include "lkjlib/lkjlib.h"
-
-#define CONFIG_PATH "/data/config.json"
-#define MEMORY_PATH "/data/memory.json"
-
-typedef struct lkjagent_t {
-    object_t* config;
-    object_t* memory;
-} lkjagent_t;
+#include "lkjagent.h"
 
 static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, lkjagent_t* lkjagent) {
     data_t* config_tmp = NULL;
@@ -18,7 +10,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
     }
     if (object_parse_json(pool, &lkjagent->config, config_tmp) != RESULT_OK) {
         if (data_destroy(pool, config_tmp) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy temporary data");
+            PRINT_ERR("Failed to destroy temporary data");
         }
         RETURN_ERR("Failed to parse configuration JSON");
     }
@@ -30,7 +22,7 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
     }
     if (object_parse_json(pool, &lkjagent->memory, memory_tmp) != RESULT_OK) {
         if (data_destroy(pool, memory_tmp) != RESULT_OK) {
-            RETURN_ERR("Failed to destroy temporary data");
+            PRINT_ERR("Failed to destroy temporary data");
         }
         RETURN_ERR("Failed to parse memory JSON");
     }
@@ -40,14 +32,41 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, lkjagent_t* lkjagent) {
-    data_t* tmp = NULL;
-    if (object_todata_json(pool, &tmp, lkjagent->config) != RESULT_OK) {
-        RETURN_ERR("Failed to convert config object to JSON");
+static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
+    data_t* content_type = NULL;
+    data_t* prompt = NULL;
+    data_t* recv = NULL;
+    if(data_create_str(&content_type, "application/json") != RESULT_OK) {
+        RETURN_ERR("Failed to create content_type");
     }
-    printf("%.*s\n", (int)tmp->size, tmp->data);
-    if (data_destroy(pool, tmp) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy temporary data");
+    if(lkjagent_makeprompt(pool, lkjagent, &prompt) != RESULT_OK) {
+        RETURN_ERR("Failed to make prompt");
+    }
+}
+
+static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, lkjagent_t* lkjagent) {
+    object_t* iteration_limit_enable = NULL;
+    object_t* iteration_limit_value = NULL;
+    int64_t iteration_limit;
+    if (object_provide_str(&iteration_limit_enable, "agent.iteration_limit.enable") != RESULT_OK) {
+        RETURN_ERR("Failed to provide iteration_limit_enable");
+    }
+    if (object_provide_str(&iteration_limit_value, "agent.iteration_limit.value") != RESULT_OK) {
+        RETURN_ERR("Failed to provide iteration_limit_value");
+    }
+    if (data_equal_str(iteration_limit_enable, "true")) {
+        iteration_limit = UINT64_MAX;
+    } else if (data_equal_str(iteration_limit_enable, "false")) {
+        if(data_toint(iteration_limit_value, &iteration_limit) != RESULT_OK) {
+            RETURN_ERR("Failed to convert iteration_limit_value to int");
+        }
+    } else {
+        RETURN_ERR("Invalid value for agent.iteration_limit.enable");
+    }
+    for(uint64_t i = 0; i < iteration_limit; i++) {
+        if (lkjagent_step(&pool, &lkjagent, i) != RESULT_OK) {
+            RETURN_ERR("Failed to execute lkjagent step");
+        }
     }
     return RESULT_OK;
 }

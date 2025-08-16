@@ -168,7 +168,7 @@ LKJAgent uses `data/config.json` for configuration. The configuration is structu
       "enable": false,
       "max_tokens": 2048
     },
-    "iterate": {
+    "iteration": {
       "max_iterations": 10
     }
   }

@@ -134,6 +134,7 @@ __attribute__((warn_unused_result)) result_t data_copy_str(pool_t* pool, data_t*
 __attribute__((warn_unused_result)) result_t data_append_data(pool_t* pool, data_t** data1, const data_t* data2);
 __attribute__((warn_unused_result)) result_t data_append_str(pool_t* pool, data_t** data, const char* str);
 __attribute__((warn_unused_result)) result_t data_append_char(pool_t* pool, data_t** data, char c);
+__attribute__((warn_unused_result)) result_t data_toint(const data_t* data, int64_t* dst);
 uint64_t data_equal_data(const data_t* data1, const data_t* data2);
 uint64_t data_equal_str(const data_t* data, const char* str);
 int64_t data_find_data(const data_t* data1, const data_t* data2, uint64_t index);

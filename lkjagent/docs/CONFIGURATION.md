@@ -212,7 +212,7 @@ The `agent` section controls core agent behavior, memory management, and state t
       "enable": false,
       "max_tokens": 2048
     },
-    "iterate": {
+    "iteration": {
       "max_iterations": 10
     },
     "state": {
@@ -232,11 +232,11 @@ The `agent` section controls core agent behavior, memory management, and state t
 
 ### Iteration Control
 
-#### `iterate.max_iterations` (integer, optional, default: 5)
+#### `iteration.max_iterations` (integer, optional, default: 5)
 ```json
 {
   "agent": {
-    "iterate": {
+    "iteration": {
       "max_iterations": 10
     }
   }
@@ -438,7 +438,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "think_log": { "max_entries": 2 },
     "evaluation_log": { "max_entries": 1 },
     "command_log": { "max_entries": 1 },
-    "iterate": { "max_iterations": 5 }
+    "iteration": { "max_iterations": 5 }
   }
 }
 ```
@@ -457,7 +457,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "think_log": { "max_entries": 8 },
     "evaluation_log": { "max_entries": 3 },
     "command_log": { "max_entries": 5 },
-    "iterate": { "max_iterations": 25 }
+    "iteration": { "max_iterations": 25 }
   }
 }
 ```
@@ -498,7 +498,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "timeout": 30
   },
   "agent": {
-    "iterate": { "max_iterations": 3 },
+    "iteration": { "max_iterations": 3 },
     "think_log": { "enable": true, "max_entries": 2 },
     "evaluation_log": { "enable": true, "max_entries": 1 },
     "command_log": { "enable": true, "max_entries": 1 }
@@ -524,7 +524,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "retry_delay": 5
   },
   "agent": {
-    "iterate": { "max_iterations": 15 },
+    "iteration": { "max_iterations": 15 },
     "paging_limit": {
       "enable": true,
       "max_tokens": 1536
@@ -553,7 +553,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "timeout": 45
   },
   "agent": {
-    "iterate": { "max_iterations": 10 }
+    "iteration": { "max_iterations": 10 }
   }
 }
 ```
@@ -640,7 +640,7 @@ LKJAgent supports multiple log types with configurable rotation and storage.
     "temperature": 0.3
   },
   "agent": {
-    "iterate": { "max_iterations": 5 },
+    "iteration": { "max_iterations": 5 },
     "think_log": { "max_entries": 1 }
   }
 }

@@ -132,6 +132,33 @@ result_t data_append_char(pool_t* pool, data_t** data, char c) {
     return RESULT_OK;
 }
 
+result_t data_toint(const data_t* data, int64_t* dst) {
+    int64_t value;
+    int neg;
+    uint64_t i;
+    uint64_t size = data->size;
+    if (data->data[0] == '-') {
+        neg = 1;
+        i = 1;
+    } else {
+        neg = 0;
+        i = 0;
+    }
+    while(i < size) {
+        char c = data->data[i];
+        if(c < '0' || c > '9') {
+            RETURN_ERR("Invalid character in data");
+        }
+        value = value * 10 + (c - '0');
+        i++;
+    }
+    if (neg) {
+        value = -value;
+    }
+    *dst = value;
+    return RESULT_OK;
+}
+
 uint64_t data_equal_data(const data_t* data1, const data_t* data2) {
     if (data1->size != data2->size) {
         return 0;

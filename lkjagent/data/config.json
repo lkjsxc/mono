@@ -23,15 +23,15 @@
     },
     "paging_limit": {
       "enable": false,
-      "max_tokens": 1024
+      "value": 1024
     },
     "hard_limit": {
       "enable": false,
-      "max_tokens": 2048
+      "value": 2048
     },
-    "iterate": {
+    "iteration_limit": {
       "enable": false,
-      "max_iterations": 10000
+      "value": 10000
     },
     "state": {
       "base": {
