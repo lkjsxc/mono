@@ -8,7 +8,7 @@
   "agent": {
     "think_log": {
       "enable": true,
-      "max_entries": 6,
+      "max_entries": 4,
       "key_prefix": "think_log_"
     },
     "evaluation_log": {
