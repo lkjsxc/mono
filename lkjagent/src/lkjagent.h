@@ -13,5 +13,6 @@ typedef struct lkjagent_t {
 
 __attribute__((warn_unused_result)) result_t lkjagent_request(pool_t* pool, lkjagent_t* lkjagent, data_t** dst);
 __attribute__((warn_unused_result)) result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* src, uint64_t iteration);
+__attribute__((warn_unused_result)) result_t lkjagent_action(pool_t* pool, lkjagent_t* lkjagent, data_t* src, uint64_t iteration);
 
 #endif

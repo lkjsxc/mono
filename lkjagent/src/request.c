@@ -1,6 +1,6 @@
 #include "lkjagent.h"
 
-result_t extract_config_objects( object_t* config, object_t* agent, object_t** agent_workingmemory, object_t** agent_state, object_t** config_agent_state, object_t** config_agent_state_base, object_t** config_agent_state_base_prompt, object_t** config_agent_state_main, object_t** config_agent_state_main_prompt) {
+static __attribute__((warn_unused_result)) result_t extract_config_objects(object_t* config, object_t* agent, object_t** agent_workingmemory, object_t** agent_state, object_t** config_agent_state, object_t** config_agent_state_base, object_t** config_agent_state_base_prompt, object_t** config_agent_state_main, object_t** config_agent_state_main_prompt) {
     if (object_provide_str(agent_workingmemory, agent, "working_memory") != RESULT_OK) {
         RETURN_ERR("Failed to get working memory from agent");
     }
@@ -26,14 +26,14 @@ result_t extract_config_objects( object_t* config, object_t* agent, object_t** a
     return RESULT_OK;
 }
 
-result_t build_header(pool_t* pool, data_t** dst) {
+static __attribute__((warn_unused_result)) result_t build_header(pool_t* pool, data_t** dst) {
     if (data_create_str(pool, dst, "{\"messages\":[{\"role\":\"user\",\"content\":\"") != RESULT_OK) {
         RETURN_ERR("Failed to copy initial prompt data");
     }
     return RESULT_OK;
 }
 
-result_t append_base(pool_t* pool, data_t** dst, object_t* config_agent_state_base_prompt) {
+static __attribute__((warn_unused_result)) result_t append_base(pool_t* pool, data_t** dst, object_t* config_agent_state_base_prompt) {
     data_t* tmp_data = NULL;
 
     if (data_create(pool, &tmp_data) != RESULT_OK) {
@@ -69,7 +69,7 @@ result_t append_base(pool_t* pool, data_t** dst, object_t* config_agent_state_ba
     return RESULT_OK;
 }
 
-result_t append_state(pool_t* pool, data_t** dst, object_t* config_agent_state_main_prompt) {
+static __attribute__((warn_unused_result)) result_t append_state(pool_t* pool, data_t** dst, object_t* config_agent_state_main_prompt) {
     data_t* tmp_data = NULL;
 
     if (data_create(pool, &tmp_data) != RESULT_OK) {
@@ -105,7 +105,7 @@ result_t append_state(pool_t* pool, data_t** dst, object_t* config_agent_state_m
     return RESULT_OK;
 }
 
-result_t append_memory(pool_t* pool, data_t** dst, object_t* agent_workingmemory) {
+static __attribute__((warn_unused_result)) result_t append_memory(pool_t* pool, data_t** dst, object_t* agent_workingmemory) {
     data_t* tmp_data = NULL;
 
     if (data_create(pool, &tmp_data) != RESULT_OK) {
@@ -156,7 +156,7 @@ result_t append_memory(pool_t* pool, data_t** dst, object_t* agent_workingmemory
     return RESULT_OK;
 }
 
-result_t append_footer(pool_t* pool, data_t** dst, object_t* config) {
+static __attribute__((warn_unused_result)) result_t append_footer(pool_t* pool, data_t** dst, object_t* config) {
     object_t* tmp_object = NULL;
 
     if (data_append_str(pool, dst, "\"}], \"model\":\"") != RESULT_OK) {
@@ -230,31 +230,31 @@ result_t lkjagent_request(pool_t* pool, lkjagent_t* lkjagent, data_t** dst) {
     object_t* url = NULL;
     data_t* content_type = NULL;
     data_t* request = NULL;
-    if(object_provide_str(&url, lkjagent->config, "llm.endpoint") != RESULT_OK) {
+    if (object_provide_str(&url, lkjagent->config, "llm.endpoint") != RESULT_OK) {
         RETURN_ERR("Failed to get URL from configuration");
     }
-    if(data_create_str(pool, &content_type, "application/json") != RESULT_OK) {
+    if (data_create_str(pool, &content_type, "application/json") != RESULT_OK) {
         RETURN_ERR("Failed to create content type data");
     }
     if (makerequest(pool, lkjagent->config, lkjagent->memory, &request) != RESULT_OK) {
-        if(data_destroy(pool, content_type) != RESULT_OK) {
+        if (data_destroy(pool, content_type) != RESULT_OK) {
             PRINT_ERR("Failed to destroy content type data");
         }
         RETURN_ERR("Failed to make request");
     }
-    if(http_post(pool, url->data, content_type, request, dst) != RESULT_OK) {
-        if(data_destroy(pool, content_type) != RESULT_OK) {
+    if (http_post(pool, url->data, content_type, request, dst) != RESULT_OK) {
+        if (data_destroy(pool, content_type) != RESULT_OK) {
             PRINT_ERR("Failed to destroy content type data");
         }
-        if(data_destroy(pool, request) != RESULT_OK) {
+        if (data_destroy(pool, request) != RESULT_OK) {
             PRINT_ERR("Failed to destroy request data");
         }
         RETURN_ERR("Failed to send HTTP POST request");
     }
-    if(data_destroy(pool, content_type) != RESULT_OK) {
+    if (data_destroy(pool, content_type) != RESULT_OK) {
         PRINT_ERR("Failed to destroy content type data");
     }
-    if(data_destroy(pool, request) != RESULT_OK) {
+    if (data_destroy(pool, request) != RESULT_OK) {
         PRINT_ERR("Failed to destroy request data");
     }
     return RESULT_OK;

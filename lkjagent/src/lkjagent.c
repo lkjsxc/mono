@@ -32,18 +32,37 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
     return RESULT_OK;
 }
 
+static __attribute__((warn_unused_result)) result_t lkjagent_save(pool_t* pool, lkjagent_t* lkjagent) {
+    data_t* memory = NULL;
+    if (object_todata_json(pool, &memory, lkjagent->memory) != RESULT_OK) {
+        RETURN_ERR("Failed to convert memory to data");
+    }
+    if (file_write(MEMORY_PATH, memory) != RESULT_OK) {
+        if (data_destroy(pool, memory) != RESULT_OK) {
+            PRINT_ERR("Failed to destroy temporary data");
+        }
+        RETURN_ERR("Failed to write memory to file");
+    }
+    if (data_destroy(pool, memory) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy temporary data");
+    }
+    return RESULT_OK;
+}
+
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
     data_t* recv = NULL;
     if (lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
         RETURN_ERR("Failed to request");
     }
-    if(lkjagent_process(pool, lkjagent, recv, iteration) != RESULT_OK) {
+    if (lkjagent_process(pool, lkjagent, recv, iteration) != RESULT_OK) {
         RETURN_ERR("Failed to process received data");
     }
     if (data_destroy(pool, recv) != RESULT_OK) {
         RETURN_ERR("Failed to destroy received data");
     }
-    fflush(stdout);
+    if (lkjagent_save(pool, lkjagent) != RESULT_OK) {
+        RETURN_ERR("Failed to save lkjagent");
+    }
     return RESULT_OK;
 }
 
