@@ -11,6 +11,6 @@ typedef struct lkjagent_t {
     object_t* memory;
 } lkjagent_t;
 
-__attribute__((warn_unused_result)) result_t lkjagent_makeprompt(pool_t* pool, lkjagent_t* lkjagent, data_t** prompt);
+__attribute__((warn_unused_result)) result_t lkjagent_request(pool_t* pool, lkjagent_t* lkjagent, data_t** dst);
 
 #endif

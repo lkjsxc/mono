@@ -572,6 +572,64 @@ result_t object_provide_str(object_t** dst, const object_t* object, const char* 
     return RESULT_OK;
 }
 
+result_t object_provide_data(object_t** dst, const object_t* object, const data_t* path) {
+    if (!object || !path || !path->data) {
+        RETURN_ERR("Invalid arguments: object and path are required");
+    }
+    const object_t* cur = object;
+    if (cur->data == NULL && cur->child)
+        cur = cur;
+    const char* p = path->data;
+    const char* end = path->data + path->size;
+    while (p < end) {
+        char seg[256];
+        size_t si = 0;
+        while (p < end && *p != '.' && si + 1 < sizeof(seg))
+            seg[si++] = *p++;
+        seg[si] = '\0';
+        if (p < end && *p == '.')
+            p++;
+        int32_t is_index = 1;
+        for (size_t i = 0; i < si; i++) {
+            if (!isdigit((unsigned char)seg[i])) {
+                is_index = 0;
+                break;
+            }
+        }
+        if (is_index && si > 0) {
+            size_t idx = (size_t)strtoull(seg, NULL, 10);
+            const object_t* child = cur->child;
+            size_t k = 0;
+            while (child && k < idx) {
+                child = child->next;
+                k++;
+            }
+            if (!child) {
+                RETURN_ERR("Array index out of range in path traversal");
+            }
+            cur = child;
+        } else {
+            const object_t* child = cur->child;
+            int32_t found = 0;
+            while (child) {
+                if (child->data && child->child) {
+                    if (child->data->size == si && memcmp(child->data->data, seg, si) == 0) {
+                        cur = child->child;
+                        found = 1;
+                        break;
+                    }
+                }
+                child = child->next;
+            }
+            if (!found) {
+                RETURN_ERR("Key not found in object during path traversal");
+            }
+        }
+    }
+    *dst = (object_t*)cur;
+    return RESULT_OK;
+}
+
 static const char* skip_xml_ws_local(const char* p, const char* end) {
     while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
         p++;

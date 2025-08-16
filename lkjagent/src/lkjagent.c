@@ -33,38 +33,35 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
-    data_t* content_type = NULL;
-    data_t* prompt = NULL;
     data_t* recv = NULL;
-    if(data_create_str(&content_type, "application/json") != RESULT_OK) {
-        RETURN_ERR("Failed to create content_type");
+    printf("debug: lkjagent_step called with iteration %lu\n", iteration);
+    if(lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
+        RETURN_ERR("Failed to make request");
     }
-    if(lkjagent_makeprompt(pool, lkjagent, &prompt) != RESULT_OK) {
-        RETURN_ERR("Failed to make prompt");
-    }
+    return RESULT_OK;
 }
 
 static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, lkjagent_t* lkjagent) {
     object_t* iteration_limit_enable = NULL;
     object_t* iteration_limit_value = NULL;
     int64_t iteration_limit;
-    if (object_provide_str(&iteration_limit_enable, "agent.iteration_limit.enable") != RESULT_OK) {
+    if (object_provide_str(&iteration_limit_enable, lkjagent->config, "agent.iteration_limit.enable") != RESULT_OK) {
         RETURN_ERR("Failed to provide iteration_limit_enable");
     }
-    if (object_provide_str(&iteration_limit_value, "agent.iteration_limit.value") != RESULT_OK) {
+    if (object_provide_str(&iteration_limit_value, lkjagent->config, "agent.iteration_limit.value") != RESULT_OK) {
         RETURN_ERR("Failed to provide iteration_limit_value");
     }
-    if (data_equal_str(iteration_limit_enable, "true")) {
+    if (data_equal_str(iteration_limit_enable->data, "true")) {
         iteration_limit = UINT64_MAX;
-    } else if (data_equal_str(iteration_limit_enable, "false")) {
-        if(data_toint(iteration_limit_value, &iteration_limit) != RESULT_OK) {
+    } else if (data_equal_str(iteration_limit_enable->data, "false")) {
+        if(data_toint(iteration_limit_value->data, &iteration_limit) != RESULT_OK) {
             RETURN_ERR("Failed to convert iteration_limit_value to int");
         }
     } else {
         RETURN_ERR("Invalid value for agent.iteration_limit.enable");
     }
-    for(uint64_t i = 0; i < iteration_limit; i++) {
-        if (lkjagent_step(&pool, &lkjagent, i) != RESULT_OK) {
+    for(int64_t i = 0; i < iteration_limit; i++) {
+        if (lkjagent_step(pool, lkjagent, i) != RESULT_OK) {
             RETURN_ERR("Failed to execute lkjagent step");
         }
     }

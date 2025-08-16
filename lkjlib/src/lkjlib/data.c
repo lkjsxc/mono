@@ -133,7 +133,7 @@ result_t data_append_char(pool_t* pool, data_t** data, char c) {
 }
 
 result_t data_toint(const data_t* data, int64_t* dst) {
-    int64_t value;
+    int64_t value = 0;
     int neg;
     uint64_t i;
     uint64_t size = data->size;
