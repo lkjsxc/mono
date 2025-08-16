@@ -64,7 +64,7 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t process_content_next_state(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj, uint64_t iteration) {
+static __attribute__((warn_unused_result)) result_t process_content_next_state(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj) {
     object_t* next_state_obj = NULL;
 
     if (object_provide_str(&next_state_obj, content_obj, "agent.next_state") != RESULT_OK) {
@@ -93,7 +93,7 @@ static __attribute__((warn_unused_result)) result_t process_content_action(pool_
 }
 
 static __attribute__((warn_unused_result)) result_t process_content(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj, uint64_t iteration) {
-    if (process_content_next_state(pool, lkjagent, content_obj, iteration) != RESULT_OK) {
+    if (process_content_next_state(pool, lkjagent, content_obj) != RESULT_OK) {
         RETURN_ERR("Failed to process next_state");
     }
 
@@ -122,13 +122,16 @@ result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* src, uint6
 
     // Cleanup the extracted content
     if (data_destroy(pool, content_data) != RESULT_OK) {
+        if (object_destroy(pool, content_obj) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup content object after content data cleanup error");
+        }
         RETURN_ERR("Failed to cleanup content data");
     }
 
-    // Process the XML content
+    // Process the content object
     if (process_content(pool, lkjagent, content_obj, iteration) != RESULT_OK) {
         if (object_destroy(pool, content_obj) != RESULT_OK) {
-            RETURN_ERR("Failed to cleanup content object after processing error");
+            PRINT_ERR("Failed to cleanup content object after processing error");
         }
         RETURN_ERR("Failed to process content object");
     }
