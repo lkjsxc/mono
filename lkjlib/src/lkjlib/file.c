@@ -1,7 +1,7 @@
 #include "lkjlib.h"
 
 // File
-result_t file_read(pool_t* pool, data_t** data, const char* path) {
+result_t file_read(pool_t* pool, const char* path, data_t** data) {
     FILE* file = fopen(path, "r");
     if (!file) {
         RETURN_ERR("Failed to open file for reading");

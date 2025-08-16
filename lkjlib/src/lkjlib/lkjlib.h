@@ -141,7 +141,7 @@ int64_t data_find_str(const data_t* data, const char* str, uint64_t index);
 int64_t data_find_char(const data_t* data, char c, uint64_t index);
 
 // File
-__attribute__((warn_unused_result)) result_t file_read(pool_t* pool, data_t** data, const char* path);
+__attribute__((warn_unused_result)) result_t file_read(pool_t* pool, const char* path, data_t** data);
 __attribute__((warn_unused_result)) result_t file_write(const char* path, const data_t* data);
 
 // Object

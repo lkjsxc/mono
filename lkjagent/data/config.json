@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "0001",
   "llm": {
     "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
     "model": "qwen/qwen3-8b",
@@ -228,38 +228,6 @@
             }
           }
         }
-      }
-    }
-  },
-  "documentation": {
-    "paging_system": {
-  "description": "LLM-driven memory management system that activates when working memory approaches token limits. Storage capacity is unlimited; paging is about managing working_memory tokens, not storage size.",
-      "trigger_conditions": {
-        "paging_limit_reached": "When estimated tokens >= paging_limit (1024), system transitions to paging mode",
-        "hard_limit_reached": "When estimated tokens >= hard_limit (2048), system forces paging mode immediately"
-      },
-      "llm_driven_approach": {
-        "analysis_phase": "LLM examines all items currently in working_memory",
-        "decision_making": "LLM evaluates importance, relevance, and recency of each item",
-        "selection_process": "LLM chooses which items to archive based on context and task requirements",
-        "intelligent_summarization": "LLM creates meaningful summaries when archiving multiple related items"
-      },
-      "paging_strategies": {
-        "contextual_analysis": "LLM analyzes working memory content to understand current context",
-        "smart_selection": "LLM selects items to archive based on importance and relevance",
-        "intelligent_summarization": "LLM combines related items into coherent summaries before archiving",
-        "preserve_context": "LLM maintains task continuity by keeping essential information active"
-      },
-      "example_workflow": {
-        "step1": "Working memory reaches 1024+ tokens",
-        "step2": "System auto-transitions from 'commanding' to 'paging'",
-        "step3": "LLM analyzes working memory: todo, character_alice_about, think_log_00, think_log_01",
-        "step4": "LLM decides: keep 'todo' (current task), archive old thinking logs",
-        "step5": "LLM creates summary: 'Early session focused on Alice character development'",
-        "step6": "LLM saves summary to storage with descriptive tag",
-        "step7": "LLM removes archived items from working memory",
-        "step8": "System auto-transitions back to 'thinking' mode",
-        "step9": "LLM continues with optimized working memory"
       }
     }
   }
