@@ -37,6 +37,9 @@ static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, 
     if (lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
         RETURN_ERR("Failed to make request");
     }
+    if(lkjagent_process(pool, lkjagent, recv, iteration) != RESULT_OK) {
+        RETURN_ERR("Failed to process received data");
+    }
     if (data_destroy(pool, recv) != RESULT_OK) {
         RETURN_ERR("Failed to destroy received data");
     }
@@ -64,7 +67,8 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, l
     }
     for (int64_t i = 0; i < iteration_limit; i++) {
         if (lkjagent_step(pool, lkjagent, i) != RESULT_OK) {
-            RETURN_ERR("Failed to execute lkjagent step");
+            PRINT_ERR("Failed to execute lkjagent step");
+            sleep(5);
         }
     }
     return RESULT_OK;
