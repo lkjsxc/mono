@@ -179,6 +179,10 @@ static result_t extract_response_body(pool_t* pool, const data_t* raw_response, 
     int64_t body_start_lf = data_find_str(raw_response, "\n\n", 0);
     int64_t body_start = -1;
 
+    if (data_create(pool, body) != RESULT_OK) {
+        RETURN_ERR("Failed to create response body");
+    }
+
     if (body_start_crlf >= 0) {
         body_start = body_start_crlf + 4;
     } else if (body_start_lf >= 0) {

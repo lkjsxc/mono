@@ -34,11 +34,9 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
 
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
     data_t* recv = NULL;
-    printf("debug: lkjagent_step called with iteration %lu\n", iteration);
     if (lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
         RETURN_ERR("Failed to make request");
     }
-    printf("Debug\n%.*s\n", (int)recv->size, recv->data);
     if (data_destroy(pool, recv) != RESULT_OK) {
         RETURN_ERR("Failed to destroy received data");
     }
