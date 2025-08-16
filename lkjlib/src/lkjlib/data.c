@@ -132,20 +132,6 @@ result_t data_append_char(pool_t* pool, data_t** data, char c) {
     return RESULT_OK;
 }
 
-result_t data_escape(pool_t* pool, data_t** data) {
-    if (pool_data_realloc(pool, data, 114514) != RESULT_OK) {
-        RETURN_ERR("data escaping not implemented yet");
-    }
-    return RESULT_OK;
-}
-
-result_t data_unescape(pool_t* pool, data_t** data) {
-    if (pool_data_realloc(pool, data, 114514) != RESULT_OK) {
-        RETURN_ERR("data unescaping not implemented yet");
-    }
-    return RESULT_OK;
-}
-
 uint64_t data_equal_data(const data_t* data1, const data_t* data2) {
     if (data1->size != data2->size) {
         return 0;
