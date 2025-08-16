@@ -4,16 +4,21 @@ services:
     container_name: lkjscript
     volumes:
       - ./lkjscript/data:/data
-  lkjsite:
-    build: ./lkjsite
-    container_name: lkjsite
-    volumes:
-      - ./lkjsite/data:/data
   lkjagent:
     build: ./lkjagent
     container_name: lkjagent
     volumes:
       - ./lkjagent/data:/data
+  lkjlib:
+    build: ./lkjlib
+    container_name: lkjlib
+    volumes:
+      - ./lkjlib/data:/data
+  lkjsite:
+    build: ./lkjsite
+    container_name: lkjsite
+    volumes:
+      - ./lkjsite/data:/data
   lkjlm:
     build: ./lkjlm
     container_name: lkjlm
