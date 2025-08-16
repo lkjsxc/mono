@@ -35,8 +35,12 @@ static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, 
 static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
     data_t* recv = NULL;
     printf("debug: lkjagent_step called with iteration %lu\n", iteration);
-    if(lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
+    if (lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
         RETURN_ERR("Failed to make request");
+    }
+    printf("Debug\n%.*s\n", (int)recv->size, recv->data);
+    if (data_destroy(pool, recv) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy received data");
     }
     return RESULT_OK;
 }
@@ -54,13 +58,13 @@ static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, l
     if (data_equal_str(iteration_limit_enable->data, "true")) {
         iteration_limit = UINT64_MAX;
     } else if (data_equal_str(iteration_limit_enable->data, "false")) {
-        if(data_toint(iteration_limit_value->data, &iteration_limit) != RESULT_OK) {
+        if (data_toint(iteration_limit_value->data, &iteration_limit) != RESULT_OK) {
             RETURN_ERR("Failed to convert iteration_limit_value to int");
         }
     } else {
         RETURN_ERR("Invalid value for agent.iteration_limit.enable");
     }
-    for(int64_t i = 0; i < iteration_limit; i++) {
+    for (int64_t i = 0; i < iteration_limit; i++) {
         if (lkjagent_step(pool, lkjagent, i) != RESULT_OK) {
             RETURN_ERR("Failed to execute lkjagent step");
         }
