@@ -76,8 +76,14 @@ static result_t process_xml_content(pool_t* pool, lkjagent_t* lkjagent, const da
     }
     
     // Check if this is an action XML
-    if (object_provide_str(&action_obj, xml_obj, "action") == RESULT_OK) {
+    if (object_provide_str(&action_obj, xml_obj, "action") != RESULT_OK) {
+        if (object_destroy(pool, xml_obj) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup XML object after action extraction error");
+        }
+        RETURN_ERR("Failed to get action from XML");
     }
+
+    
     
     // Cleanup the XML object
     if (object_destroy(pool, xml_obj) != RESULT_OK) {
