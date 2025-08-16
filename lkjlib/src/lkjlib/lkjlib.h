@@ -1,5 +1,3 @@
-// lkjlib version 0003
-
 #ifndef LKJLIB_H
 #define LKJLIB_H
 

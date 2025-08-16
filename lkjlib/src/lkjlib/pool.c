@@ -144,11 +144,13 @@ result_t pool_data_free(pool_t* pool, data_t* data) {
 }
 
 result_t pool_data_realloc(pool_t* pool, data_t** data, uint64_t capacity) {
+    data_t* new_data = NULL;
     if (pool_data_free(pool, *data) != RESULT_OK) {
         RETURN_ERR("Failed to free existing data");
     }
-    if (pool_data_alloc(pool, data, capacity) != RESULT_OK) {
+    if (pool_data_alloc(pool, &new_data, capacity) != RESULT_OK) {
         RETURN_ERR("Failed to allocate data with sufficient capacity");
     }
+    *data = new_data;
     return RESULT_OK;
 }
