@@ -1,4 +1,4 @@
-#include "lkjlib.h"
+#include "lkjlib/lkjlib.h"
 
 #define SOURCECODE_PATH "/data/index.txt"
 
