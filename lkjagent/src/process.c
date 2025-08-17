@@ -47,13 +47,60 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
         RETURN_ERR("Failed to get content from message in LLM response");
     }
 
-    // Create a copy of the content data
-    if (data_create_data(pool, content, content_obj->data) != RESULT_OK) {
-        result_t cleanup = object_destroy(pool, response_obj);
-        if (cleanup != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup response object after content copy error");
+    // Check if content contains a <think> tag and extract everything after it
+    data_t* processed_content = NULL;
+    int64_t think_pos = data_find_str(content_obj->data, "</think>", 0);
+    
+    if (think_pos >= 0) {
+        // Found </think> tag, extract everything after it
+        uint64_t start_pos = think_pos + 8; // Length of "</think>"
+
+        if (data_create(pool, &processed_content) != RESULT_OK) {
+            result_t cleanup = object_destroy(pool, response_obj);
+            if (cleanup != RESULT_OK) {
+                PRINT_ERR("Failed to cleanup response object after processed_content creation error");
+            }
+            RETURN_ERR("Failed to create processed content data");
         }
-        RETURN_ERR("Failed to copy content data from LLM response");
+
+        // Copy everything after </think> tag
+        for (uint64_t i = start_pos; i < content_obj->data->size; i++) {
+            if (data_append_char(pool, &processed_content, content_obj->data->data[i]) != RESULT_OK) {
+                if (data_destroy(pool, processed_content) != RESULT_OK) {
+                    PRINT_ERR("Failed to cleanup processed_content after char append error");
+                }
+                result_t cleanup = object_destroy(pool, response_obj);
+                if (cleanup != RESULT_OK) {
+                    PRINT_ERR("Failed to cleanup response object after char append error");
+                }
+                RETURN_ERR("Failed to append character to processed content");
+            }
+        }
+
+        // Use the processed content (everything after </think>)
+        if (data_create_data(pool, content, processed_content) != RESULT_OK) {
+            if (data_destroy(pool, processed_content) != RESULT_OK) {
+                PRINT_ERR("Failed to cleanup processed_content after content copy error");
+            }
+            result_t cleanup = object_destroy(pool, response_obj);
+            if (cleanup != RESULT_OK) {
+                PRINT_ERR("Failed to cleanup response object after content copy error");
+            }
+            RETURN_ERR("Failed to copy processed content data");
+        }
+        
+        if (data_destroy(pool, processed_content) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup processed_content");
+        }
+    } else {
+        // No </think> tag found, use original content as-is
+        if (data_create_data(pool, content, content_obj->data) != RESULT_OK) {
+            result_t cleanup = object_destroy(pool, response_obj);
+            if (cleanup != RESULT_OK) {
+                PRINT_ERR("Failed to cleanup response object after content copy error");
+            }
+            RETURN_ERR("Failed to copy content data from LLM response");
+        }
     }
 
     // Cleanup the parsed JSON object

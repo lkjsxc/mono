@@ -1,118 +1,94 @@
 {
-  "version": "0001",
+  "version": "0003",
   "llm": {
     "endpoint": "http://host.docker.internal:1234/v1/chat/completions",
     "model": "qwen/qwen3-8b",
     "temperature": 0.7
   },
   "agent": {
-    "evaluation_log": {
-      "enable": true,
-      "max_entries": 1,
-      "key_prefix": "evaluation_log_"
-    },
-    "command_log": {
-      "enable": true,
-      "max_entries": 1,
-      "key_prefix": "command_log_"
-    },
-    "paging_limit": {
-      "enable": false,
-      "value": 1024
-    },
-    "hard_limit": {
-      "enable": false,
-      "value": 2048
-    },
     "iteration_limit": {
-      "enable": false,
+      "enable": true,
       "value": 10000
     },
     "state": {
       "base": {
         "prompt": {
-          "purpose": "Deterministic agent loop that reads current state and working_memory, decides the next step, and outputs strictly formatted simple markup.",
+          "purpose": "Deterministic multi-step loop. Read current state + working_memory, decide next step, and emit strictly formatted XML.",
           "memory_model": {
-            "working_memory": "Volatile key-value space that holds the active context for this session.",
-            "storage": "Persistent key-value store with effectively unlimited capacity. Multiple conceptual tags must be combined into a single 'tags' string key. Use lowercase ASCII, underscores for separators, and no spaces (spaces will be converted to underscores). Values are plain strings. When in doubt, prefer saving rich, retrievable details to storage.",
+            "working_memory": "Volatile key-value space for active context.",
+            "storage": "Persistent key-value store with unlimited capacity. Combine conceptual tags in a single 'tags' string key; lowercase ASCII; underscores; no spaces.",
             "value_format_policy": {
-              "avoid_structured_values": "Do not store values in JSON, XML, CSV, or other structured formats.",
-              "represent_structure_with_keys": "Represent structure via the 'tags' key naming; keep values as concise plain strings."
+              "avoid_structured_values": "No JSON/XML/CSV in values; plain strings only.",
+              "represent_structure_with_keys": "Represent structure via tags, not values."
             },
             "tags_conventions": {
               "allowed_chars": "a-z, 0-9, underscore",
               "separator_within_tag": "_",
               "collection_separator": ",",
-              "order_policy": "Order of tags does not matter; the system normalizes and sorts them.",
+              "order_policy": "Order of tags is irrelevant.",
               "examples_of_tag_composition": {
                 "single_tag_example": "character_alice_background",
                 "collection_example": "dictionary,terms,vagueness"
               },
-              "length_hint": "Keep each tag concise (less than 64 chars)."
+              "length_hint": "Keep each tag < 64 chars."
             },
             "storage_usage_policy": {
-              "capacity": "Effectively unlimited; create as many keys as helpful for retrieval and provenance.",
-              "value_target_tokens": "Around 100 tokens per key; if longer, split across multiple keys instead of shrinking content.",
-              "granularity": "Prefer small, focused values saved under descriptive, composable tags—it's fine to spread information across many keys.",
-              "housekeeping": "Occasionally consolidate for readability, not due to capacity limits."
+              "capacity": "Unlimited.",
+              "value_target_tokens": "≈100 tokens per key; split if longer.",
+              "granularity": "Prefer small, focused values with descriptive tags.",
+              "housekeeping": "Occasionally consolidate for readability."
             }
           },
           "iteration_principles": {
-            "continuity": "Build on prior state and memory to maintain multi-iteration coherence."
+            "continuity": "Build on prior state + memory for coherence.",
+            "minimality": "Keep outputs short and unambiguous for Qwen3-8B."
           },
           "output_contract": {
-            "container": "Always emit an agent container as the top-level element in the message content."
+            "container": "Always emit <agent> as top-level with EXACTLY one <next_state> and EXACTLY one <action> using the commanding schema.",
+            "schema_template": "<agent>\n  <next_state>STATE</next_state>\n  <action>\n    <type>TYPE</type>\n    <tags>TAGS</tags>\n    <value>VALUE</value>\n  </action>\n</agent>",
+            "schema_rules": {
+              "allowed_states": "thinking | commanding | evaluating | paging",
+              "allowed_types": "working_memory_add | working_memory_remove | storage_load | storage_save | storage_search",
+              "tags_required": "Comma-separated tags string.",
+              "value_required_for": "Include <value> only for working_memory_add and storage_save; otherwise include empty element <value></value>."
+            }
           },
           "safety_and_bounds": {
-            "avoid_unnecessary_changes": "Do not create or rename tags unless necessary for the task.",
-            "no_freeform_json": "Do not output JSON; output only the required tags inside the agent container.",
-            "respect_limits": "When memory is large, prefer archiving less-relevant items to storage with clear tags.",
-            "compact_values": "Keep storage values around 100 tokens. If exceeding this size, split into multiple parts.",
-            "storage_capacity": "Storage capacity is unlimited; favor liberal saving to storage for traceability and retrieval."
+            "avoid_unnecessary_changes": "Do not create/rename tags unless needed.",
+            "no_freeform_json": "Output only XML inside <agent>.",
+            "respect_limits": "When working_memory grows, archive to storage with clear tags.",
+            "compact_values": "Aim for ≈60–120 tokens in values.",
+            "storage_capacity": "Unlimited; save liberally for traceability."
+          },
+          "quality": {
+            "clarity": "Direct, specific, minimal verbosity.",
+            "traceability": "Thinking/evaluating must leave concise traces in working_memory.",
+            "default_flow": "thinking → commanding → evaluating → (paging as needed) → thinking."
           }
         }
       },
       "thinking": {
         "prompt": {
           "goals": {
-            "goal_1": "Analyze current working_memory and recent logs to determine the most useful next step.",
-            "goal_2": "Select next_state: 'thinking' to continue planning, 'commanding' to perform an action, or 'evaluating' to reflect on results."
+            "g1": "Analyze working_memory + logs; pick the most useful next atomic action.",
+            "g2": "Record the reasoning that leads to that action into working_memory."
           },
           "principles": {
-            "parsimony": "Include only fields required by this state.",
-            "stability": "Preserve established tags and meanings; avoid unnecessary churn.",
-            "traceability": "Use action/working_memory_add sparingly to reference concrete keys or intended actions."
+            "parsimony": "Emit only required fields.",
+            "stability": "Preserve existing tags.",
+            "traceability": "Always log rationale."
           },
           "decision_rubric": {
-            "choose_commanding_when": {
-              "case_1": "There is a clear, atomic action that advances the task",
-              "case_2": "Information must be moved between storage and working_memory",
-              "case_3": "A concise update to working_memory is beneficial"
-            },
-            "choose_thinking_when": {
-              "case_1": "Context requires more analysis before acting",
-              "case_2": "Multiple options exist and need short prioritization"
-            },
-            "choose_evaluating_when": {
-              "case_1": "A previous action's impact needs assessment to guide the next step"
-            }
+            "choose_commanding_when": "A clear atomic action is identified or info needs to move between storage and working_memory.",
+            "choose_paging_when": "Working_memory is crowded or token budget is tight."
           },
-          "output_requirements": {
-            "must_emit": {
-              "next_state": "Allowed values: thinking | commanding | evaluating"
-            },
-            "may_emit": {
-              "action": {
-                "type": "working_memory_add",
-                "description": "Add concise, factual reasoning about the chosen next step to working memory; reference keys when helpful",
-                "format": "Use standard action XML format: <action><type>working_memory_add</type><tags>thinking_notes</tags><value>reasoning content</value></action>"
-              }
-            },
-            "must_not_emit": {
-              "evaluation_log": true
+          "strict_output_format": {
+            "template": "<agent>\n  <next_state>STATE</next_state>\n  <action>\n    <type>working_memory_add</type>\n    <tags>thinking_notes</tags>\n    <value>Concise rationale for the next atomic action, key options considered, and chosen action summary.</value>\n  </action>\n</agent>",
+            "rules": {
+              "state_policy": "STATE must be 'commanding' by default, or 'paging' if cleanup is necessary before action.",
+              "value_policy": "Keep to ≈60–120 tokens; no lists/tables/JSON."
             }
-          },
-          "continuity": "Maintain multi-step coherence across iterations; avoid contradicting established facts in working_memory."
+          }
         }
       },
       "commanding": {
@@ -126,108 +102,75 @@
             "storage_search": true
           },
           "principles": {
-            "parsimony": "Only emit <action> with required children; nothing else.",
-            "stability": "Prefer updating existing keys over creating new ones.",
-            "traceability": "Choose tags that clearly reflect content and future retrieval needs.",
-            "storage_first": "When in doubt, persist useful details to storage. Storage capacity is unlimited, so don't hesitate to create new keys for clarity and recall."
+            "parsimony": "Emit only <next_state> and one <action>.",
+            "stability": "Prefer updating existing keys.",
+            "traceability": "Choose informative tags; rely on prior thinking_notes.",
+            "storage_first": "Favor persisting to storage if in doubt."
           },
           "strict_output_format": {
-            "exact_xml_only": "Output exactly one XML block with the following structure and lowercase tag names; no prose, no backticks, no JSON:",
-            "template": "<action>\n  <type>a</type>\n  <tags>b</tags>\n  <value>c</value>\n</action>",
+            "template": "<agent>\n  <next_state>evaluating</next_state>\n  <action>\n    <type>TYPE</type>\n    <tags>TAGS</tags>\n    <value>VALUE</value>\n  </action>\n</agent>",
             "rules": {
-              "type_values": "a must be one of: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search",
-              "tags_required": "b is a single string of comma-separated tags (the system will normalize: lowercase, replace spaces with underscores, sort, dedupe)",
-              "value_required_for": "Include <value> only for working_memory_add and storage_save; omit the <value> element entirely for working_memory_remove, storage_load, and storage_search",
-              "no_other_fields": "Do not emit any other elements or attributes.",
-              "whitespace": "Whitespace and indentation are flexible; tag names and structure must match exactly."
+              "next_state_values": "Must always be 'evaluating'.",
+              "type_values": "TYPE ∈ {working_memory_add, working_memory_remove, storage_load, storage_save, storage_search}.",
+              "tags_required": "TAGS is a comma-separated tags string.",
+              "value_required_for": "Include VALUE only for working_memory_add or storage_save; otherwise output an empty VALUE element."
             }
           },
           "action_rules": {
-            "single_action": "Emit exactly one action per response.",
-            "no_next_state": "Do NOT emit next_state in commanding state (the system will auto-transition to evaluating).",
-            "tags_format": "Use a single string of comma-separated tags as the key (e.g., 'dictionary,terms,vagueness'). Tags may be in any order; the system will lowercase, replace spaces with underscores, sort ascending, and deduplicate.",
-            "value_requirement": "Include value only for working_memory_add and storage_save.",
-            "no_structured_values": "Values must be plain strings, not JSON/XML/CSV or similar structured data.",
-            "value_size_limit": "For storage_save, keep value around 100 tokens; summarize if longer.",
-            "unlimited_capacity": "Storage capacity is unlimited—feel free to create new, well-tagged keys to maximize retrieval quality.",
-            "idempotence_hint": "Prefer actions that do not cause duplication when repeated."
+            "single_action": "Emit exactly one action.",
+            "no_structured_values": "Values are plain strings; no JSON/XML.",
+            "value_size_limit": "For storage_save, ≈100 tokens.",
+            "thinking_trace_requirement": "If the chosen TYPE is not working_memory_add, ensure the prior state logged rationale in 'thinking_notes'."
           }
         }
       },
       "evaluating": {
         "prompt": {
-          "purpose": "Reflect on the most recent action/result and set up the next thinking cycle.",
+          "purpose": "Briefly reflect on the most recent action’s effect and prepare for the next thinking cycle.",
           "principles": {
-            "brevity": "Keep evaluation concise and factual.",
-            "stability": "Do not invent or rename keys; refer to existing ones.",
-            "continuity": "Set up the next thinking cycle based on concrete recent changes."
+            "brevity": "Concise and factual.",
+            "stability": "Do not invent/rename keys.",
+            "continuity": "Support the next reasoning step."
           },
-          "output_requirements": {
-            "must_emit": {
-              "next_state": "thinking",
-              "evaluation_log": "Concise, factual assessment that references specific keys or effects when relevant"
-            },
-            "may_emit": {
-              "action": {
-                "type": "working_memory_add",
-                "description": "Add evaluation details to working memory if needed",
-                "format": "Use standard action XML format: <action><type>working_memory_add</type><tags>evaluation_notes</tags><value>evaluation content</value></action>"
-              }
-            },
-            "must_not_emit": {}
+          "strict_output_format": {
+            "template": "<agent>\n  <next_state>thinking</next_state>\n  <action>\n    <type>working_memory_add</type>\n    <tags>evaluation_notes</tags>\n    <value>What changed, immediate outcome, any follow-ups or cleanup needed.</value>\n  </action>\n</agent>",
+            "rules": {
+              "next_state_values": "Must always be 'thinking'.",
+              "value_policy": "Keep to ≈40–80 tokens."
+            }
           },
           "guidance": {
             "assess": {
               "item_1": "What changed in working_memory or storage?",
-              "item_2": "Is additional cleanup or paging likely needed soon?"
-            },
-            "continuity": "Keep evaluations short but informative to support multi-iteration coherence."
+              "item_2": "Is cleanup/paging needed soon?"
+            }
           }
         }
       },
       "paging": {
         "prompt": {
-          "purpose": "Reduce working_memory size by archiving low-priority items to storage while preserving high-value context. Storage capacity is unlimited; paging exists to declutter working_memory tokens, not because storage is scarce.",
+          "purpose": "Reduce working_memory by archiving low-priority items to storage while preserving high-value context.",
           "principles": {
-            "compactness": "Produce concise summaries when saving to storage (≈100 tokens).",
-            "declutter": "Use paging to move detail out of working_memory liberally; storage has no practical limit.",
-            "safety": "Remove only items that have been safely archived or are clearly low-value."
+            "compactness": "Summarize when saving (≈100 tokens).",
+            "declutter": "Move detail out; storage is unlimited.",
+            "safety": "Only remove what was archived or is low value."
           },
           "strategy": {
-            "analyze": "Scan keys in working_memory and rank by recency, relevance to current goals, and necessity for next iterations.",
-            "select": "Prefer archiving older thinking logs, completed subtasks, and reference data.",
-            "preserve": "Keep immediate context, current todos, and active entities in working_memory."
+            "analyze": "Rank working_memory by recency/relevance.",
+            "select": "Archive older thinking logs and completed subtasks.",
+            "preserve": "Keep immediate context and active todos."
           },
           "strict_output_format": {
-            "exact_xml_only": "Output exactly one XML block in this structure; no prose, no backticks, no JSON:",
-            "template": "<action>\n  <type>a</type>\n  <tags>b</tags>\n  <value>c</value>\n</action>",
+            "template": "<agent>\n  <next_state>thinking</next_state>\n  <action>\n    <type>TYPE</type>\n    <tags>TAGS</tags>\n    <value>VALUE</value>\n  </action>\n</agent>",
             "rules": {
-              "type_values": "a must be one of: storage_save | working_memory_remove",
-              "tags_required": "b is a single string of comma-separated tags (the system will normalize)",
-              "value_policy": "Include <value> for storage_save (concise summary ~100 tokens). Omit <value> for working_memory_remove.",
-              "no_other_fields": "Do not emit any other elements or attributes.",
-              "whitespace": "Whitespace and indentation are flexible; tag names and structure must match exactly."
+              "type_values": "TYPE must be storage_save or working_memory_remove.",
+              "tags_required": "TAGS is a comma-separated tags string identifying what is archived or removed.",
+              "value_policy": "Include VALUE only for storage_save (compact summary). For working_memory_remove, include empty VALUE."
             }
           },
           "actions_policy": {
-            "per_response": "Emit one <action> per response.",
-            "preferred_sequence": {
-              "step_1": "storage_save (summaries or bundles of less-critical info)",
-              "step_2": "working_memory_remove (corresponding keys just archived)"
-            },
-            "tagging": "Use descriptive, stable tags (lowercase, underscores).",
-            "unlimited_capacity": "No key-count budget—feel free to create more keys for clarity. Consolidate only for readability or navigation, not capacity.",
-            "value_size": "When saving to storage, produce concise summaries ≈100 tokens."
-          },
-          "output_requirements": {
-            "must_emit": {
-              "action": "Exactly one, either storage_save or working_memory_remove"
-            },
-            "must_not_emit": {
-              "next_state": true,
-              "evaluation_log": true,
-              "think_log": true
-            }
+            "per_response": "Emit exactly one action.",
+            "preferred_sequence": "If multiple items: first storage_save (archive), then on the next turn working_memory_remove (cleanup)."
           }
         }
       }

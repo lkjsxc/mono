@@ -1,26 +1,72 @@
 #include "lkjagent.h"
 
-result_t lkjagent_action_storage_save(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value, uint64_t iteration) {
-    object_t* storage = NULL;
-    object_t* new_entry = NULL;
-    data_t* storage_path = NULL;
-    data_t* entry_data = NULL;
+// Helper function to create storage key in the format "tags,iteration_123"
+static result_t create_storage_key(pool_t* pool, const data_t* tags, uint64_t iteration, data_t** storage_key) {
+    if (!pool || !tags || !storage_key) {
+        RETURN_ERR("Invalid parameters for create_storage_key");
+    }
     
-    // Create path to storage
+    // Create the storage key data structure
+    if (data_create(pool, storage_key) != RESULT_OK) {
+        RETURN_ERR("Failed to create storage key data");
+    }
+    
+    // Append the tags
+    if (data_append_data(pool, storage_key, tags) != RESULT_OK) {
+        if (data_destroy(pool, *storage_key) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup storage_key after tags append error");
+        }
+        RETURN_ERR("Failed to append tags to storage key");
+    }
+    
+    // Append ",iteration_"
+    if (data_append_str(pool, storage_key, ",iteration_") != RESULT_OK) {
+        if (data_destroy(pool, *storage_key) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup storage_key after iteration prefix append error");
+        }
+        RETURN_ERR("Failed to append iteration prefix to storage key");
+    }
+    
+    // Convert iteration to string and append
+    char iteration_buffer[32];
+    snprintf(iteration_buffer, sizeof(iteration_buffer), "%lu", iteration);
+    
+    if (data_append_str(pool, storage_key, iteration_buffer) != RESULT_OK) {
+        if (data_destroy(pool, *storage_key) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup storage_key after iteration append error");
+        }
+        RETURN_ERR("Failed to append iteration number to storage key");
+    }
+    
+    return RESULT_OK;
+}
+
+// Action handler for storage_save - saves data to persistent storage
+result_t lkjagent_action_storage_save(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value, uint64_t iteration) {
+    if (pool == NULL || lkjagent == NULL || tags == NULL || value == NULL) {
+        RETURN_ERR("Invalid parameters (null pool, lkjagent, tags, or value)");
+    }
+    
+    object_t* storage = NULL;
+    data_t* storage_path = NULL;
+    data_t* storage_key = NULL;
+    
+    // Create path to storage in memory
     if (data_create_str(pool, &storage_path, "storage") != RESULT_OK) {
-        RETURN_ERR("Failed to create storage path");
+        RETURN_ERR("Failed to create storage path data");
     }
     
     // Get or create storage object
     if (object_provide_str(&storage, lkjagent->memory, "storage") != RESULT_OK) {
-        // Create new storage array if it doesn't exist
+        // Storage doesn't exist, create new storage object
         if (object_create(pool, &storage) != RESULT_OK) {
             if (data_destroy(pool, storage_path) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup storage_path after object creation error");
+                PRINT_ERR("Failed to cleanup storage_path after storage creation error");
             }
             RETURN_ERR("Failed to create storage object");
         }
         
+        // Set the new storage object in memory
         if (object_set_data(pool, lkjagent->memory, storage_path, NULL) != RESULT_OK) {
             if (data_destroy(pool, storage_path) != RESULT_OK) {
                 PRINT_ERR("Failed to cleanup storage_path after set_data error");
@@ -28,157 +74,41 @@ result_t lkjagent_action_storage_save(pool_t* pool, lkjagent_t* lkjagent, data_t
             if (object_destroy(pool, storage) != RESULT_OK) {
                 PRINT_ERR("Failed to cleanup storage after set_data error");
             }
-            RETURN_ERR("Failed to set storage object");
-        }
-    }
-    
-    // Check if entry with same tags already exists and remove it
-    object_t* current = storage->child;
-    object_t* prev = NULL;
-    
-    while (current != NULL) {
-        object_t* next = current->next;
-        bool should_remove = false;
-        
-        // Check if current entry matches tags
-        if (current->data != NULL) {
-            // Entry format is "tags:value:iteration"
-            if (data_find_data(current->data, tags, 0) == 0) {
-                // Tags found at beginning, check if followed by ':'
-                char separator[2] = ":";
-                if (data_find_str(current->data, separator, tags->size) == (int64_t)tags->size) {
-                    should_remove = true;
-                }
-            }
+            RETURN_ERR("Failed to set storage object in memory");
         }
         
-        if (should_remove) {
-            // Remove existing entry with same tags
-            if (prev == NULL) {
-                storage->child = next;
-            } else {
-                prev->next = next;
+        // Re-obtain the storage reference after setting it
+        if (object_provide_str(&storage, lkjagent->memory, "storage") != RESULT_OK) {
+            if (data_destroy(pool, storage_path) != RESULT_OK) {
+                PRINT_ERR("Failed to cleanup storage_path after re-provide error");
             }
-            
-            if (object_destroy(pool, current) != RESULT_OK) {
-                RETURN_ERR("Failed to destroy replaced storage entry");
-            }
-            break;
-        } else {
-            prev = current;
+            RETURN_ERR("Failed to re-obtain storage object reference");
         }
-        
-        current = next;
     }
     
-    // Create new storage entry as a simple data entry
-    // Format: "tags:value:iteration"
-    if (data_create(pool, &entry_data) != RESULT_OK) {
+    // Create storage key in format "tags,iteration_123"
+    if (create_storage_key(pool, tags, iteration, &storage_key) != RESULT_OK) {
         if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after entry_data creation error");
+            PRINT_ERR("Failed to cleanup storage_path after storage_key creation error");
         }
-        RETURN_ERR("Failed to create entry data");
+        RETURN_ERR("Failed to create storage key");
     }
     
-    // Build entry string: "tags:value:iteration"
-    if (data_append_data(pool, &entry_data, tags) != RESULT_OK) {
+    // Use object_set_data to store the value directly in storage using the key as path
+    if (object_set_data(pool, storage, storage_key, value) != RESULT_OK) {
         if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after append tags error");
+            PRINT_ERR("Failed to cleanup storage_path after storage set_data error");
         }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after append tags error");
+        if (data_destroy(pool, storage_key) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup storage_key after storage set_data error");
         }
-        RETURN_ERR("Failed to append tags");
+        RETURN_ERR("Failed to set data in storage");
     }
     
-    if (data_append_str(pool, &entry_data, ":") != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after append separator error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after append separator error");
-        }
-        RETURN_ERR("Failed to append separator");
+    // Cleanup temporary data
+    if (data_destroy(pool, storage_key) != RESULT_OK) {
+        PRINT_ERR("Failed to cleanup storage_key");
     }
-    
-    if (data_append_data(pool, &entry_data, value) != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after append value error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after append value error");
-        }
-        RETURN_ERR("Failed to append value");
-    }
-    
-    if (data_append_str(pool, &entry_data, ":") != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after append separator error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after append separator error");
-        }
-        RETURN_ERR("Failed to append separator");
-    }
-    
-    // Convert iteration to string and append
-    data_t* iteration_str = NULL;
-    char iteration_buffer[32];
-    snprintf(iteration_buffer, sizeof(iteration_buffer), "%lu", iteration);
-    
-    if (data_create_str(pool, &iteration_str, iteration_buffer) != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after iteration_str creation error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after iteration_str creation error");
-        }
-        RETURN_ERR("Failed to create iteration string");
-    }
-    
-    if (data_append_data(pool, &entry_data, iteration_str) != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after append iteration error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after append iteration error");
-        }
-        if (data_destroy(pool, iteration_str) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup iteration_str after append iteration error");
-        }
-        RETURN_ERR("Failed to append iteration");
-    }
-    
-    if (data_destroy(pool, iteration_str) != RESULT_OK) {
-        PRINT_ERR("Failed to cleanup iteration_str");
-    }
-    
-    // Create object for the entry
-    if (object_create(pool, &new_entry) != RESULT_OK) {
-        if (data_destroy(pool, storage_path) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup storage_path after new_entry creation error");
-        }
-        if (data_destroy(pool, entry_data) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup entry_data after new_entry creation error");
-        }
-        RETURN_ERR("Failed to create new entry object");
-    }
-    
-    new_entry->data = entry_data;
-    
-    // Add to storage by linking as child
-    if (storage->child == NULL) {
-        storage->child = new_entry;
-    } else {
-        // Find the last child and append
-        object_t* current = storage->child;
-        while (current->next != NULL) {
-            current = current->next;
-        }
-        current->next = new_entry;
-    }
-    
-    // Cleanup
     if (data_destroy(pool, storage_path) != RESULT_OK) {
         PRINT_ERR("Failed to cleanup storage_path");
     }

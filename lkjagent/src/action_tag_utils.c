@@ -70,24 +70,6 @@ static result_t trim_segment(pool_t* pool, const char* start, uint64_t length, d
     return RESULT_OK;
 }
 
-// High-quality tag sorting function
-result_t sort_tags(pool_t* pool, const data_t* input_tags, data_t** sorted_tags) {
-    if (input_tags == NULL || input_tags->data == NULL || input_tags->size == 0) {
-        // Empty input, create empty output
-        if (data_create_str(pool, sorted_tags, "") != RESULT_OK) {
-            RETURN_ERR("Failed to create empty sorted tags");
-        }
-        return RESULT_OK;
-    }
-    
-    // For now, just return a copy of the input (preserving backward compatibility)
-    if (data_create_data(pool, sorted_tags, input_tags) != RESULT_OK) {
-        RETURN_ERR("Failed to create copy of input tags");
-    }
-    
-    return RESULT_OK;
-}
-
 // High-quality tags_sort function that produces a null-terminated array
 result_t tags_sort(pool_t* pool, data_t** sorted_tags_array, const data_t* unsorted_tags) {
     if (!pool || !sorted_tags_array || !unsorted_tags) {
