@@ -66,21 +66,21 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
 
 static __attribute__((warn_unused_result)) result_t process_content_next_state(pool_t* pool, lkjagent_t* lkjagent, const object_t* content) {
     object_t* content_next_state = NULL;
-    data_t* next_state_path = NULL;
+    data_t* state_path = NULL;
 
     if (object_provide_str(&content_next_state, content, "agent.next_state") != RESULT_OK) {
         RETURN_ERR("Failed to get next_state from content object");
     }
 
-    if (data_create_str(pool, &next_state_path, "next_state") != RESULT_OK) {
+    if (data_create_str(pool, &state_path, "state") != RESULT_OK) {
         RETURN_ERR("Failed to create data for next_state path");
     }
 
-    if (object_set_data(pool, lkjagent->memory, next_state_path, content_next_state->data) != RESULT_OK) {
+    if (object_set_data(pool, lkjagent->memory, state_path, content_next_state->data) != RESULT_OK) {
         RETURN_ERR("Failed to set data for next_state object");
     }
 
-    if (data_destroy(pool, next_state_path) != RESULT_OK) {
+    if (data_destroy(pool, state_path) != RESULT_OK) {
         RETURN_ERR("Failed to cleanup next_state path");
     }
 

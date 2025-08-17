@@ -6,11 +6,6 @@
     "temperature": 0.7
   },
   "agent": {
-    "think_log": {
-      "enable": true,
-      "max_entries": 4,
-      "key_prefix": "think_log_"
-    },
     "evaluation_log": {
       "enable": true,
       "max_entries": 1,
@@ -86,7 +81,7 @@
           "principles": {
             "parsimony": "Include only fields required by this state.",
             "stability": "Preserve established tags and meanings; avoid unnecessary churn.",
-            "traceability": "Use <think_log> sparingly to reference concrete keys or intended actions."
+            "traceability": "Use action/working_memory_add sparingly to reference concrete keys or intended actions."
           },
           "decision_rubric": {
             "choose_commanding_when": {
@@ -107,10 +102,13 @@
               "next_state": "Allowed values: thinking | commanding | evaluating"
             },
             "may_emit": {
-              "think_log": "Concise, factual reasoning about the chosen next step; reference keys when helpful"
+              "action": {
+                "type": "working_memory_add",
+                "description": "Add concise, factual reasoning about the chosen next step to working memory; reference keys when helpful",
+                "format": "Use standard action XML format: <action><type>working_memory_add</type><tags>thinking_notes</tags><value>reasoning content</value></action>"
+              }
             },
             "must_not_emit": {
-              "action": true,
               "evaluation_log": true
             }
           },
@@ -169,10 +167,14 @@
               "next_state": "thinking",
               "evaluation_log": "Concise, factual assessment that references specific keys or effects when relevant"
             },
-            "must_not_emit": {
-              "action": true,
-              "think_log": true
-            }
+            "may_emit": {
+              "action": {
+                "type": "working_memory_add",
+                "description": "Add evaluation details to working memory if needed",
+                "format": "Use standard action XML format: <action><type>working_memory_add</type><tags>evaluation_notes</tags><value>evaluation content</value></action>"
+              }
+            },
+            "must_not_emit": {}
           },
           "guidance": {
             "assess": {
