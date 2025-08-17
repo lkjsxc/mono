@@ -1,5 +1,10 @@
 #include "lkjagent.h"
 
+static __attribute__((warn_unused_result)) result_t tags_sort(pool_t* pool, lkjagent_t* lkjagent, data_t* tags) {
+    data_t* tags_new = NULL;
+    return RESULT_OK;
+}
+
 static __attribute__((warn_unused_result)) result_t lkjagent_action(pool_t* pool, lkjagent_t* lkjagent, object_t* content, uint64_t iteration) {
     object_t* action_type = NULL;
     object_t* action_tags = NULL;
@@ -18,9 +23,15 @@ static __attribute__((warn_unused_result)) result_t lkjagent_action(pool_t* pool
     }
 
     if (data_equal_data(action_type->data, "storage_save") == RESULT_OK) {
-        
+        if (lkjagent_action_storage_save(pool, lkjagent, action_tags->data, action_value->data, iteration) != RESULT_OK) {
+            RETURN_ERR("Failed to perform storage_save action");
+        }
     } else if (data_equal_data(action_type->data, "storage_load") == RESULT_OK) {
-
+        if (lkjagent_action_storage_load(pool, lkjagent, action_tags->data, action_value->data, iteration) != RESULT_OK) {
+            RETURN_ERR("Failed to perform storage_load action");
+        }
+    } else {
+        RETURN_ERR("Unknown action type");
     }
 
     return RESULT_OK;
