@@ -1197,3 +1197,153 @@ result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src) {
         return object_to_xml_recursive_local(pool, dst, src, "value");
     }
 }
+
+result_t object_set_data(pool_t* pool, object_t* object, const data_t* path, const data_t* data) {
+    if (!object) {
+        RETURN_ERR("Invalid argument: object is required");
+    }
+    if (!path || !path->data) {
+        RETURN_ERR("Invalid argument: path is required");
+    }
+    
+    // Navigate to the target object using the path
+    object_t* target = object;
+    const char* p = path->data;
+    const char* end = path->data + path->size;
+    
+    while (p < end) {
+        // Extract the next path segment
+        char seg[256];
+        size_t si = 0;
+        while (p < end && *p != '.' && si + 1 < sizeof(seg)) {
+            seg[si++] = *p++;
+        }
+        seg[si] = '\0';
+        if (p < end && *p == '.') {
+            p++;
+        }
+        
+        // Check if this is an array index
+        int32_t is_index = 1;
+        for (size_t i = 0; i < si; i++) {
+            if (!isdigit((unsigned char)seg[i])) {
+                is_index = 0;
+                break;
+            }
+        }
+        
+        if (is_index && si > 0) {
+            // Handle array index
+            size_t idx = (size_t)strtoull(seg, NULL, 10);
+            object_t* child = target->child;
+            size_t k = 0;
+            while (child && k < idx) {
+                child = child->next;
+                k++;
+            }
+            if (!child) {
+                RETURN_ERR("Array index out of range in path for object_set_data");
+            }
+            target = child;
+        } else {
+            // Handle object key
+            object_t* child = target->child;
+            object_t* found = NULL;
+            
+            while (child) {
+                if (child->data && child->child) {
+                    if (child->data->size == si && memcmp(child->data->data, seg, si) == 0) {
+                        found = child->child;
+                        break;
+                    }
+                }
+                child = child->next;
+            }
+            
+            if (!found) {
+                // Create new key-value pair if not found
+                object_t* key_obj = NULL;
+                object_t* value_obj = NULL;
+                
+                if (object_create(pool, &key_obj) != RESULT_OK) {
+                    RETURN_ERR("Failed to create key object for new path segment");
+                }
+                if (object_create(pool, &value_obj) != RESULT_OK) {
+                    RETURN_ERR("Failed to create value object for new path segment");
+                }
+                
+                // Set the key
+                if (data_create_str(pool, &key_obj->data, seg) != RESULT_OK) {
+                    RETURN_ERR("Failed to create key data for new path segment");
+                }
+                key_obj->child = value_obj;
+                
+                // Add to parent's children
+                if (!target->child) {
+                    target->child = key_obj;
+                } else {
+                    object_t* last_child = target->child;
+                    while (last_child->next) {
+                        last_child = last_child->next;
+                    }
+                    last_child->next = key_obj;
+                }
+                
+                found = value_obj;
+            }
+            target = found;
+        }
+    }
+    
+    // Set the data at the target object
+    if (target->data) {
+        if (data_destroy(pool, target->data) != RESULT_OK) {
+            RETURN_ERR("Failed to destroy existing target object data");
+        }
+        target->data = NULL;
+    }
+    
+    if (data) {
+        if (data_create_data(pool, &target->data, data) != RESULT_OK) {
+            RETURN_ERR("Failed to create data copy for target object");
+        }
+    }
+    
+    return RESULT_OK;
+}
+
+result_t object_set_str(pool_t* pool, object_t* object, const char* path, const char* str) {
+    if (!path) {
+        RETURN_ERR("Invalid argument: path is required");
+    }
+    
+    // Convert path string to data_t
+    data_t* path_data = NULL;
+    if (data_create_str(pool, &path_data, path) != RESULT_OK) {
+        RETURN_ERR("Failed to create path data from string");
+    }
+    
+    // Convert str to data_t if not NULL
+    data_t* str_data = NULL;
+    if (str) {
+        if (data_create_str(pool, &str_data, str) != RESULT_OK) {
+            if (data_destroy(pool, path_data) != RESULT_OK) {
+                RETURN_ERR("Failed to destroy path data after str data creation failure");
+            }
+            RETURN_ERR("Failed to create string data");
+        }
+    }
+    
+    // Call object_set_data
+    result_t result = object_set_data(pool, object, path_data, str_data);
+    
+    // Clean up temporary data
+    if (path_data && data_destroy(pool, path_data) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy temporary path data");
+    }
+    if (str_data && data_destroy(pool, str_data) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy temporary string data");
+    }
+    
+    return result;
+}

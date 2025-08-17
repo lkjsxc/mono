@@ -156,6 +156,8 @@ __attribute__((warn_unused_result)) result_t object_parse_xml(pool_t* pool, obje
 __attribute__((warn_unused_result)) result_t object_todata_xml(pool_t* pool, data_t** dst, const object_t* src);
 __attribute__((warn_unused_result)) result_t object_provide_data(object_t** dst, const object_t* object, const data_t* path);
 __attribute__((warn_unused_result)) result_t object_provide_str(object_t** dst, const object_t* object, const char* path);
+__attribute__((warn_unused_result)) result_t object_set_data(pool_t* pool, object_t* object, const data_t* path, const data_t* data);
+__attribute__((warn_unused_result)) result_t object_set_str(pool_t* pool, object_t* object, const char* path, const char* str);
 
 // HTTP
 __attribute__((warn_unused_result)) result_t http_get(pool_t* pool, const data_t* url, data_t** response);

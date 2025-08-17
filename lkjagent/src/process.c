@@ -64,24 +64,33 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t process_content_next_state(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj) {
-    object_t* next_state_obj = NULL;
+static __attribute__((warn_unused_result)) result_t process_content_next_state(pool_t* pool, lkjagent_t* lkjagent, const object_t* content) {
+    object_t* content_next_state = NULL;
+    data_t* next_state_path = NULL;
 
-    if (object_provide_str(&next_state_obj, content_obj, "agent.next_state") != RESULT_OK) {
+    if (object_provide_str(&content_next_state, content, "agent.next_state") != RESULT_OK) {
         RETURN_ERR("Failed to get next_state from content object");
     }
 
-    if (object_set_data(pool, lkjagent->memory, "next_state", next_state_obj->data) != RESULT_OK) {
+    if (data_create_str(pool, &next_state_path, "next_state") != RESULT_OK) {
+        RETURN_ERR("Failed to create data for next_state path");
+    }
+
+    if (object_set_data(pool, lkjagent->memory, next_state_path, content_next_state->data) != RESULT_OK) {
         RETURN_ERR("Failed to set data for next_state object");
+    }
+
+    if (data_destroy(pool, next_state_path) != RESULT_OK) {
+        RETURN_ERR("Failed to cleanup next_state path");
     }
 
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t process_content_action(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj, uint64_t iteration) {
+static __attribute__((warn_unused_result)) result_t process_content_action(pool_t* pool, lkjagent_t* lkjagent, const object_t* content, uint64_t iteration) {
     object_t* action_obj = NULL;
 
-    if (object_provide_str(&action_obj, content_obj, "agent.action") != RESULT_OK) {
+    if (object_provide_str(&action_obj, content, "agent.action") != RESULT_OK) {
         RETURN_ERR("Failed to get action from content object");
     }
 
@@ -92,24 +101,24 @@ static __attribute__((warn_unused_result)) result_t process_content_action(pool_
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t process_content(pool_t* pool, lkjagent_t* lkjagent, const object_t* content_obj, uint64_t iteration) {
-    if (process_content_next_state(pool, lkjagent, content_obj) != RESULT_OK) {
+static __attribute__((warn_unused_result)) result_t process_content(pool_t* pool, lkjagent_t* lkjagent, const object_t* content, uint64_t iteration) {
+    if (process_content_next_state(pool, lkjagent, content) != RESULT_OK) {
         RETURN_ERR("Failed to process next_state");
     }
 
-    if (process_content_action(pool, lkjagent, content_obj, iteration) != RESULT_OK) {
+    if (process_content_action(pool, lkjagent, content, iteration) != RESULT_OK) {
         RETURN_ERR("Failed to process action");
     }
 
     return RESULT_OK;
 }
 
-result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* src, uint64_t iteration) {
+result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* recv, uint64_t iteration) {
     data_t* content_data = NULL;
     object_t* content_obj = NULL;
 
     // Extract XML content from the LLM JSON response
-    if (extract_content_from_llm_response(pool, src, &content_data) != RESULT_OK) {
+    if (extract_content_from_llm_response(pool, recv, &content_data) != RESULT_OK) {
         RETURN_ERR("Failed to extract content from LLM response");
     }
 
