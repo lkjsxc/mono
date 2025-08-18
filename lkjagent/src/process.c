@@ -50,10 +50,10 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
     // Check if content contains a <think> tag and extract everything after it
     data_t* processed_content = NULL;
     int64_t think_pos = data_find_str(content_obj->data, "</think>", 0);
-    
+
     if (think_pos >= 0) {
         // Found </think> tag, extract everything after it
-        uint64_t start_pos = think_pos + 8; // Length of "</think>"
+        uint64_t start_pos = think_pos + 8;  // Length of "</think>"
 
         if (data_create(pool, &processed_content) != RESULT_OK) {
             result_t cleanup = object_destroy(pool, response_obj);
@@ -88,7 +88,7 @@ static __attribute__((warn_unused_result)) result_t extract_content_from_llm_res
             }
             RETURN_ERR("Failed to copy processed content data");
         }
-        
+
         if (data_destroy(pool, processed_content) != RESULT_OK) {
             PRINT_ERR("Failed to cleanup processed_content");
         }
@@ -163,6 +163,8 @@ static __attribute__((warn_unused_result)) result_t process_content(pool_t* pool
 result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* recv, uint64_t iteration) {
     data_t* content_data = NULL;
     object_t* content_obj = NULL;
+    object_t* paging_limit_enable = NULL;
+    object_t* paging_limit_value = NULL;
 
     // Extract XML content from the LLM JSON response
     if (extract_content_from_llm_response(pool, recv, &content_data) != RESULT_OK) {
@@ -195,6 +197,39 @@ result_t lkjagent_process(pool_t* pool, lkjagent_t* lkjagent, data_t* recv, uint
     // Cleanup the content object
     if (object_destroy(pool, content_obj) != RESULT_OK) {
         RETURN_ERR("Failed to cleanup content object");
+    }
+
+    // Get paging configuration
+    if (object_provide_str(&paging_limit_enable, lkjagent->config, "agent.paging_limit.enable") != RESULT_OK) {
+        RETURN_ERR("Failed to get paging from content object");
+    }
+    if (object_provide_str(&paging_limit_value, lkjagent->config, "agent.paging_limit.value") != RESULT_OK) {
+        RETURN_ERR("Failed to get paging limit value from content object");
+    }
+    if (data_equal_str(paging_limit_enable->data, "true")) {
+        int64_t paging_value;
+        object_t* working_memory_obj = NULL;
+        data_t* working_memory_data = NULL;
+        if (data_toint(paging_limit_value->data, &paging_value) != RESULT_OK) {
+            RETURN_ERR("Failed to parse paging limit value");
+        }
+        if (object_provide_str(&working_memory_obj, lkjagent->memory, "working_memory") != RESULT_OK) {
+            RETURN_ERR("Failed to get working memory object");
+        }
+        if (object_todata_xml(pool, &working_memory_data, working_memory_obj) != RESULT_OK) {
+            RETURN_ERR("Failed to convert working memory object to data");
+        }
+        if (working_memory_data->size > (uint64_t)paging_value) {
+            if (object_set_str(pool, lkjagent->memory, "state", "paging") != RESULT_OK) {
+                if (data_destroy(pool, working_memory_data) != RESULT_OK) {
+                    PRINT_ERR("Failed to cleanup working memory data after setting state");
+                }
+                RETURN_ERR("Failed to set working memory data");
+            }
+        }
+        if (data_destroy(pool, working_memory_data) != RESULT_OK) {
+            PRINT_ERR("Failed to cleanup working memory data");
+        }
     }
 
     return RESULT_OK;

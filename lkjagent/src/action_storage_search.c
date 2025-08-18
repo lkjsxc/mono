@@ -141,7 +141,7 @@ result_t lkjagent_action_storage_search(pool_t* pool, lkjagent_t* lkjagent, data
     // Get storage object from memory
     object_t* storage = NULL;
     if (object_provide_str(&storage, lkjagent->memory, "storage") != RESULT_OK) {
-        // No storage exists, save this information to working memory
+        PRINT_ERR("Failed to get storage object from memory");
         data_t* no_storage_tags = NULL;
         data_t* no_storage_value = NULL;
         

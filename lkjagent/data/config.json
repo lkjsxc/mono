@@ -7,8 +7,12 @@
   },
   "agent": {
     "iteration_limit": {
-      "enable": true,
+      "enable": false,
       "value": 10000
+    },
+    "paging_limit": {
+      "enable": true,
+      "value": 5000
     },
     "state": {
       "base": {
@@ -30,7 +34,7 @@
                 "single_tag_example": "character_alice_background",
                 "collection_example": "dictionary,terms,vagueness"
               },
-              "length_hint": "Keep each tag < 64 chars."
+              "length_hint": "Keep each tag < 3 tokens."
             },
             "storage_usage_policy": {
               "capacity": "Unlimited.",
@@ -40,8 +44,7 @@
             }
           },
           "iteration_principles": {
-            "continuity": "Build on prior state + memory for coherence.",
-            "minimality": "Keep outputs short and unambiguous for Qwen3-8B."
+            "continuity": "Build on prior state + memory for coherence."
           },
           "output_contract": {
             "container": "Always emit <agent> as top-level with EXACTLY one <next_state> and EXACTLY one <action> using the commanding schema.",
@@ -86,7 +89,7 @@
             "template": "<agent>\n  <next_state>STATE</next_state>\n  <action>\n    <type>working_memory_add</type>\n    <tags>thinking_notes</tags>\n    <value>Concise rationale for the next atomic action, key options considered, and chosen action summary.</value>\n  </action>\n</agent>",
             "rules": {
               "state_policy": "STATE must be 'commanding' by default, or 'paging' if cleanup is necessary before action.",
-              "value_policy": "Keep to ≈60–120 tokens; no lists/tables/JSON."
+              "value_policy": "Keep to ≈40–80 tokens. The value must be a plain, unstructured string."
             }
           }
         }

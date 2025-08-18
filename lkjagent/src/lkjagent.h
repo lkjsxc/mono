@@ -19,7 +19,7 @@ __attribute__((warn_unused_result)) result_t lkjagent_action(pool_t* pool, lkjag
 // Action function declarations
 __attribute__((warn_unused_result)) result_t lkjagent_action_working_memory_add(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value, uint64_t iteration);
 __attribute__((warn_unused_result)) result_t lkjagent_action_working_memory_remove(pool_t* pool, lkjagent_t* lkjagent, data_t* tags);
-__attribute__((warn_unused_result)) result_t lkjagent_action_storage_save(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value, uint64_t iteration);
+__attribute__((warn_unused_result)) result_t lkjagent_action_storage_save(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value);
 __attribute__((warn_unused_result)) result_t lkjagent_action_storage_load(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, uint64_t iteration);
 __attribute__((warn_unused_result)) result_t lkjagent_action_storage_search(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, data_t* value, uint64_t iteration);
 

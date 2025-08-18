@@ -7,7 +7,7 @@ result_t lkjagent_action_storage_load(pool_t* pool, lkjagent_t* lkjagent, data_t
     
     // Get storage object
     if (object_provide_str(&storage, lkjagent->memory, "storage") != RESULT_OK) {
-        // No storage exists, nothing to load
+        PRINT_ERR("Failed to get storage object from memory");
         return RESULT_OK;
     }
     

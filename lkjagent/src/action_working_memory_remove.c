@@ -8,7 +8,7 @@ result_t lkjagent_action_working_memory_remove(pool_t* pool, lkjagent_t* lkjagen
     
     // Get working memory object
     if (object_provide_str(&working_memory, lkjagent->memory, "working_memory") != RESULT_OK) {
-        // No working memory exists, nothing to remove
+        PRINT_ERR("Failed to get working memory object from memory");
         return RESULT_OK;
     }
     

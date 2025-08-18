@@ -63,7 +63,7 @@ result_t lkjagent_action(pool_t* pool, lkjagent_t* lkjagent, object_t* action, u
             RETURN_ERR("Failed to perform working_memory_remove action");
         }
     } else if (data_equal_str(action_type->data, "storage_save")) {
-        if (lkjagent_action_storage_save(pool, lkjagent, sorted_tags_string, action_value->data, iteration) != RESULT_OK) {
+        if (lkjagent_action_storage_save(pool, lkjagent, sorted_tags_string, action_value->data) != RESULT_OK) {
             // Cleanup
             for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
                 if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
