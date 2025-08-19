@@ -36,3 +36,9 @@ services:
   lkjnostrclient:
     build: ./lkjnostrclient
     container_name: lkjnostrclient
+  lkjnpubmining:
+    build: ./lkjnpubmining
+    container_name: lkjnpubmining
+    command: ["/app/build/lkjnpubmining", "aa"]
+    volumes:
+      - ./lkjnpubmining/data:/data
