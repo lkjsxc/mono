@@ -1,10 +1,9 @@
-#include "lkjlib/lkjlib.h"
-
-#define SRC_PATH "/data/main.lkjscript"
+#include "lkjscript.h"
 
 int main() {
     static pool_t pool;
     data_t* src = NULL;
+    object_t* token = NULL;
     if(pool_init(&pool) != RESULT_OK) {
         RETURN_ERR("Failed to initialize memory pool");
         return 1;
@@ -13,7 +12,9 @@ int main() {
         RETURN_ERR("Failed to read source file");
         return 1;
     }
-    printf("debug: %.*s\n", (int)src->size, src->data);
-    fflush(stdout);
+    if(lkjscript_tokenize(&pool, token, src) != RESULT_OK) {
+        RETURN_ERR("Failed to tokenize source code");
+        return 1;
+    }
     return 0;
 }
