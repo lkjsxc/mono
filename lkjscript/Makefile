@@ -31,6 +31,8 @@ all: $(TARGET)
 # Create directories if they don't exist
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
+	mkdir -p $(OBJ_DIR)/lkjlib
+	mkdir -p $(OBJ_DIR)/action
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)

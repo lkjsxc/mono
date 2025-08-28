@@ -1,6 +1,7 @@
 FROM gcc:12 as builder
-COPY ./src /app/src
+COPY ./src/ /app/src
 COPY ./Makefile /app
+
 WORKDIR /app
 RUN make
 
