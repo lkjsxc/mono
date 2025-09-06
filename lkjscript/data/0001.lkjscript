@@ -1,1 +1,7 @@
-debug
+// test
+
+imm 5 100
+
+copy 0 5
+
+debug   // output debug

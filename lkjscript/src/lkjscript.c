@@ -8,14 +8,11 @@
 #define LKJSCRIPT_SRCPATH "/data/0001.lkjscript"
 
 typedef enum {
-    RESULT_OK,
-    RESULT_ERROR
-} result_t;
-
-typedef enum {
     INST_NULL,
     INST_END,
-    INST_DEBUG
+    INST_DEBUG,
+    INST_IMM,
+    INST_COPY,
 } inst_t;
 
 typedef struct {
@@ -24,91 +21,131 @@ typedef struct {
 
 static lkjscript_t lkjscript;
 
-int token_size(const char* token) {
-    for(int i = 0; 1; i++) {
-        if(token[i] == ' ' || token[i] == '\n' || token[i] == '\r' || token[i] == '\t' || token[i] == '\0') {
+int32_t token_size(const char* token) {
+    for (int32_t i = 0; 1; i++) {
+        if (token[i] == ' ' || token[i] == '\n' || token[i] == '\r' || token[i] == '\t' || token[i] == '\0') {
             return i;
         }
     }
 }
 
-const char* token_next(const char* token) {
-    int size = token_size(token);
-    token += size;
-    while(*token == ' ' || *token == '\n' || *token == '\r' || *token == '\t') {
-        token++;
+int32_t token_toint(const char* token) {
+    int32_t size = token_size(token);
+    int32_t value = 0;
+    for (int32_t i = 0; i < size; i++) {
+        value = value * 10 + (token[i] - '0');
     }
-    return token;
+    return value;
 }
 
-int token_equal(const char* a, const char* b) {
-    int a_size = token_size(a);
-    int b_size = token_size(b);
-    if(a_size != b_size) {
+int32_t token_equal(const char* a, const char* b) {
+    int32_t a_size = token_size(a);
+    int32_t b_size = token_size(b);
+    if (a_size != b_size) {
         return 0;
     }
-    for(int i = 0; i < a_size; i++) {
-        if(a[i] != b[i]) {
+    for (int32_t i = 0; i < a_size; i++) {
+        if (a[i] != b[i]) {
             return 0;
         }
     }
     return 1;
 }
 
-result_t compile() {
+const char* token_skipspace(const char* token) {
+    while (*token == ' ' || *token == '\n' || *token == '\r' || *token == '\t') {
+        token++;
+    }
+    return token;
+}
+
+const char* token_next(const char* token) {
+    int32_t size = token_size(token);
+    token += size;
+    token = token_skipspace(token);
+    while (token_equal(token, "//")) {
+        while (*token != '\n' && *token != '\0') {
+            token++;
+        }
+        token = token_skipspace(token);
+    }
+    return token;
+}
+
+void compile() {
     // Load source file
-    FILE *src_file = fopen(LKJSCRIPT_SRCPATH, "rb");
+    FILE* src_file = fopen(LKJSCRIPT_SRCPATH, "rb");
     if (!src_file) {
         fprintf(stderr, "Error: Unable to open source file %s\n", LKJSCRIPT_SRCPATH);
-        return RESULT_ERROR;
+        exit(1);
     }
-    int32_t src_size = fread(lkjscript.data, 1, LKJSCRIPT_SIZE, src_file);
+    int32_t src_size = fread(lkjscript.data + 1, 1, LKJSCRIPT_SIZE, src_file);
     fclose(src_file);
-    lkjscript.data[src_size] = '\0';
+    lkjscript.data[0] = ' ';
+    lkjscript.data[src_size + 1] = '\0';
 
     // Tokenize and compile
-    int32_t* inst_data = (int32_t*)(lkjscript.data + src_size + 1);
-    int inst_size = 0;
+    int32_t* inst_data = (int32_t*)(lkjscript.data + src_size + 2);
+    int32_t inst_size = 0;
     const char* token_itr = (const char*)lkjscript.data;
-    while(*token_itr != '\0') {
-        if(token_equal(token_itr, "debug")) {
-            inst_data[inst_size++] = INST_DEBUG;
+    token_itr = token_next(token_itr);
+    while (*token_itr != '\0') {
+        if (token_equal(token_itr, "debug")) {
+            token_itr = token_next(token_itr);
+            inst_data[inst_size++] = (INST_DEBUG << 24);
+        } else if (token_equal(token_itr, "imm")) {
+            token_itr = token_next(token_itr);
+            int32_t reg = token_toint(token_itr);
+            token_itr = token_next(token_itr);
+            int32_t value = token_toint(token_itr);
+            token_itr = token_next(token_itr);
+            inst_data[inst_size++] = (INST_IMM << 24) | (reg << 16) | value;
+        } else if (token_equal(token_itr, "copy")) {
+            token_itr = token_next(token_itr);
+            int32_t reg_dst = token_toint(token_itr);
+            token_itr = token_next(token_itr);
+            int32_t reg_src = token_toint(token_itr);
+            token_itr = token_next(token_itr);
+            inst_data[inst_size++] = (INST_COPY << 24) | (reg_dst << 16) | reg_src;
         } else {
-            fprintf(stderr, "Error: Unknown token '%.*s'\n", token_size(token_itr), token_itr);
-            return RESULT_ERROR;
+            fprintf(stderr, "Error: Unknown token '%.*s' token[0]: %d\n", token_size(token_itr), token_itr, token_itr[0]);
+            exit(1);
         }
-        token_itr = token_next(token_itr);
     }
-    inst_data[inst_size++] = INST_END;
+    inst_data[inst_size++] = (INST_END << 24);
 
     // Move instructions to the start of lkjscript.data
     memmove(lkjscript.data, inst_data, inst_size * sizeof(int32_t));
-
-    return RESULT_OK;
 }
 
-result_t run() {
-    int32_t* pc = (int32_t*)lkjscript.data;
-    while(1) {
-        int32_t inst = *pc++;
-        switch(inst) {
-            case INST_NULL:
-                return RESULT_ERROR;
+void run() {
+    int64_t reg[16];
+    uint8_t* pc = lkjscript.data;
+    while (1) {
+        uint32_t inst = *((uint32_t*)pc);
+        pc += 4;
+        switch (inst >> 24) {
             case INST_END:
-                return RESULT_OK;
-            case INST_DEBUG:
-                printf("Debug instruction executed.\n");
-                break;
+                exit(0);
+            case INST_DEBUG: {
+                printf("Debug: reg[0]=%ld\n", reg[0]);
+                fflush(stdout);
+            } break;
+            case INST_IMM: {
+                uint32_t reg_id = (inst >> 16) & 0xFF;
+                uint32_t value = inst & 0xFFFF;
+                reg[reg_id] = value;
+            } break;
+            case INST_COPY: {
+                uint32_t reg_dst = (inst >> 16) & 0xFF;
+                uint32_t reg_src = inst & 0xFFFF;
+                reg[reg_dst] = reg[reg_src];
+            } break;
         }
     }
 }
 
 int main() {
-    if(compile() != RESULT_OK) {
-        return 1;
-    }
-    if(run() != RESULT_OK) {
-        return 1;
-    }
-    return 0;
+    compile();
+    run();
 }
