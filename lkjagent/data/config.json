@@ -30,6 +30,7 @@
               "separator_within_tag": "_",
               "collection_separator": ",",
               "order_policy": "Order of tags is irrelevant.",
+              "automatic_tags": "The 'iteration' tag is automatically assigned by the system.",
               "examples_of_tag_composition": {
                 "single_tag_example": "character_alice_background",
                 "collection_example": "dictionary,terms,vagueness"

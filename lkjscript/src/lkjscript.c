@@ -7,17 +7,34 @@
 #define LKJSCRIPT_SIZE (1024 * 1024 * 16)
 #define LKJSCRIPT_SRCPATH "/data/0001.lkjscript"
 
-typedef enum {
+typedef enum inst_t inst_t;
+typedef struct lkjscript_t lkjscript_t;
+typedef struct instmap_t instmap_t;
+
+enum inst_t {
     INST_NULL,
     INST_END,
     INST_DEBUG,
     INST_IMM,
     INST_COPY,
-} inst_t;
+};
 
-typedef struct {
+struct lkjscript_t {
     uint8_t data[LKJSCRIPT_SIZE];
-} lkjscript_t;
+};
+
+struct instmap_t {
+    const char* name;
+    inst_t inst;
+};
+
+static instmap_t instmap[] = {
+    {"null", INST_NULL},
+    {"end", INST_END},
+    {"debug", INST_DEBUG},
+    {"imm", INST_IMM},
+    {"copy", INST_COPY},
+};
 
 static lkjscript_t lkjscript;
 
@@ -93,24 +110,28 @@ void compile() {
         if (token_equal(token_itr, "debug")) {
             token_itr = token_next(token_itr);
             inst_data[inst_size++] = (INST_DEBUG << 24);
-        } else if (token_equal(token_itr, "imm")) {
+            continue;
+        }
+        if (token_equal(token_itr, "imm")) {
             token_itr = token_next(token_itr);
             int32_t reg = token_toint(token_itr);
             token_itr = token_next(token_itr);
             int32_t value = token_toint(token_itr);
             token_itr = token_next(token_itr);
             inst_data[inst_size++] = (INST_IMM << 24) | (reg << 16) | value;
-        } else if (token_equal(token_itr, "copy")) {
+            continue;
+        }
+        if (token_equal(token_itr, "copy")) {
             token_itr = token_next(token_itr);
             int32_t reg_dst = token_toint(token_itr);
             token_itr = token_next(token_itr);
             int32_t reg_src = token_toint(token_itr);
             token_itr = token_next(token_itr);
             inst_data[inst_size++] = (INST_COPY << 24) | (reg_dst << 16) | reg_src;
-        } else {
-            fprintf(stderr, "Error: Unknown token '%.*s' token[0]: %d\n", token_size(token_itr), token_itr, token_itr[0]);
-            exit(1);
+            continue;
         }
+        fprintf(stderr, "Error: Unknown token '%.*s' token[0]: %d\n", token_size(token_itr), token_itr, token_itr[0]);
+        exit(1);
     }
     inst_data[inst_size++] = (INST_END << 24);
 
