@@ -10,6 +10,7 @@
 #define LKJSCRIPT_SRCPATH "/data/main.lkjscript"
 
 typedef enum result_t result_t;
+typedef enum inst_t inst_t;
 typedef enum node_type_t node_type_t;
 typedef union uni64_t uni64_t;
 typedef struct token_t token_t;
@@ -21,13 +22,27 @@ enum result_t {
     RESULT_ERROR
 };
 
+enum inst_t {
+    INST_NULL,
+    INST_IMM,
+    INST_COPY,
+    INST_ADD,
+    INST_SUB,
+    INST_LOAD,
+    INST_STORE,
+    INST_JMP,
+    INST_JZE,
+};
+
 enum node_type_t {
     NODE_TYPE_NULL,
     NODE_TYPE_BLOCK,
     NODE_TYPE_IDENT,
     NODE_TYPE_NUM,
     NODE_TYPE_STR,
-    NODE_TYPE_BF_BLOCK_LOOP,
+    NODE_TYPE_BF_BLOCK,
+    NODE_TYPE_BF_LOOP_START,
+    NODE_TYPE_BF_LOOP_END,
     NODE_TYPE_BF_PLUS,
     NODE_TYPE_BF_MINUS,
     NODE_TYPE_BF_LSHIFT,
@@ -90,6 +105,23 @@ int64_t token_equal_str(token_t* a, const char* b) {
         }
     }
     return 1;
+}
+
+node_t* node_find(node_t* current, node_type_t type) {
+    node_t* base;
+    if (current->parent == NULL) {
+        base = current;
+    } else {
+        base = current->parent->child_begin;
+    }
+    for (node_t* base_itr = base; base_itr != NULL; base_itr = base_itr->parent) {
+        for (node_t* node_itr = base_itr; node_itr != NULL; node_itr = node_itr->next) {
+            if (node_itr->type == type) {
+                return node_itr;
+            }
+        }
+    }
+    return NULL;
 }
 
 result_t mem_init() {
@@ -201,10 +233,11 @@ node_t* compile_parse_push(node_t** node_itr, node_type_t type, node_t* parent) 
 
 result_parse_t compile_parse_stmt(node_t* parent, token_t* token_itr, node_t* node_itr) {
     if (token_equal_str(token_itr, "[")) {
-        node_t* loop_parent = compile_parse_push(&node_itr, NODE_TYPE_BF_BLOCK_LOOP, parent);
+        node_t* loop_block = compile_parse_push(&node_itr, NODE_TYPE_BF_BLOCK, parent);
+        node_t* loop_start = compile_parse_push(&node_itr, NODE_TYPE_BF_LOOP_START, loop_block);
         token_itr += 1;
         while (!token_equal_str(token_itr, "]")) {
-            result_parse_t result = compile_parse_stmt(loop_parent, token_itr, node_itr);
+            result_parse_t result = compile_parse_stmt(loop_block, token_itr, node_itr);
             if (result.result != RESULT_ERROR) {
                 fprintf(stderr, "Error: I will think about error message.\n");
                 return (result_parse_t){.result = RESULT_ERROR, .token_itr = token_itr, .node_itr = node_itr};
@@ -212,6 +245,7 @@ result_parse_t compile_parse_stmt(node_t* parent, token_t* token_itr, node_t* no
             token_itr = result.token_itr;
             node_itr = result.node_itr;
         }
+        node_t* loop_start = compile_parse_push(&node_itr, NODE_TYPE_BF_LOOP_END, loop_block);
         token_itr += 1;
         return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
     } else if (token_equal_str(token_itr, "+")) {
@@ -267,9 +301,47 @@ result_t compile_parse(uint8_t** itr, token_t* token) {
     return RESULT_OK;
 }
 
+void compile_codegen_push_imm(uint32_t** code_itr, int64_t reg, int64_t value) {
+    **code_itr = (INST_IMM << 24) | (reg << 16) | value;
+    *code_itr += 1;
+}
+
+void compile_codegen_push_control(uint32_t** code_itr, inst_t inst) {
+    **code_itr = (inst << 24);
+    *code_itr += 1;
+}
+
+result_t compile_codegen_node(uint32_t** code_itr, node_t* node) {
+    switch (node->type) {
+        case NODE_TYPE_BF_BLOCK: {
+            for (node_t* child_itr = node->child_begin; child_itr != NULL; child_itr = child_itr->next) {
+                if (compile_codegen_node(code_itr, child_itr) != RESULT_OK) {
+                    fprintf(stderr, "Error: I will think about error message.\n");
+                    return RESULT_ERROR;
+                }
+            }
+        } break;
+        case NODE_TYPE_BF_LOOP_START: {
+            compile_codegen_push_control(code_itr, INST_JZE);
+        } break;
+        case NODE_TYPE_BF_LOOP_END: {
+            compile_codegen_push_control(code_itr, INST_JMP);
+        } break;
+        case NODE_TYPE_BF_PLUS:
+        case NODE_TYPE_BF_MINUS:
+        case NODE_TYPE_BF_LSHIFT:
+        case NODE_TYPE_BF_RSHIFT:
+        case NODE_TYPE_BF_OUTPUT:
+        case NODE_TYPE_BF_INPUT:
+    }
+    return RESULT_OK;
+}
+
 result_t compile_codegen(uint8_t** itr, node_t* node_root) {
     uint32_t* code_itr = (uint32_t*)itr;
-
+    if (compile_codegen_block(&code_itr, node_root) != RESULT_OK) {
+        fprintf(stderr, "Error: I will think about error message.\n");
+    }
     *itr = (uint8_t*)code_itr;
     return RESULT_OK;
 }
@@ -317,30 +389,27 @@ result_t lkjscript_init() {
     return RESULT_OK;
 }
 
-void lkjscript_run() {
-    if (mem == NULL) {
-        fprintf(stderr, "Error: Cannot run script, memory not initialized.\n");
-        return;
-    }
-    printf("Executing generated code...\n");
-    int64_t (*fn)() = (int64_t (*)())mem;
-    int64_t result = fn();
-    printf("Result: %ld\n", result);
-    fflush(stdout);
-}
-
 result_t lkjscript_deinit() {
     printf("Deinitializing script engine...\n");
     return mem_deinit();
 }
 
+void lkjscript_run() {
+}
+
+// void lkjscript_run() {
+//     if (mem == NULL) {
+//         fprintf(stderr, "Error: Cannot run script, memory not initialized.\n");
+//         return;
+//     }
+//     printf("Executing generated code...\n");
+//     int64_t (*fn)() = (int64_t (*)())mem;
+//     int64_t result = fn();
+//     printf("Result: %ld\n", result);
+//     fflush(stdout);
+// }
+
 int main() {
-    FILE* f = fopen(LKJSCRIPT_SRCPATH, "w");
-    if (f) {
-        fprintf(f, "print('hello world')\n");
-        fclose(f);
-    }
-    printf("Initializing script engine...\n");
     if (lkjscript_init() != RESULT_OK) {
         fprintf(stderr, "\nLKJScript initialization failed. Exiting.\n");
         return EXIT_FAILURE;
@@ -350,6 +419,5 @@ int main() {
         fprintf(stderr, "\nLKJScript deinitialization failed. Exiting.\n");
         return EXIT_FAILURE;
     }
-    printf("Shutdown complete.\n");
     return EXIT_SUCCESS;
 }
