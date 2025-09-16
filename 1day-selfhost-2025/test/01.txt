@@ -1,0 +1,59 @@
+// test of operator, comment out, ident
+
+
+// operator test
+// const char* table_operator[] = {">>=", "<<=", "->", "&&", "||", "<=", ">=", "==", "!=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<", ">>", "+", "-", "*", "/", "%", "=", "<", ">", "&", "|", "(", ")", ",", ".", "\n", NULL};
+a <<= b
+a >>= b
+a += b
+a -= b
+a *= b
+a /= b
+a %= b
+a &= b
+a |= b
+a ^= b
+a << b
+a >> b
+a == b
+a != b
+a <= b
+a >= b
+a && b
+a || b
+a = b + c - d * e / f % g
+a = b < c > d & e | f
+a = (b, c.d)
+
+// without space
+a+=1
+
+
+// comment out test
+a = 1 // this is a comment
+// a = 2 // this is a comment
+
+// ident test
+a = 1
+b = 2
+c = 3
+d = 4
+e = 5
+f = 6
+g = 7
+h = 8
+i = 9
+j = 10
+k = 11
+l = 12
+m = 13
+n = 14
+o = 15
+p = 16
+q = 17
+r = 18
+s = 19
+t = 20
+
+// ident test
+a = abcdefghijklmnopqrstuvwxyz0123456789_

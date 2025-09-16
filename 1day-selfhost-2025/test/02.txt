@@ -1,0 +1,6 @@
+// parse test
+return 1234
+(
+    return 1234 + 5678
+)
+return 1234

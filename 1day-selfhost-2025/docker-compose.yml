@@ -1,0 +1,4 @@
+services:
+  1day-selfhost-2025:
+    build: .
+    container_name: 1day-selfhost-2025

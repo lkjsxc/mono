@@ -181,11 +181,9 @@ result_t compile_readsrc(uint8_t** itr) {
         return RESULT_ERROR;
     }
     fclose(fp);
-    mem[fsize] = '\0';
-    *itr = mem + fsize + 1;
-    // mem[fsize] = '\n';
-    // mem[fsize + 1] = '\0';
-    // *itr = mem + fsize + 2;
+    mem[fsize] = '\n';
+    mem[fsize + 1] = '\0';
+    *itr = mem + fsize + 2;
     return RESULT_OK;
 }
 
@@ -210,139 +208,6 @@ result_t compile_tokenize(uint8_t** itr, char* src) {
     }
     compile_tokenize_push(&token_itr, NULL, 0);
     *itr = (uint8_t*)token_itr;
-    return RESULT_OK;
-}
-
-node_t* compile_parse_push(node_t** node_itr, node_type_t type, node_t* parent) {
-    node_t* node = *node_itr;
-    (*node_itr) += 1;
-    node->type = type;
-    node->value.u64 = 0;
-    node->next = NULL;
-    node->parent = parent;
-    node->child_begin = NULL;
-    node->child_rbegin = NULL;
-    if (parent->child_begin == NULL) {
-        parent->child_begin = node;
-    } else {
-        parent->child_rbegin->next = node;
-    }
-    parent->child_rbegin = node;
-    return node;
-}
-
-result_parse_t compile_parse_stmt(node_t* parent, token_t* token_itr, node_t* node_itr) {
-    if (token_equal_str(token_itr, "[")) {
-        node_t* loop_block = compile_parse_push(&node_itr, NODE_TYPE_BF_BLOCK, parent);
-        node_t* loop_start = compile_parse_push(&node_itr, NODE_TYPE_BF_LOOP_START, loop_block);
-        token_itr += 1;
-        while (!token_equal_str(token_itr, "]")) {
-            result_parse_t result = compile_parse_stmt(loop_block, token_itr, node_itr);
-            if (result.result != RESULT_ERROR) {
-                fprintf(stderr, "Error: I will think about error message.\n");
-                return (result_parse_t){.result = RESULT_ERROR, .token_itr = token_itr, .node_itr = node_itr};
-            }
-            token_itr = result.token_itr;
-            node_itr = result.node_itr;
-        }
-        node_t* loop_start = compile_parse_push(&node_itr, NODE_TYPE_BF_LOOP_END, loop_block);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, "+")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_PLUS, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, "-")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_MINUS, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, "<")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_LSHIFT, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, ">")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_RSHIFT, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, ".")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_OUTPUT, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else if (token_equal_str(token_itr, ",")) {
-        node_t* plus = compile_parse_push(&node_itr, NODE_TYPE_BF_INPUT, parent);
-        token_itr += 1;
-        return (result_parse_t){.result = RESULT_OK, .token_itr = token_itr, .node_itr = node_itr};
-    } else {
-        fprintf(stderr, "Error: I will think about error message.\n");
-        return (result_parse_t){.result = RESULT_ERROR, .token_itr = token_itr, .node_itr = node_itr};
-    }
-}
-
-result_t compile_parse(uint8_t** itr, token_t* token) {
-    token_t* token_itr = token;
-    node_t* node_itr = (node_t*)*itr;
-    node_t* root = node_itr++;
-    root->type = NODE_TYPE_BLOCK;
-    root->value.u64 = 0;
-    root->next = NULL;
-    root->parent = NULL;
-    root->child_begin = NULL;
-    root->child_rbegin = NULL;
-    while (token_itr->data != NULL) {
-        result_parse_t result = compile_parse_stmt(root, token_itr, node_itr);
-        if (result.result != RESULT_OK) {
-            fprintf(stderr, "Error: I will think about error message.\n");
-        }
-        token_itr = result.token_itr;
-        node_itr = result.node_itr;
-    }
-    *itr = (uint8_t*)node_itr;
-    printf("Parsing step (stub)... OK\n");
-    return RESULT_OK;
-}
-
-void compile_codegen_push_imm(uint32_t** code_itr, int64_t reg, int64_t value) {
-    **code_itr = (INST_IMM << 24) | (reg << 16) | value;
-    *code_itr += 1;
-}
-
-void compile_codegen_push_control(uint32_t** code_itr, inst_t inst) {
-    **code_itr = (inst << 24);
-    *code_itr += 1;
-}
-
-result_t compile_codegen_node(uint32_t** code_itr, node_t* node) {
-    switch (node->type) {
-        case NODE_TYPE_BF_BLOCK: {
-            for (node_t* child_itr = node->child_begin; child_itr != NULL; child_itr = child_itr->next) {
-                if (compile_codegen_node(code_itr, child_itr) != RESULT_OK) {
-                    fprintf(stderr, "Error: I will think about error message.\n");
-                    return RESULT_ERROR;
-                }
-            }
-        } break;
-        case NODE_TYPE_BF_LOOP_START: {
-            compile_codegen_push_control(code_itr, INST_JZE);
-        } break;
-        case NODE_TYPE_BF_LOOP_END: {
-            compile_codegen_push_control(code_itr, INST_JMP);
-        } break;
-        case NODE_TYPE_BF_PLUS:
-        case NODE_TYPE_BF_MINUS:
-        case NODE_TYPE_BF_LSHIFT:
-        case NODE_TYPE_BF_RSHIFT:
-        case NODE_TYPE_BF_OUTPUT:
-        case NODE_TYPE_BF_INPUT:
-    }
-    return RESULT_OK;
-}
-
-result_t compile_codegen(uint8_t** itr, node_t* node_root) {
-    uint32_t* code_itr = (uint32_t*)itr;
-    if (compile_codegen_block(&code_itr, node_root) != RESULT_OK) {
-        fprintf(stderr, "Error: I will think about error message.\n");
-    }
-    *itr = (uint8_t*)code_itr;
     return RESULT_OK;
 }
 
@@ -395,19 +260,9 @@ result_t lkjscript_deinit() {
 }
 
 void lkjscript_run() {
+    node_t* node_root = *(node_t**)mem;
+    
 }
-
-// void lkjscript_run() {
-//     if (mem == NULL) {
-//         fprintf(stderr, "Error: Cannot run script, memory not initialized.\n");
-//         return;
-//     }
-//     printf("Executing generated code...\n");
-//     int64_t (*fn)() = (int64_t (*)())mem;
-//     int64_t result = fn();
-//     printf("Result: %ld\n", result);
-//     fflush(stdout);
-// }
 
 int main() {
     if (lkjscript_init() != RESULT_OK) {
