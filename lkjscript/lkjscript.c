@@ -40,15 +40,6 @@ enum node_type_t {
     NODE_TYPE_IDENT,
     NODE_TYPE_NUM,
     NODE_TYPE_STR,
-    NODE_TYPE_BF_BLOCK,
-    NODE_TYPE_BF_LOOP_START,
-    NODE_TYPE_BF_LOOP_END,
-    NODE_TYPE_BF_PLUS,
-    NODE_TYPE_BF_MINUS,
-    NODE_TYPE_BF_LSHIFT,
-    NODE_TYPE_BF_RSHIFT,
-    NODE_TYPE_BF_OUTPUT,
-    NODE_TYPE_BF_INPUT,
 };
 
 union uni64_t {
@@ -82,11 +73,11 @@ struct result_parse_t {
 
 uint8_t* mem = NULL;
 
-int64_t token_equal(token_t* a, token_t* b) {
+uint64_t token_equal(token_t* a, token_t* b) {
     if (a->size != b->size) {
         return 0;
     }
-    for (int64_t i = 0; i < a->size; i++) {
+    for (uint64_t i = 0; i < a->size; i++) {
         if (a->data[i] != b->data[i]) {
             return 0;
         }
@@ -94,12 +85,12 @@ int64_t token_equal(token_t* a, token_t* b) {
     return 1;
 }
 
-int64_t token_equal_str(token_t* a, const char* b) {
-    int64_t b_size = strlen(b);
+uint64_t token_equal_str(token_t* a, const char* b) {
+    uint64_t b_size = strlen(b);
     if (a->size != b_size) {
         return 0;
     }
-    for (int64_t i = 0; i < a->size; i++) {
+    for (uint64_t i = 0; i < a->size; i++) {
         if (a->data[i] != b[i]) {
             return 0;
         }
@@ -260,8 +251,6 @@ result_t lkjscript_deinit() {
 }
 
 void lkjscript_run() {
-    node_t* node_root = *(node_t**)mem;
-    
 }
 
 int main() {
