@@ -1,8 +1,7 @@
-FROM gcc:12 as builder
-COPY ./lkjscript.c /app/lkjscript.c
-
+FROM gcc as builder
 WORKDIR /app
-RUN gcc -o lkjscript lkjscript.c -march=native -Werror -Wall -Wextra -std=c11 -O2 -g
+COPY ./lkjscript.c /app/lkjscript.c
+RUN gcc -o lkjscript lkjscript.c -static -march=native -std=c11 -Werror -Wall -Wextra -O2
 
 FROM scratch
 COPY --from=builder /app/lkjscript /app/lkjscript

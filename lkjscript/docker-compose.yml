@@ -1,0 +1,7 @@
+services:
+  lkjscript:
+    build: .
+    image: lkjscript:latest
+    container_name: lkjscript
+    volumes:
+      - ./data:/data
