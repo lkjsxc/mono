@@ -1,102 +1,48 @@
 #include "lkjagent.h"
 
+// Forward declaration
+static bool storage_tags_match(const data_t* search_tags, const data_t* entry_tags);
+
+// **FIXED STORAGE LOAD** - Now works with the correct unified storage format
+// Loads data from storage and adds to working memory using efficient matching
+
 result_t lkjagent_action_storage_load(pool_t* pool, lkjagent_t* lkjagent, data_t* tags, uint64_t iteration) {
-    
-    object_t* storage = NULL;
-    object_t* current = NULL;
+    // Input validation
+    if (!pool || !lkjagent || !tags) {
+        RETURN_ERR("Invalid parameters: pool, lkjagent, or tags is NULL");
+    }
     
     // Get storage object
+    object_t* storage = NULL;
     if (object_provide_str(&storage, lkjagent->memory, "storage") != RESULT_OK) {
-        PRINT_ERR("Failed to get storage object from memory");
+        // Storage doesn't exist - that's OK, just return without error
         return RESULT_OK;
     }
     
-    // Search storage for entries matching the tags
-    current = storage->child;
+    if (!storage->child) {
+        // Storage is empty - that's OK, just return
+        return RESULT_OK;
+    }
+    
+    // **EFFICIENT STORAGE SEARCH** - O(n) single pass through storage entries
+    // Storage format: each child has key=tags, value=data (direct key-value pairs)
+    object_t* current = storage->child;
+    uint32_t matches_loaded = 0;
     
     while (current != NULL) {
-        bool match = false;
-        
-        // Check if current entry matches tags
-        if (current->data != NULL) {
-            // Entry format is "tags:value:iteration"
-            // Check if tags match at the beginning
-            if (data_find_data(current->data, tags, 0) == 0) {
-                // Tags found at beginning, check if followed by ':'
-                char separator[2] = ":";
-                if (data_find_str(current->data, separator, tags->size) == (int64_t)tags->size) {
-                    match = true;
-                }
-            }
+        if (current->data && current->child && current->child->data) {
+            // current->data = tags (key)
+            // current->child->data = value (data)
             
-            // Also check if tags appear anywhere in the entry (more flexible matching)
-            if (!match && data_find_data(current->data, tags, 0) >= 0) {
-                match = true;
-            }
-        }
-        
-        if (match) {
-            // Found matching entry, extract value and add to working memory
-            data_t* entry_tags = NULL;
-            data_t* entry_value = NULL;
+            bool match = storage_tags_match(tags, current->data);
             
-            // Parse the entry: "tags:value:iteration"
-            int64_t first_colon = data_find_char(current->data, ':', 0);
-            int64_t second_colon = data_find_char(current->data, ':', first_colon + 1);
-            
-            if (first_colon > 0 && second_colon > first_colon) {
-                // Extract tags part
-                if (data_create(pool, &entry_tags) != RESULT_OK) {
-                    RETURN_ERR("Failed to create entry tags");
-                }
-                
-                // Copy tags (from start to first colon)
-                for (int64_t i = 0; i < first_colon; i++) {
-                    if (data_append_char(pool, &entry_tags, current->data->data[i]) != RESULT_OK) {
-                        if (data_destroy(pool, entry_tags) != RESULT_OK) {
-                            PRINT_ERR("Failed to cleanup entry_tags after copy tags error");
-                        }
-                        RETURN_ERR("Failed to copy tags");
-                    }
-                }
-                
-                // Extract value part
-                if (data_create(pool, &entry_value) != RESULT_OK) {
-                    if (data_destroy(pool, entry_tags) != RESULT_OK) {
-                        PRINT_ERR("Failed to cleanup entry_tags after entry_value creation error");
-                    }
-                    RETURN_ERR("Failed to create entry value");
-                }
-                
-                // Copy value (from first colon+1 to second colon)
-                for (int64_t i = first_colon + 1; i < second_colon; i++) {
-                    if (data_append_char(pool, &entry_value, current->data->data[i]) != RESULT_OK) {
-                        if (data_destroy(pool, entry_tags) != RESULT_OK) {
-                            PRINT_ERR("Failed to cleanup entry_tags after copy value error");
-                        }
-                        if (data_destroy(pool, entry_value) != RESULT_OK) {
-                            PRINT_ERR("Failed to cleanup entry_value after copy value error");
-                        }
-                        RETURN_ERR("Failed to copy value");
-                    }
-                }
-                
-                // Add to working memory
-                if (lkjagent_action_working_memory_add(pool, lkjagent, entry_tags, entry_value, iteration) != RESULT_OK) {
-                    if (data_destroy(pool, entry_tags) != RESULT_OK) {
-                        PRINT_ERR("Failed to cleanup entry_tags after working_memory_add error");
-                    }
-                    if (data_destroy(pool, entry_value) != RESULT_OK) {
-                        PRINT_ERR("Failed to cleanup entry_value after working_memory_add error");
-                    }
-                    RETURN_ERR("Failed to add loaded entry to working memory");
-                }
-                
-                if (data_destroy(pool, entry_tags) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup entry_tags");
-                }
-                if (data_destroy(pool, entry_value) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup entry_value");
+            if (match) {
+                // Found matching entry - add to working memory
+                if (lkjagent_action_working_memory_add(pool, lkjagent, current->data, current->child->data, iteration) != RESULT_OK) {
+                    // Don't fail entire operation if one add fails
+                    PRINT_ERR("Warning: Failed to add loaded entry to working memory");
+                } else {
+                    matches_loaded++;
                 }
             }
         }
@@ -105,4 +51,99 @@ result_t lkjagent_action_storage_load(pool_t* pool, lkjagent_t* lkjagent, data_t
     }
     
     return RESULT_OK;
+}
+
+// **OPTIMIZED TAG MATCHING** - Efficient subset matching for storage operations
+// Returns true if search_tags is a subset of entry_tags (all search tags must be present)
+static bool storage_tags_match(const data_t* search_tags, const data_t* entry_tags) {
+    if (!search_tags || search_tags->size == 0) {
+        return true; // Empty search matches everything
+    }
+    
+    if (!entry_tags || entry_tags->size == 0) {
+        return false; // Non-empty search can't match empty entry
+    }
+    
+    // Handle exact match case (common optimization)
+    if (data_equal_data(search_tags, entry_tags)) {
+        return true;
+    }
+    
+    // Parse search tags and check each one exists in entry tags
+    const char* search_str = search_tags->data;
+    const char* entry_str = entry_tags->data;
+    uint64_t search_len = search_tags->size;
+    uint64_t entry_len = entry_tags->size;
+    
+    // Simple but efficient comma-separated tag subset matching
+    uint64_t search_pos = 0;
+    while (search_pos < search_len) {
+        // Find next tag in search string
+        uint64_t tag_start = search_pos;
+        uint64_t tag_end = search_pos;
+        
+        // Skip leading whitespace
+        while (tag_start < search_len && (search_str[tag_start] == ' ' || search_str[tag_start] == '\t')) {
+            tag_start++;
+        }
+        
+        // Find end of tag
+        tag_end = tag_start;
+        while (tag_end < search_len && search_str[tag_end] != ',') {
+            tag_end++;
+        }
+        
+        // Trim trailing whitespace
+        while (tag_end > tag_start && (search_str[tag_end - 1] == ' ' || search_str[tag_end - 1] == '\t')) {
+            tag_end--;
+        }
+        
+        if (tag_end > tag_start) {
+            // Check if this tag exists in entry tags
+            uint64_t tag_len = tag_end - tag_start;
+            bool found = false;
+            
+            // Search for tag in entry string
+            for (uint64_t i = 0; i <= entry_len; i++) {
+                if (i == entry_len || entry_str[i] == ',') {
+                    // Found tag boundary, check if it matches
+                    uint64_t entry_tag_start = (i == 0) ? 0 : i - tag_len;
+                    if (entry_tag_start > 0) {
+                        // Find actual start after comma
+                        for (uint64_t j = entry_tag_start; j > 0; j--) {
+                            if (entry_str[j - 1] == ',') {
+                                entry_tag_start = j;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Skip whitespace
+                    while (entry_tag_start < i && (entry_str[entry_tag_start] == ' ' || entry_str[entry_tag_start] == '\t')) {
+                        entry_tag_start++;
+                    }
+                    
+                    uint64_t entry_tag_end = i;
+                    while (entry_tag_end > entry_tag_start && (entry_str[entry_tag_end - 1] == ' ' || entry_str[entry_tag_end - 1] == '\t')) {
+                        entry_tag_end--;
+                    }
+                    
+                    if (entry_tag_end - entry_tag_start == tag_len && 
+                        memcmp(search_str + tag_start, entry_str + entry_tag_start, tag_len) == 0) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!found) {
+                return false; // Search tag not found in entry
+            }
+        }
+        
+        // Move to next search tag
+        search_pos = (tag_end < search_len) ? tag_end + 1 : search_len;
+    }
+    
+    return true; // All search tags found
 }

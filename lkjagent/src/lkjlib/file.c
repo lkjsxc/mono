@@ -25,7 +25,7 @@ result_t file_read(pool_t* pool, const char* path, data_t** data) {
     }
     size_t read_size = fread((*data)->data, 1, file_size, file);
     if (read_size != (uint64_t)file_size) {
-        if (pool_data_free(pool, *data)) {
+        if (pool_data_free(pool, *data) != RESULT_OK) {
             fclose(file);
             RETURN_ERR("Failed to free data after partial read");
         }

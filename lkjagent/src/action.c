@@ -1,127 +1,110 @@
 #include "lkjagent.h"
 
-result_t lkjagent_action(pool_t* pool, lkjagent_t* lkjagent, object_t* action, uint64_t iteration) {
-    object_t* action_type = NULL;
-    object_t* action_tags = NULL;
-    object_t* action_value = NULL;
-    data_t* sorted_tags_array[MAX_TAGS] = {NULL};
-    data_t* sorted_tags_string = NULL;
+// **UNIFIED ACTION DISPATCHER** 
+// High-performance, clean implementation with consistent error handling
+// and unified data formats across all operations
 
-    if (object_provide_str(&action_type, action, "type") != RESULT_OK) {
-        RETURN_ERR("Failed to get action type from action object");
+typedef struct {
+    data_t* sorted_tags_array[MAX_TAGS];
+    data_t* sorted_tags_string; 
+    result_t status;
+} action_context_t;
+
+// Efficient cleanup function - handles all cases safely
+static void action_context_cleanup(pool_t* pool, action_context_t* ctx) {
+    if (!ctx) return;
+    
+    // Clean sorted tags array
+    for (uint64_t i = 0; i < MAX_TAGS && ctx->sorted_tags_array[i] != NULL; i++) {
+        if (data_destroy(pool, ctx->sorted_tags_array[i]) != RESULT_OK) {
+            PRINT_ERR("Warning: Failed to cleanup sorted tag array element");
+        }
+        ctx->sorted_tags_array[i] = NULL;
     }
-
-    if (object_provide_str(&action_tags, action, "tags") != RESULT_OK) {
-        RETURN_ERR("Failed to get action tags from action object");
+    
+    // Clean sorted tags string
+    if (ctx->sorted_tags_string) {
+        if (data_destroy(pool, ctx->sorted_tags_string) != RESULT_OK) {
+            PRINT_ERR("Warning: Failed to cleanup sorted tags string");
+        }
+        ctx->sorted_tags_string = NULL;
     }
+}
 
-    if (object_provide_str(&action_value, action, "value") != RESULT_OK) {
-        RETURN_ERR("Failed to get action value from action object");
+// Initialize action context with proper error handling
+static result_t action_context_init(pool_t* pool, action_context_t* ctx, const data_t* tags) {
+    // Initialize context
+    for (uint64_t i = 0; i < MAX_TAGS; i++) {
+        ctx->sorted_tags_array[i] = NULL;
     }
+    ctx->sorted_tags_string = NULL;
+    ctx->status = RESULT_OK;
 
-    // Sort tags into array format
-    if (tags_sort(pool, sorted_tags_array, action_tags->data) != RESULT_OK) {
+    // Sort and normalize tags
+    if (tags_sort(pool, ctx->sorted_tags_array, tags) != RESULT_OK) {
         RETURN_ERR("Failed to sort action tags");
     }
 
-    // Convert sorted array back to comma-separated string for existing action functions
-    if (tags_array_to_string(pool, sorted_tags_array, &sorted_tags_string) != RESULT_OK) {
-        // Cleanup sorted_tags_array
-        for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-            if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted tag array element during conversion error");
-            }
-        }
-        RETURN_ERR("Failed to convert sorted tags array to string");
+    // Convert to string format for compatibility
+    if (tags_array_to_string(pool, ctx->sorted_tags_array, &ctx->sorted_tags_string) != RESULT_OK) {
+        action_context_cleanup(pool, ctx);
+        RETURN_ERR("Failed to convert sorted tags to string");
     }
 
-    // Dispatch to appropriate action handler based on type
+    return RESULT_OK;
+}
+
+// **OPTIMIZED ACTION DISPATCHER**
+result_t lkjagent_action(pool_t* pool, lkjagent_t* lkjagent, object_t* action, uint64_t iteration) {
+    // Input validation
+    if (!pool || !lkjagent || !action) {
+        RETURN_ERR("Invalid parameters: pool, lkjagent, or action is NULL");
+    }
+
+    // Extract action components
+    object_t* action_type = NULL;
+    object_t* action_tags = NULL; 
+    object_t* action_value = NULL;
+
+    if (object_provide_str(&action_type, action, "type") != RESULT_OK) {
+        RETURN_ERR("Failed to get action type");
+    }
+    if (object_provide_str(&action_tags, action, "tags") != RESULT_OK) {
+        RETURN_ERR("Failed to get action tags");
+    }
+    if (object_provide_str(&action_value, action, "value") != RESULT_OK) {
+        RETURN_ERR("Failed to get action value");
+    }
+
+    // Initialize action context
+    action_context_t ctx;
+    if (action_context_init(pool, &ctx, action_tags->data) != RESULT_OK) {
+        RETURN_ERR("Failed to initialize action context");
+    }
+
+    // **UNIFIED ACTION DISPATCH - No more code duplication!**
+    result_t result = RESULT_ERR;
+
     if (data_equal_str(action_type->data, "working_memory_add")) {
-        if (lkjagent_action_working_memory_add(pool, lkjagent, sorted_tags_string, action_value->data, iteration) != RESULT_OK) {
-            // Cleanup
-            for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-                if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup sorted tag array element");
-                }
-            }
-            if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted_tags_string after working_memory_add error");
-            }
-            RETURN_ERR("Failed to perform working_memory_add action");
-        }
+        result = lkjagent_action_working_memory_add(pool, lkjagent, ctx.sorted_tags_string, action_value->data, iteration);
     } else if (data_equal_str(action_type->data, "working_memory_remove")) {
-        if (lkjagent_action_working_memory_remove(pool, lkjagent, sorted_tags_string) != RESULT_OK) {
-            // Cleanup
-            for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-                if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup sorted tag array element");
-                }
-            }
-            if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted_tags_string after working_memory_remove error");
-            }
-            RETURN_ERR("Failed to perform working_memory_remove action");
-        }
+        result = lkjagent_action_working_memory_remove(pool, lkjagent, ctx.sorted_tags_string);
     } else if (data_equal_str(action_type->data, "storage_save")) {
-        if (lkjagent_action_storage_save(pool, lkjagent, sorted_tags_string, action_value->data) != RESULT_OK) {
-            // Cleanup
-            for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-                if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup sorted tag array element");
-                }
-            }
-            if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted_tags_string after storage_save error");
-            }
-            RETURN_ERR("Failed to perform storage_save action");
-        }
+        result = lkjagent_action_storage_save(pool, lkjagent, ctx.sorted_tags_string, action_value->data);
     } else if (data_equal_str(action_type->data, "storage_load")) {
-        if (lkjagent_action_storage_load(pool, lkjagent, sorted_tags_string, iteration) != RESULT_OK) {
-            // Cleanup
-            for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-                if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup sorted tag array element");
-                }
-            }
-            if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted_tags_string after storage_load error");
-            }
-            RETURN_ERR("Failed to perform storage_load action");
-        }
+        result = lkjagent_action_storage_load(pool, lkjagent, ctx.sorted_tags_string, iteration);
     } else if (data_equal_str(action_type->data, "storage_search")) {
-        if (lkjagent_action_storage_search(pool, lkjagent, sorted_tags_string, action_value->data, iteration) != RESULT_OK) {
-            // Cleanup
-            for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-                if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                    PRINT_ERR("Failed to cleanup sorted tag array element");
-                }
-            }
-            if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted_tags_string after storage_search error");
-            }
-            RETURN_ERR("Failed to perform storage_search action");
-        }
+        result = lkjagent_action_storage_search(pool, lkjagent, ctx.sorted_tags_string, action_value->data, iteration);
     } else {
-        // Cleanup
-        for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-            if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup sorted tag array element");
-            }
-        }
-        if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup sorted_tags_string after unknown action type");
-        }
+        action_context_cleanup(pool, &ctx);
         RETURN_ERR("Unknown action type");
     }
 
-    // Cleanup sorted tags array and string
-    for (uint64_t i = 0; i < MAX_TAGS && sorted_tags_array[i] != NULL; i++) {
-        if (data_destroy(pool, sorted_tags_array[i]) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup sorted tag array element");
-        }
-    }
-    if (data_destroy(pool, sorted_tags_string) != RESULT_OK) {
-        PRINT_ERR("Failed to cleanup sorted tags string");
+    // Cleanup and return result
+    action_context_cleanup(pool, &ctx);
+    
+    if (result != RESULT_OK) {
+        RETURN_ERR("Action execution failed");
     }
 
     return RESULT_OK;

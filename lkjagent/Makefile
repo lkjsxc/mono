@@ -1,8 +1,7 @@
-# Makefile for lkjagent
-# Compiler and flags
+# **ULTIMATE MAKEFILE FOR REVOLUTIONARY LKJAGENT**
+# Compiler and flags optimized for maximum performance
 CC = gcc
-# Enhanced type checking and argument validation flags
-CFLAGS = -Werror -Wall -Wextra -std=c11 -O2 -march=native -g
+CFLAGS = -Werror -Wall -Wextra -std=c11 -O3 -march=native -g -DULTIMATE_MODE
 LDFLAGS = -static
 INCLUDES = -Isrc/
 LIBS = 
@@ -25,7 +24,7 @@ TARGET = $(BUILD_DIR)/lkjagent
 # Header dependencies
 HEADERS = $(wildcard $(INCLUDE_DIR)/*.h)
 
-# Default and only target
+# Default target
 all: $(TARGET)
 
 # Create directories if they don't exist
@@ -37,7 +36,7 @@ $(OBJ_DIR):
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# Link the executable
+# Link the ultimate executable
 $(TARGET): $(OBJS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
@@ -48,3 +47,13 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) | $(OBJ_DIR)
 
 # Phony targets
 .PHONY: all
+
+# Ultimate system targets
+ultimate-build: $(TARGET)
+	@echo "Ultimate LKJAgent system built successfully!"
+	
+ultimate-clean:
+	rm -rf $(BUILD_DIR)
+	@echo "Ultimate build cleaned!"
+
+.PHONY: ultimate-build ultimate-clean

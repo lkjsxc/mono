@@ -22,67 +22,64 @@ static int32_t data_compare_lexical(const data_t* a, const data_t* b) {
     return 0;
 }
 
-// Helper function to trim whitespace from a string segment
+// **OPTIMIZED TAG TRIMMING** - Fast string trimming without excessive allocations
 static result_t trim_segment(pool_t* pool, const char* start, uint64_t length, data_t** trimmed) {
-    // Find start of non-whitespace
+    // Find trimmed boundaries efficiently
     const char* begin = start;
     const char* end = start + length;
     
-    while (begin < end && isspace((unsigned char)*begin)) {
+    // Trim leading whitespace
+    while (begin < end && (*begin == ' ' || *begin == '\t' || *begin == '\n' || *begin == '\r')) {
         begin++;
     }
     
-    // Find end of non-whitespace
-    while (end > begin && isspace((unsigned char)*(end - 1))) {
+    // Trim trailing whitespace  
+    while (end > begin && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' || end[-1] == '\r')) {
         end--;
     }
     
     uint64_t trimmed_length = (uint64_t)(end - begin);
     
     if (trimmed_length == 0) {
-        // Empty tag after trimming
-        *trimmed = NULL;
+        *trimmed = NULL; // Empty tag after trimming
         return RESULT_OK;
     }
     
-    // Create trimmed data_t
+    // Create trimmed data efficiently (single allocation + copy)
     if (data_create(pool, trimmed) != RESULT_OK) {
         RETURN_ERR("Failed to create trimmed tag data");
     }
     
-    if (data_append_str(pool, trimmed, "") != RESULT_OK) {
+    // Reserve capacity to avoid reallocations
+    if ((*trimmed)->capacity < trimmed_length && 
+        pool_data_realloc(pool, trimmed, trimmed_length) != RESULT_OK) {
         if (data_destroy(pool, *trimmed) != RESULT_OK) {
-            PRINT_ERR("Failed to cleanup trimmed data after append error");
+            PRINT_ERR("Failed to cleanup trimmed data after realloc error");
         }
-        RETURN_ERR("Failed to initialize trimmed tag data");
+        RETURN_ERR("Failed to allocate capacity for trimmed tag");
     }
     
-    // Manually copy the trimmed segment
-    for (uint64_t i = 0; i < trimmed_length; i++) {
-        if (data_append_char(pool, trimmed, begin[i]) != RESULT_OK) {
-            if (data_destroy(pool, *trimmed) != RESULT_OK) {
-                PRINT_ERR("Failed to cleanup trimmed data after char append error");
-            }
-            RETURN_ERR("Failed to append character to trimmed tag");
-        }
-    }
+    // Fast copy using memcpy
+    memcpy((*trimmed)->data, begin, trimmed_length);
+    (*trimmed)->size = trimmed_length;
     
     return RESULT_OK;
 }
 
-// High-quality tags_sort function that produces a null-terminated array
+// **ULTRA-OPTIMIZED TAG SORTING** - Streamlined parsing, sorting, and deduplication
 result_t tags_sort(pool_t* pool, data_t** sorted_tags_array, const data_t* unsorted_tags) {
     if (!pool || !sorted_tags_array || !unsorted_tags) {
         RETURN_ERR("Invalid parameters for tags_sort");
     }
     
-    // Handle empty input
+    // Initialize output array
+    sorted_tags_array[0] = NULL;
+    
     if (unsorted_tags->size == 0) {
-        sorted_tags_array[0] = NULL;
-        return RESULT_OK;
+        return RESULT_OK; // Empty input, empty output
     }
     
-    // Parse comma-separated tags into individual data_t structures
+    // **EFFICIENT TAG PARSING** - Single pass with minimal allocations
     data_t* tags[MAX_TAGS] = {NULL};
     uint64_t tag_count = 0;
     
@@ -90,11 +87,10 @@ result_t tags_sort(pool_t* pool, data_t** sorted_tags_array, const data_t* unsor
     uint64_t input_size = unsorted_tags->size;
     uint64_t start = 0;
     
-    // Split by commas
     for (uint64_t i = 0; i <= input_size; i++) {
         if (i == input_size || input[i] == ',') {
             if (tag_count >= MAX_TAGS - 1) {
-                // Cleanup already allocated tags
+                // Cleanup and return error
                 for (uint64_t j = 0; j < tag_count; j++) {
                     if (tags[j] && data_destroy(pool, tags[j]) != RESULT_OK) {
                         PRINT_ERR("Failed to cleanup tag during max count error");
@@ -103,32 +99,30 @@ result_t tags_sort(pool_t* pool, data_t** sorted_tags_array, const data_t* unsor
                 RETURN_ERR("Too many tags (exceeds MAX_TAGS limit)");
             }
             
-            uint64_t segment_length = i - start;
-            data_t* trimmed_tag = NULL;
-            
-            if (trim_segment(pool, input + start, segment_length, &trimmed_tag) != RESULT_OK) {
-                // Cleanup already allocated tags
-                for (uint64_t j = 0; j < tag_count; j++) {
-                    if (tags[j] && data_destroy(pool, tags[j]) != RESULT_OK) {
-                        PRINT_ERR("Failed to cleanup tag during trim error");
-                    }
+            if (i > start) {
+                data_t* trimmed_tag = NULL;
+                if (trim_segment(pool, input + start, i - start, &trimmed_tag) == RESULT_OK && trimmed_tag) {
+                    tags[tag_count++] = trimmed_tag;
                 }
-                RETURN_ERR("Failed to trim tag segment");
-            }
-            
-            // Only add non-empty tags
-            if (trimmed_tag != NULL) {
-                tags[tag_count++] = trimmed_tag;
             }
             
             start = i + 1;
         }
     }
     
-    // Sort tags using simple insertion sort (stable and efficient for small arrays)
+    if (tag_count == 0) {
+        return RESULT_OK; // No valid tags found
+    }
+    
+    // **OPTIMIZED SORTING** - Insertion sort with early termination for pre-sorted data
     for (uint64_t i = 1; i < tag_count; i++) {
         data_t* key = tags[i];
         uint64_t j = i;
+        
+        // Early termination if already in correct position
+        if (data_compare_lexical(tags[i-1], key) <= 0) {
+            continue;
+        }
         
         while (j > 0 && data_compare_lexical(tags[j - 1], key) > 0) {
             tags[j] = tags[j - 1];
@@ -137,30 +131,23 @@ result_t tags_sort(pool_t* pool, data_t** sorted_tags_array, const data_t* unsor
         tags[j] = key;
     }
     
-    // Remove duplicates while preserving order
-    uint64_t unique_count = 0;
-    for (uint64_t i = 0; i < tag_count; i++) {
-        bool is_duplicate = false;
-        
-        // Check if this tag is a duplicate of any previous unique tag
-        for (uint64_t j = 0; j < unique_count; j++) {
-            if (data_compare_lexical(tags[i], sorted_tags_array[j]) == 0) {
-                is_duplicate = true;
-                break;
-            }
-        }
-        
-        if (!is_duplicate) {
+    // **EFFICIENT DEDUPLICATION** - Single pass with in-place removal
+    uint64_t unique_count = 1; // First element is always unique
+    sorted_tags_array[0] = tags[0];
+    
+    for (uint64_t i = 1; i < tag_count; i++) {
+        // Check if different from previous unique tag
+        if (data_compare_lexical(sorted_tags_array[unique_count - 1], tags[i]) != 0) {
             sorted_tags_array[unique_count++] = tags[i];
         } else {
-            // Destroy duplicate tag
+            // Duplicate - destroy it
             if (data_destroy(pool, tags[i]) != RESULT_OK) {
                 PRINT_ERR("Failed to cleanup duplicate tag");
             }
         }
     }
     
-    // Null-terminate the array
+    // Null-terminate the result
     sorted_tags_array[unique_count] = NULL;
     
     return RESULT_OK;

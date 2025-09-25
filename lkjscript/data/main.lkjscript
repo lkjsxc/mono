@@ -1,1 +1,1 @@
-++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+fn fibonacci(n) { var a = 0 var b = 1 var temp = 0 debug01(a + 48) debug01(32) temp = a + b a = b b = temp debug01(a + 48) debug01(32) temp = a + b a = b b = temp debug01(a + 48) debug01(10) return a } fn main() { debug01(83) debug01(101) debug01(108) debug01(102) debug01(45) debug01(72) debug01(111) debug01(115) debug01(116) debug01(105) debug01(110) debug01(103) debug01(58) debug01(32) var result = fibonacci(3) return result } main()

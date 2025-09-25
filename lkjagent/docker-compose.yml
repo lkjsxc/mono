@@ -1,0 +1,16 @@
+services:
+  lkjagent:
+    build: .
+    image: lkjagent:latest
+    container_name: lkjagent
+    volumes:
+      - ./data:/data
+    networks:
+      - lkjsxc_network
+    restart: unless-stopped
+    environment:
+      - REVOLUTIONARY_MODE=true
+
+networks:
+  lkjsxc_network:
+    name: lkjsxc_network

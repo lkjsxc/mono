@@ -1,110 +1,155 @@
 #include "lkjagent.h"
 
-static __attribute__((warn_unused_result)) result_t lkjagent_init(pool_t* pool, lkjagent_t* lkjagent) {
-    data_t* config_tmp = NULL;
-    data_t* memory_tmp = NULL;
-    lkjagent->config = NULL;
-    lkjagent->memory = NULL;
-    if (file_read(pool, CONFIG_PATH, &config_tmp) != RESULT_OK) {
+typedef struct {
+    pool_t* pool;
+    lkjagent_t* agent;
+    data_t* config_raw;
+    data_t* memory_raw;
+} runtime_ctx_t;
+
+static __attribute__((warn_unused_result)) result_t load_config(runtime_ctx_t* ctx) {
+    if (file_read(ctx->pool, CONFIG_PATH, &ctx->config_raw) != RESULT_OK) {
         RETURN_ERR("Failed to read configuration file");
     }
-    if (object_parse_json(pool, &lkjagent->config, config_tmp) != RESULT_OK) {
-        if (data_destroy(pool, config_tmp) != RESULT_OK) {
-            PRINT_ERR("Failed to destroy temporary data");
-        }
+
+    if (object_parse_json(ctx->pool, &ctx->agent->config, ctx->config_raw) != RESULT_OK) {
         RETURN_ERR("Failed to parse configuration JSON");
     }
-    if (data_destroy(pool, config_tmp) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy temporary data");
+
+    if (data_destroy(ctx->pool, ctx->config_raw) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy temporary config data");
     }
-    if (file_read(pool, MEMORY_PATH, &memory_tmp) != RESULT_OK) {
-        RETURN_ERR("Failed to read memory file");
-    }
-    if (object_parse_json(pool, &lkjagent->memory, memory_tmp) != RESULT_OK) {
-        if (data_destroy(pool, memory_tmp) != RESULT_OK) {
-            PRINT_ERR("Failed to destroy temporary data");
-        }
-        RETURN_ERR("Failed to parse memory JSON");
-    }
-    if (data_destroy(pool, memory_tmp) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy temporary data");
-    }
+
+    ctx->config_raw = NULL;
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t lkjagent_save(pool_t* pool, lkjagent_t* lkjagent) {
-    data_t* memory = NULL;
-    if (object_todata_json(pool, &memory, lkjagent->memory) != RESULT_OK) {
-        RETURN_ERR("Failed to convert memory to data");
+static __attribute__((warn_unused_result)) result_t ensure_memory_default(runtime_ctx_t* ctx) {
+    static const char default_memory[] =
+        "{\"state\":\"analyzing\",\"working_memory\":{},\"storage\":{}}";
+
+    if (file_read(ctx->pool, MEMORY_PATH, &ctx->memory_raw) == RESULT_OK) {
+        return RESULT_OK;
     }
+
+    if (data_create_str(ctx->pool, &ctx->memory_raw, default_memory) != RESULT_OK) {
+        RETURN_ERR("Failed to create default memory");
+    }
+
+    return RESULT_OK;
+}
+
+static __attribute__((warn_unused_result)) result_t load_memory(runtime_ctx_t* ctx) {
+    if (ensure_memory_default(ctx) != RESULT_OK) {
+        RETURN_ERR("Failed to obtain memory buffer");
+    }
+
+    if (object_parse_json(ctx->pool, &ctx->agent->memory, ctx->memory_raw) != RESULT_OK) {
+        RETURN_ERR("Failed to parse memory JSON");
+    }
+
+    if (data_destroy(ctx->pool, ctx->memory_raw) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy temporary memory data");
+    }
+
+    ctx->memory_raw = NULL;
+    return RESULT_OK;
+}
+
+static __attribute__((warn_unused_result)) result_t lkjagent_init(runtime_ctx_t* ctx) {
+    ctx->agent->config = NULL;
+    ctx->agent->memory = NULL;
+    ctx->config_raw = NULL;
+    ctx->memory_raw = NULL;
+
+    if (load_config(ctx) != RESULT_OK) {
+        RETURN_ERR("Agent initialization failed during config load");
+    }
+
+    if (load_memory(ctx) != RESULT_OK) {
+        RETURN_ERR("Agent initialization failed during memory load");
+    }
+
+    return RESULT_OK;
+}
+
+static __attribute__((warn_unused_result)) result_t lkjagent_save(pool_t* pool, lkjagent_t* agent) {
+    data_t* memory = NULL;
+
+    if (object_todata_json(pool, &memory, agent->memory) != RESULT_OK) {
+        RETURN_ERR("Failed to convert memory to JSON");
+    }
+
     if (file_write(MEMORY_PATH, memory) != RESULT_OK) {
         if (data_destroy(pool, memory) != RESULT_OK) {
-            PRINT_ERR("Failed to destroy temporary data");
+            PRINT_ERR("Failed to destroy memory data");
         }
         RETURN_ERR("Failed to write memory to file");
     }
+
     if (data_destroy(pool, memory) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy temporary data");
+        RETURN_ERR("Failed to destroy memory data");
     }
+
     return RESULT_OK;
 }
 
-static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* lkjagent, uint64_t iteration) {
-    data_t* recv = NULL;
-    if (lkjagent_request(pool, lkjagent, &recv) != RESULT_OK) {
-        RETURN_ERR("Failed to request");
-    }
-    if (lkjagent_process(pool, lkjagent, recv, iteration) != RESULT_OK) {
-        RETURN_ERR("Failed to process received data");
-    }
-    if (data_destroy(pool, recv) != RESULT_OK) {
-        RETURN_ERR("Failed to destroy received data");
-    }
-    if (lkjagent_save(pool, lkjagent) != RESULT_OK) {
-        RETURN_ERR("Failed to save lkjagent");
-    }
-    return RESULT_OK;
-}
+static __attribute__((warn_unused_result)) result_t lkjagent_step(pool_t* pool, lkjagent_t* agent, uint64_t iteration) {
+    data_t* response = NULL;
 
-static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, lkjagent_t* lkjagent) {
-    object_t* iteration_limit_enable = NULL;
-    object_t* iteration_limit_value = NULL;
-    int64_t iteration_limit;
-    if (object_provide_str(&iteration_limit_enable, lkjagent->config, "agent.iteration_limit.enable") != RESULT_OK) {
-        RETURN_ERR("Failed to provide iteration_limit_enable");
+    if (lkjagent_request(pool, agent, &response) != RESULT_OK) {
+        PRINT_ERR("Request to LLM endpoint failed");
+        return RESULT_OK;
     }
-    if (object_provide_str(&iteration_limit_value, lkjagent->config, "agent.iteration_limit.value") != RESULT_OK) {
-        RETURN_ERR("Failed to provide iteration_limit_value");
-    }
-    if (data_equal_str(iteration_limit_enable->data, "true")) {
-        if (data_toint(iteration_limit_value->data, &iteration_limit) != RESULT_OK) {
-            RETURN_ERR("Failed to convert iteration_limit_value to int");
+
+    if (lkjagent_process(pool, agent, response, iteration) != RESULT_OK) {
+        PRINT_ERR("Processing of LLM response failed");
+        if (data_destroy(pool, response) != RESULT_OK) {
+            PRINT_ERR("Failed to destroy response payload after processing error");
         }
-    } else if (data_equal_str(iteration_limit_enable->data, "false")) {
-        iteration_limit = INT64_MAX;
-    } else {
-        RETURN_ERR("Invalid value for agent.iteration_limit.enable");
+        return RESULT_OK;
     }
-    for (uint64_t i = 0; i < (uint64_t)iteration_limit; i++) {
-        if (lkjagent_step(pool, lkjagent, i) != RESULT_OK) {
-            PRINT_ERR("Failed to execute lkjagent step");
+
+    if (data_destroy(pool, response) != RESULT_OK) {
+        RETURN_ERR("Failed to destroy response payload");
+    }
+
+    if (lkjagent_save(pool, agent) != RESULT_OK) {
+        RETURN_ERR("Failed to persist agent state");
+    }
+
+    return RESULT_OK;
+}
+
+static __attribute__((warn_unused_result)) result_t lkjagent_run(pool_t* pool, lkjagent_t* agent) {
+    for (uint64_t iteration = 0; iteration < UINT64_C(100000); iteration++) {
+        if (lkjagent_step(pool, agent, iteration) != RESULT_OK) {
             sleep(5);
         }
     }
+
     return RESULT_OK;
 }
 
-int main() {
-    static pool_t pool;
-    static lkjagent_t lkjagent;
+int main(void) {
+    pool_t pool;
+    lkjagent_t agent;
+    runtime_ctx_t ctx = {.pool = &pool, .agent = &agent};
+
     if (pool_init(&pool) != RESULT_OK) {
-        RETURN_ERR("Failed to initialize memory pool");
+        fprintf(stderr, "Failed to initialize memory pool\n");
+        return 1;
     }
-    if (lkjagent_init(&pool, &lkjagent) != RESULT_OK) {
-        RETURN_ERR("Failed to initialize lkjagent");
+
+    if (lkjagent_init(&ctx) != RESULT_OK) {
+        fprintf(stderr, "Failed to initialize agent\n");
+        return 1;
     }
-    if (lkjagent_run(&pool, &lkjagent) != RESULT_OK) {
-        RETURN_ERR("Failed to run lkjagent");
+
+    if (lkjagent_run(&pool, &agent) != RESULT_OK) {
+        fprintf(stderr, "Agent execution failed\n");
+        return 1;
     }
+
     return 0;
 }

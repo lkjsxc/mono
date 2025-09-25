@@ -135,6 +135,7 @@ __attribute__((warn_unused_result)) result_t data_copy_str(pool_t* pool, data_t*
 __attribute__((warn_unused_result)) result_t data_append_data(pool_t* pool, data_t** data1, const data_t* data2);
 __attribute__((warn_unused_result)) result_t data_append_str(pool_t* pool, data_t** data, const char* str);
 __attribute__((warn_unused_result)) result_t data_append_char(pool_t* pool, data_t** data, char c);
+__attribute__((warn_unused_result)) result_t data_append_json_escaped(pool_t* pool, data_t** dst, const data_t* src);
 __attribute__((warn_unused_result)) result_t data_escape_json(pool_t* pool, data_t** data);
 __attribute__((warn_unused_result)) result_t data_unescape_json(pool_t* pool, data_t** data);
 __attribute__((warn_unused_result)) result_t data_toint(const data_t* data, int64_t* dst);

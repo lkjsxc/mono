@@ -6,5 +6,5 @@ WORKDIR /app
 RUN make
 
 FROM scratch
-COPY --from=builder /app/build/lkjagent /app/build/lkjagent
-CMD ["/app/build/lkjagent"]
+COPY --from=builder /app/build/lkjagent /lkjagent
+ENTRYPOINT ["/lkjagent"]

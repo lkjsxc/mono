@@ -471,6 +471,61 @@ result_t data_unescape_json(pool_t* pool, data_t** data) {
     return RESULT_OK;
 }
 
+// **JSON ESCAPE FUNCTION** - Properly escape JSON strings
+result_t data_append_json_escaped(pool_t* pool, data_t** dst, const data_t* src) {
+    if (!pool || !dst || !*dst || !src) {
+        RETURN_ERR("Invalid input parameters for JSON escape");
+    }
+    
+    // Reserve extra space for escaping (worst case: every char needs escaping)
+    uint64_t estimated_size = src->size * 2;
+    if ((*dst)->capacity < (*dst)->size + estimated_size) {
+        if (pool_data_realloc(pool, dst, (*dst)->size + estimated_size) != RESULT_OK) {
+            RETURN_ERR("Failed to allocate space for JSON escaping");
+        }
+    }
+    
+    // Escape JSON characters
+    for (uint64_t i = 0; i < src->size; i++) {
+        char c = src->data[i];
+        
+        switch (c) {
+            case '"':
+                if (data_append_str(pool, dst, "\\\"") != RESULT_OK) {
+                    RETURN_ERR("Failed to escape quote");
+                }
+                break;
+            case '\\':
+                if (data_append_str(pool, dst, "\\\\") != RESULT_OK) {
+                    RETURN_ERR("Failed to escape backslash");
+                }
+                break;
+            case '\n':
+                if (data_append_str(pool, dst, "\\n") != RESULT_OK) {
+                    RETURN_ERR("Failed to escape newline");
+                }
+                break;
+            case '\r':
+                if (data_append_str(pool, dst, "\\r") != RESULT_OK) {
+                    RETURN_ERR("Failed to escape carriage return");
+                }
+                break;
+            case '\t':
+                if (data_append_str(pool, dst, "\\t") != RESULT_OK) {
+                    RETURN_ERR("Failed to escape tab");
+                }
+                break;
+            default:
+                if (data_append_char(pool, dst, c) != RESULT_OK) {
+                    RETURN_ERR("Failed to append character");
+                }
+                break;
+        }
+    }
+    
+    return RESULT_OK;
+}
+
 result_t data_destroy(pool_t* pool, data_t* data) {
     if (pool_data_free(pool, data) != RESULT_OK) {
         RETURN_ERR("Failed to free data");
