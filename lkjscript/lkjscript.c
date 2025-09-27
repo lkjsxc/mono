@@ -1,15 +1,17 @@
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum type_t type_t;
+typedef enum nodetype_t nodetype_t;
 typedef union uni64_t uni64_t;
 typedef struct token_t token_t;
 typedef struct node_t node_t;
+typedef struct val_t val_t;
 
-enum type_t {
+enum nodetype_t {
     TYPE_NULL,
     TYPE_NONE,
     TYPE_ROOT,
@@ -59,12 +61,12 @@ union uni64_t {
 
 struct token_t {
     const char* data;
-    uint32_t size;
+    uint64_t size;
     token_t* next;
 };
 
 struct node_t {
-    type_t type;
+    nodetype_t type;
     uni64_t value;
     node_t* next;
     node_t* parent;
@@ -72,7 +74,14 @@ struct node_t {
     node_t* child_rbegin;
 };
 
+struct val_t {
+    nodetype_t type;
+    uni64_t value;
+};
+
 const char* table_sign[] = {"==", "!=", "<=", ">=", "&&", "||", "<<", ">>", ">", "<", "+", "-", "*", "/", "%", "&", "|", "^", "=", "(", ")", ",", ";", NULL};
+
+void parse_expr(token_t** token, node_t* parent);
 
 bool token_equal(token_t* a, token_t* b) {
     if (a->size != b->size) {
@@ -82,7 +91,7 @@ bool token_equal(token_t* a, token_t* b) {
 }
 
 bool token_equal_str(token_t* a, const char* b) {
-    uint32_t b_size = strlen(b);
+    uint64_t b_size = strlen(b);
     if (a->size != b_size) {
         return false;
     }
@@ -98,7 +107,7 @@ token_t* token_skiplf(token_t* token) {
 
 int64_t token_to_i64(token_t* token) {
     int64_t value = 0;
-    for (uint32_t i = 0; i < token->size; i++) {
+    for (uint64_t i = 0; i < token->size; i++) {
         value = value * 10 + (token->data[i] - '0');
     }
     return value;
@@ -123,7 +132,7 @@ const char* file_read(const char* filename) {
 
 const char* tokenize_find_sign(const char* src_itr) {
     for (const char** sign_itr = table_sign; *sign_itr != NULL; sign_itr++) {
-        uint32_t sign_size = strlen(*sign_itr);
+        uint64_t sign_size = strlen(*sign_itr);
         if (strncmp(src_itr, *sign_itr, sign_size) == 0) {
             return *sign_itr;
         }
@@ -131,7 +140,7 @@ const char* tokenize_find_sign(const char* src_itr) {
     return NULL;
 }
 
-void tokenize_push(token_t** token_rbegin, const char* data, uint32_t size) {
+void tokenize_push(token_t** token_rbegin, const char* data, uint64_t size) {
     token_t* new_token = malloc(sizeof(token_t));
     *new_token = (token_t){.data = data, .size = size, .next = NULL};
     (*token_rbegin)->next = new_token;
@@ -174,7 +183,7 @@ token_t* tokenize(const char* src) {
     return token_begin->next;
 }
 
-node_t* parse_new(type_t type, node_t* parent) {
+node_t* parse_new(nodetype_t type, node_t* parent) {
     node_t* new_node = malloc(sizeof(node_t));
     *new_node = (node_t){.type = type, .value = {.u64 = 0}, .next = NULL, .parent = parent, .child_begin = NULL, .child_rbegin = NULL};
     return new_node;
@@ -218,9 +227,24 @@ void parse_primary(token_t** token, node_t* parent) {
         node->value.node = node_fn;
         parse_addmember(parent, node);
         *token = (*token)->next;
+        if (!token_equal_str(*token, "(")) {
+            fprintf(stderr, "Expected '(' but got '%.*s'\n", (int)((*token)->size), (*token)->data);
+            exit(1);
+        }
+        *token = (*token)->next;
+        parse_expr(token, node);
+        if (!token_equal_str(*token, ")")) {
+            fprintf(stderr, "Expected ')' but got '%.*s'\n", (int)((*token)->size), (*token)->data);
+            exit(1);
+        }
+        *token = (*token)->next;
     } else if (token_equal_str(*token, "(")) {
         *token = (*token)->next;
         parse_expr(token, parent);
+        if (!token_equal_str(*token, ")")) {
+            fprintf(stderr, "Expected ')' but got '%.*s'\n", (int)((*token)->size), (*token)->data);
+            exit(1);
+        }
         *token = (*token)->next;
     } else if (strchr("0123456789", (*token)->data[0]) != NULL) {
         node_t* node = parse_new(TYPE_INT, parent);
@@ -233,36 +257,26 @@ void parse_primary(token_t** token, node_t* parent) {
         parse_addmember(parent, node);
         *token = (*token)->next;
     } else {
-        fprintf(stderr, "Expected primary expression but got '%.*s'\n next: '%.*s'\n", (*token)->size, (*token)->data, (*token)->next != NULL ? (*token)->next->size : 0, (*token)->next != NULL ? (*token)->next->data : "");
+        fprintf(stderr, "Expected primary expression but got '%.*s'\n next: '%.*s'\n", (int)((*token)->size), (*token)->data, (*token)->next != NULL ? (int)((*token)->next->size) : 0, (*token)->next != NULL ? (*token)->next->data : "");
         exit(1);
     }
 }
 
-void parse_binary(token_t** token, node_t* parent) {
-    parse_primary(token, parent);
-    while(1) {
-        if(token_equal_str(*token, "+")) {
-            *token = (*token)->next;
-            parse_primary(token, parent);
-            node_t* node = parse_new(TYPE_ADD, parent);
-            parse_addmember(parent, node);
-        } else if(token_equal_str(*token, "-")) {
-            *token = (*token)->next;
-            parse_primary(token, parent);
-            node_t* node = parse_new(TYPE_SUB, parent);
-            parse_addmember(parent, node);
-        } else if(token_equal_str(*token, "*")) {
-            *token = (*token)->next;
-            parse_primary(token, parent);
-            node_t* node = parse_new(TYPE_MUL, parent);
-            parse_addmember(parent, node);
-        } else {
-            break;
-        }
-    }
-}
-
 void parse_expr_pre(token_t* token, node_t* parent) {
+    uint64_t nest_level = 0;
+    while (token != NULL) {
+        if (token_equal_str(token, "(")) {
+            nest_level++;
+        } else if (token_equal_str(token, ")")) {
+            nest_level--;
+        } else if (token_equal_str(token, "fn")) {
+            token = token->next;
+            node_t* node = parse_new(TYPE_DECL_FN, parent);
+            node->value.token = token;
+            parse_addmember(parent, node);
+        }
+        token = token->next;
+    }
 }
 
 void parse_expr(token_t** token, node_t* parent) {
@@ -276,13 +290,13 @@ void parse_expr(token_t** token, node_t* parent) {
             *token = token_skiplf((*token)->next);
         }
         *token = token_skiplf((*token)->next);
-    } else if (token_equal_str(*token, "let")) {
-        node_t* node = parse_new(TYPE_DECL_VAR, parent);
-        node->value.token = (*token)->next;
+    } else if (token_equal_str(*token, "return")) {
+        node_t* node = parse_new(TYPE_RETURN, parent);
         parse_addmember(parent, node);
-        *token = (*token)->next->next;
+        *token = (*token)->next;
+        parse_expr(token, node);
     } else {
-        parse_binary(token, parent);
+        parse_primary(token, parent);
     }
 }
 
@@ -291,10 +305,39 @@ node_t* parse(token_t* token) {
     token_t* token_itr = token;
     token_itr = token_skiplf(token_itr);
     while (token_itr != NULL) {
-        parse_expr(token_itr, root);
+        parse_expr(&token_itr, root);
         token_itr = token_skiplf(token_itr->next);
     }
     return root;
+}
+
+val_t eval(node_t* node) {
+    switch (node->type) {
+        case TYPE_ROOT:
+        case TYPE_BLOCK: {
+            val_t result = {.type = TYPE_NULL, .value = {.u64 = 0}};
+            for (node_t* child = node->child_begin; child != NULL; child = child->next) {
+                result = eval(child);
+            }
+            return result;
+        }
+        case TYPE_INT: {
+            return (val_t){.type = TYPE_INT, .value = {.i64 = node->value.i64}};
+        }
+        case TYPE_IDENT: {
+            return (val_t){.type = TYPE_IDENT, .value = {.node = node->value.node}};
+        }
+        case TYPE_CALL: {
+            return (val_t){.type = TYPE_CALL, .value = {.node = node->value.node}};
+        }
+        case TYPE_RETURN: {
+            return eval(node->child_begin);
+        }
+        default: {
+            fprintf(stderr, "Evaluation not implemented for node type %d\n", node->type);
+            exit(1);
+        }
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -305,7 +348,7 @@ int main(int argc, char* argv[]) {
     const char* src = file_read(argv[1]);
     token_t* token = tokenize(src);
     node_t* node = parse(token);
-    uint32_t* code = codegen(node);
-    eval(code);
+    val_t result = eval(node);
+    printf("eval result: %ld\n", result.value.i64);
     return 0;
 }

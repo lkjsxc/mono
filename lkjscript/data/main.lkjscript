@@ -1,7 +1,1 @@
-fn main() (
-    debug01(97)
-    debug01(98)
-    debug01(99)
-    debug01(10)
-    return 0
-)
+return 123
