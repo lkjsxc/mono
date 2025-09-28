@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -5,21 +6,36 @@
 #include <string.h>
 
 typedef enum nodetype_t nodetype_t;
-typedef union uni64_t uni64_t;
+typedef enum typekind_t typekind_t;
 typedef struct token_t token_t;
 typedef struct node_t node_t;
-typedef struct object_t object_t;
+typedef struct var_t var_t;
+typedef struct fn_t fn_t;
+typedef struct structinfo_t structinfo_t;
+typedef struct struct_instance_t struct_instance_t;
 typedef struct primitive_t primitive_t;
+typedef struct typeinfo_t typeinfo_t;
+typedef struct object_t object_t;
+typedef struct frame_t frame_t;
 
 enum nodetype_t {
     NODETYPE_NULL,
     NODETYPE_BLOCK,
     NODETYPE_DECL_VAR,
     NODETYPE_DECL_FN,
+    NODETYPE_DECL_STRUCT,
     NODETYPE_CALL,
     NODETYPE_RETURN,
     NODETYPE_INT,
     NODETYPE_IDENT,
+    NODETYPE_IDENT_FN,
+    NODETYPE_IDENT_STRUCT,
+    NODETYPE_ASSIGN,
+    NODETYPE_ADDR,
+    NODETYPE_DEREF,
+    NODETYPE_MEMBER,
+    NODETYPE_STRUCT_INIT,
+    NODETYPE_STRUCT_FIELD_INIT,
     NODETYPE_ADD,
     NODETYPE_SUB,
     NODETYPE_MUL,
@@ -38,16 +54,13 @@ enum nodetype_t {
     NODETYPE_BITXOR,
     NODETYPE_SHL,
     NODETYPE_SHR,
-    NODETYPE_ASSIGN,
 };
 
-union uni64_t {
-    uint64_t u64;
-    int64_t i64;
-    double f64;
-    const char* str;
-    token_t* token;
-    node_t* node;
+enum typekind_t {
+    TYPEKIND_UNIT,
+    TYPEKIND_I64,
+    TYPEKIND_PTR,
+    TYPEKIND_STRUCT,
 };
 
 struct token_t {
@@ -56,18 +69,32 @@ struct token_t {
     token_t* next;
 };
 
-struct node_t {
-    nodetype_t type;
-    uni64_t value;
-    node_t* next;
-    node_t* parent;
-    node_t* child_begin;
-    node_t* child_rbegin;
+struct typeinfo_t {
+    typekind_t kind;
+    typeinfo_t* inner;
+    structinfo_t* structinfo;
+    token_t* token;
 };
 
-struct object_t {
-    nodetype_t type;
-    uni64_t value;
+struct var_t {
+    token_t* token;
+    typeinfo_t* typeinfo;
+    int64_t offset;
+};
+
+struct fn_t {
+    token_t* token;
+    node_t* args;
+    node_t* body;
+    typeinfo_t* result_type;
+    int64_t stacksize;
+};
+
+struct structinfo_t {
+    token_t* token;
+    node_t* fields;
+    var_t** field_vars;
+    int field_count;
 };
 
 struct primitive_t {
@@ -75,7 +102,48 @@ struct primitive_t {
     nodetype_t type;
 };
 
-primitive_t primitive_table[] = {
+union node_value_t {
+    int64_t i64;
+    token_t* token;
+    node_t* node;
+    var_t* var;
+    fn_t* fn;
+    structinfo_t* structinfo;
+    typeinfo_t* typeinfo;
+};
+
+typedef union node_value_t node_value_t;
+
+struct node_t {
+    nodetype_t type;
+    node_value_t value;
+    node_t* next;
+    node_t* parent;
+    node_t* child_begin;
+    node_t* child_rbegin;
+};
+
+struct struct_instance_t {
+    structinfo_t* info;
+    object_t* fields;
+};
+
+struct object_t {
+    typeinfo_t* typeinfo;
+    union {
+        int64_t i64;
+        void* ptr;
+        struct_instance_t* instance;
+    } value;
+};
+
+struct frame_t {
+    frame_t* parent;
+    object_t* slots;
+    int64_t slot_count;
+};
+
+static primitive_t primitive_table[] = {
     {"return", NODETYPE_RETURN},
     {"add", NODETYPE_ADD},
     {"sub", NODETYPE_SUB},
@@ -99,22 +167,65 @@ primitive_t primitive_table[] = {
     {NULL, NODETYPE_NULL},
 };
 
-bool token_equal(token_t* a, token_t* b) {
+static bool token_equal(const token_t* a, const token_t* b);
+static bool token_equal_str(const token_t* token, const char* str);
+static bool token_is_number(const token_t* token);
+static int64_t token_to_i64(const token_t* token);
+static const char* readsrc(const char* path);
+static token_t* tokenize(const char* src);
+static node_t* parse(token_t* token);
+static void resolve_program(node_t* root);
+static object_t eval(node_t* node, frame_t* frame, bool* did_return);
+static void object_drop(object_t* object);
+static void frame_free(frame_t* frame);
+
+static void* checked_malloc(size_t size) {
+    void* ptr = malloc(size);
+    if (ptr == NULL) {
+        fprintf(stderr, "Out of memory\n");
+        exit(1);
+    }
+    return ptr;
+}
+
+static bool token_equal(const token_t* a, const token_t* b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
     if (a->size != b->size) {
         return false;
     }
     return strncmp(a->data, b->data, a->size) == 0;
 }
 
-bool token_equal_str(token_t* token, const char* str) {
-    uint32_t str_size = strlen(str);
-    if (token->size != str_size) {
+static bool token_equal_str(const token_t* token, const char* str) {
+    if (token == NULL || str == NULL) {
         return false;
     }
-    return strncmp(token->data, str, str_size) == 0;
+    size_t len = strlen(str);
+    if (token->size != len) {
+        return false;
+    }
+    return strncmp(token->data, str, len) == 0;
 }
 
-int64_t token_to_i64(token_t* token) {
+static bool token_is_number(const token_t* token) {
+    if (token == NULL || token->size == 0) {
+        return false;
+    }
+    for (uint32_t i = 0; i < token->size; i++) {
+        if (!isdigit((unsigned char)token->data[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static int64_t token_to_i64(const token_t* token) {
+    if (!token_is_number(token)) {
+        fprintf(stderr, "Token is not a number: '%.*s'\n", token != NULL ? (int)token->size : 0, token != NULL ? token->data : "");
+        exit(1);
+    }
     int64_t value = 0;
     for (uint32_t i = 0; i < token->size; i++) {
         value = value * 10 + (token->data[i] - '0');
@@ -122,150 +233,114 @@ int64_t token_to_i64(token_t* token) {
     return value;
 }
 
-const char* readsrc(const char* path) {
+static const char* readsrc(const char* path) {
     FILE* file = fopen(path, "r");
-    fseek(file, 0, SEEK_END);
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open %s\n", path);
+        exit(1);
+    }
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fprintf(stderr, "Failed to seek %s\n", path);
+        exit(1);
+    }
     long n = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char* buf = malloc(n + 4);
+    if (n < 0) {
+        fprintf(stderr, "Failed to determine length of %s\n", path);
+        exit(1);
+    }
+    if (fseek(file, 0, SEEK_SET) != 0) {
+        fprintf(stderr, "Failed to rewind %s\n", path);
+        exit(1);
+    }
+    char* buf = (char*)checked_malloc((size_t)n + 4);
     buf[0] = '(';
-    fread(buf + 1, 1, n, file);
+    size_t read_bytes = fread(buf + 1, 1, (size_t)n, file);
+    if (read_bytes != (size_t)n) {
+        fprintf(stderr, "Failed to read %s\n", path);
+        exit(1);
+    }
     memcpy(buf + 1 + n, ")\n\0", 3);
     fclose(file);
     return buf;
 }
 
-void tokenize_pushback(token_t** token_rbegin, const char* data, uint32_t size) {
-    token_t* token_new = malloc(sizeof(token_t));
+static void tokenize_pushback(token_t** token_rbegin, const char* data, uint32_t size) {
+    token_t* token_new = (token_t*)checked_malloc(sizeof(token_t));
     *token_new = (token_t){.data = data, .size = size, .next = NULL};
     (*token_rbegin)->next = token_new;
     *token_rbegin = token_new;
 }
 
-token_t* tokenize(const char* src) {
+static token_t* tokenize(const char* src) {
     token_t token_tmp = {.data = NULL, .size = 0, .next = NULL};
     token_t* token_rbegin = &token_tmp;
-    const char* src_itr = src;
-    while (*src_itr != '\0') {
-        if (*src_itr == ' ' || *src_itr == '\t' || *src_itr == '\n' || *src_itr == '\r') {
-            src_itr += 1;
-        } else if (*src_itr == '/' && *(src_itr + 1) == '/') {
-            while (*src_itr != '\n') {
-                src_itr += 1;
+    const char* itr = src;
+    while (*itr != '\0') {
+        if (*itr == ' ' || *itr == '\t' || *itr == '\n' || *itr == '\r') {
+            itr += 1;
+        } else if (*itr == '/' && *(itr + 1) == '/') {
+            while (*itr != '\n' && *itr != '\0') {
+                itr += 1;
             }
-        } else if (strchr("().,", *src_itr) != NULL) {
-            tokenize_pushback(&token_rbegin, src_itr, 1);
-            src_itr += 1;
-        } else if (strchr("0123456789abcdefghijklmnopqrstuvwxyz_", *src_itr) != NULL) {
-            const char* ident_begin = src_itr;
-            while (strchr("0123456789abcdefghijklmnopqrstuvwxyz_", *src_itr) != NULL) {
-                src_itr += 1;
+        } else if (strchr("().,{}", *itr) != NULL) {
+            tokenize_pushback(&token_rbegin, itr, 1);
+            itr += 1;
+        } else if (strchr("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", *itr) != NULL) {
+            const char* begin = itr;
+            while (strchr("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", *itr) != NULL) {
+                itr += 1;
             }
-            tokenize_pushback(&token_rbegin, ident_begin, src_itr - ident_begin);
+            tokenize_pushback(&token_rbegin, begin, (uint32_t)(itr - begin));
         } else {
-            fprintf(stderr, "Unknown token: '%c'\n", *src_itr);
+            fprintf(stderr, "Unknown token: '%c'\n", *itr);
             exit(1);
         }
     }
     return token_tmp.next;
 }
 
-node_t* parse_new(nodetype_t type) {
-    node_t* node = malloc(sizeof(node_t));
-    *node = (node_t){.type = type, .value = {.u64 = 0}, .next = NULL, .parent = NULL, .child_begin = NULL, .child_rbegin = NULL};
+static node_t* node_new(nodetype_t type) {
+    node_t* node = (node_t*)checked_malloc(sizeof(node_t));
+    *node = (node_t){.type = type, .value = {.i64 = 0}, .next = NULL, .parent = NULL, .child_begin = NULL, .child_rbegin = NULL};
     return node;
 }
 
-void parse_pushback(node_t* parent, node_t* node) {
-    node->parent = parent;
+static node_t* node_new_var(token_t* token) {
+    node_t* node = node_new(NODETYPE_DECL_VAR);
+    var_t* var = (var_t*)checked_malloc(sizeof(var_t));
+    *var = (var_t){.token = token, .typeinfo = NULL, .offset = -1};
+    node->value.var = var;
+    return node;
+}
+
+static node_t* node_new_fn(token_t* token) {
+    node_t* node = node_new(NODETYPE_DECL_FN);
+    fn_t* fn = (fn_t*)checked_malloc(sizeof(fn_t));
+    *fn = (fn_t){.token = token, .args = NULL, .body = NULL, .result_type = NULL, .stacksize = 0};
+    node->value.fn = fn;
+    return node;
+}
+
+static node_t* node_new_struct(token_t* token) {
+    node_t* node = node_new(NODETYPE_DECL_STRUCT);
+    structinfo_t* info = (structinfo_t*)checked_malloc(sizeof(structinfo_t));
+    *info = (structinfo_t){.token = token, .fields = NULL, .field_vars = NULL, .field_count = 0};
+    node->value.structinfo = info;
+    return node;
+}
+
+static void node_add_child(node_t* parent, node_t* child) {
+    child->parent = parent;
     if (parent->child_begin == NULL) {
-        parent->child_begin = node;
+        parent->child_begin = child;
     } else {
-        parent->child_rbegin->next = node;
+        parent->child_rbegin->next = child;
     }
-    parent->child_rbegin = node;
+    parent->child_rbegin = child;
 }
 
-void parse_expr(token_t** token_itr, node_t* parent) {
-    while (1) {
-        primitive_t* primitive_found = NULL;
-        for (primitive_t* primitive_itr = primitive_table; primitive_itr->str != NULL; primitive_itr++) {
-            if (token_equal_str(*token_itr, primitive_itr->str)) {
-                primitive_found = primitive_itr;
-                break;
-            }
-        }
-        if (primitive_found != NULL) {
-            node_t* node = parse_new(primitive_found->type);
-            parse_pushback(parent, node);
-            *token_itr = (*token_itr)->next;
-            parse_expr(token_itr, node);
-        } else if (token_equal_str(*token_itr, "(")) {
-            *token_itr = (*token_itr)->next;
-            while (!token_equal_str(*token_itr, ")")) {
-                parse_expr(token_itr, parent);
-            }
-            *token_itr = (*token_itr)->next;
-        } else if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
-            node_t* node = parse_new(NODETYPE_INT);
-            node->value.i64 = token_to_i64(*token_itr);
-            parse_pushback(parent, node);
-            *token_itr = (*token_itr)->next;
-        } else {
-            fprintf(stderr, "Expected expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
-            exit(1);
-        }
-        if(*token_itr == NULL) {
-            break;
-        } else if(!token_equal_str(*token_itr, ",")) {
-            break;
-        } else {
-            *token_itr = (*token_itr)->next;
-        }
-    }
-}
-
-node_t* parse(token_t* token) {
-    node_t* node_root = parse_new(NODETYPE_BLOCK);
-    token_t* token_itr = token;
-    parse_expr(&token_itr, node_root);
-    return node_root;
-}
-
-object_t eval(node_t* node) {
-    switch (node->type) {
-        case NODETYPE_BLOCK: {
-            object_t result = {.type = NODETYPE_NULL, .value = {.u64 = 0}};
-            for (node_t* child = node->child_begin; child != NULL; child = child->next) {
-                result = eval(child);
-            }
-            return result;
-        }
-        case NODETYPE_INT: {
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = node->value.i64}};
-        }
-        case NODETYPE_RETURN: {
-            // Placeholder for return value
-            return eval(node->child_begin);
-        }
-        case NODETYPE_ADD: {
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(node->child_begin).value.i64 + eval(node->child_rbegin).value.i64}};
-        }
-        default:
-            fprintf(stderr, "TODO: Eval\n");
-            exit(1);
-    }
-}
-
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <path>\n", argv[0]);
-        return 1;
-    }
-    const char* src = readsrc(argv[1]);
-    token_t* token = tokenize(src);
-    node_t* node = parse(token);
-    object_t result = eval(node);
-    printf("result: %ld\n", result.value.i64);
-    return 0;
+static typeinfo_t* typeinfo_new(typekind_t kind) {
+    typeinfo_t* info = (typeinfo_t*)checked_malloc(sizeof(typeinfo_t));
+    *info = (typeinfo_t){.kind = kind, .inner = NULL, .structinfo = NULL, .token = NULL};
+    return info;
 }
