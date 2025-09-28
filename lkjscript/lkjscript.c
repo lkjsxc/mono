@@ -75,7 +75,7 @@ struct primitive_t {
     nodetype_t type;
 };
 
-primitive_t primitive_table[] = {
+primitive_t primitive_binary_table[] = {
     {"add", NODETYPE_ADD},
     {"sub", NODETYPE_SUB},
     {"mul", NODETYPE_MUL},
@@ -95,17 +95,16 @@ primitive_t primitive_table[] = {
     {"shl", NODETYPE_SHL},
     {"shr", NODETYPE_SHR},
     {"assign", NODETYPE_ASSIGN},
-    {"return", NODETYPE_RETURN},
     {NULL, NODETYPE_NULL},
 };
 
-void parse_exprlist(token_t** token_itr, node_t* parent);
+void parse_lkjxml(token_t** token_itr, node_t* parent);
 
-bool token_equal(token_t* token, token_t* other) {
-    if (token->size != other->size) {
+bool token_equal(token_t* a, token_t* b) {
+    if (a->size != b->size) {
         return false;
     }
-    return strncmp(token->data, other->data, token->size) == 0;
+    return strncmp(a->data, b->data, a->size) == 0;
 }
 
 bool token_equal_str(token_t* token, const char* str) {
@@ -148,7 +147,6 @@ token_t* tokenize(const char* src) {
     token_t token_tmp = {.data = NULL, .size = 0, .next = NULL};
     token_t* token_rbegin = &token_tmp;
     const char* src_itr = src;
-    tokenize_pushback(&token_rbegin, "(", 1);
     while (*src_itr != '\0') {
         if (*src_itr == ' ' || *src_itr == '\t' || *src_itr == '\n' || *src_itr == '\r') {
             src_itr += 1;
@@ -156,7 +154,7 @@ token_t* tokenize(const char* src) {
             while (*src_itr != '\n') {
                 src_itr += 1;
             }
-        } else if (*src_itr == '(' || *src_itr == ')' || *src_itr == ',' || *src_itr == '.') {
+        } else if (strchr("<>/.,", *src_itr) != NULL) {
             tokenize_pushback(&token_rbegin, src_itr, 1);
             src_itr += 1;
         } else if (strchr("0123456789abcdefghijklmnopqrstuvwxyz_", *src_itr) != NULL) {
@@ -170,7 +168,6 @@ token_t* tokenize(const char* src) {
             exit(1);
         }
     }
-    tokenize_pushback(&token_rbegin, ")", 1);
     return token_tmp.next;
 }
 
@@ -190,55 +187,130 @@ void parse_pushback(node_t* parent, node_t* node) {
     parent->child_rbegin = node;
 }
 
-void parse_exprlist(token_t** token_itr, node_t* parent) {
-    while (1) {
-        primitive_t* primitive_found = NULL;
-        for (primitive_t* primitive_itr = primitive_table; primitive_itr->str != NULL; primitive_itr++) {
-            if (token_equal_str(*token_itr, primitive_itr->str)) {
-                primitive_found = primitive_itr;
-                break;
-            }
-        }
-        if (token_equal_str(*token_itr, "(")) {
-            node_t* node = parse_new(NODETYPE_BLOCK);
-            parse_pushback(parent, node);
-            *token_itr = (*token_itr)->next;
-            while (!token_equal_str(*token_itr, ")")) {
-                parse_exprlist(token_itr, node);
-            }
-            *token_itr = (*token_itr)->next;
-        } else if (token_equal_str(*token_itr, "let")) {
-            // TODO: implement
-        } else if (token_equal_str(*token_itr, "fn")) {
-            // TODO: implement
-        } else if (primitive_found != NULL) {
-            node_t* node = parse_new(primitive_found->type);
-            parse_pushback(parent, node);
-            *token_itr = (*token_itr)->next;
-            parse_exprlist(token_itr, node);
-        } else if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
-            node_t* node = parse_new(NODETYPE_INT);
-            node->value.i64 = token_to_i64(*token_itr);
-            parse_pushback(parent, node);
-            *token_itr = (*token_itr)->next;
+bool parse_lkjxmltag_equal(token_t* a, token_t* b) {
+    if (a == NULL || !token_equal_str(a, "<")) {
+        fprintf(stderr, "parse_lkjxmltag_equal: a is NULL or not <");
+        exit(1);
+    }
+    a = a->next;
+    if (b == NULL || !token_equal_str(b, "<")) {
+        fprintf(stderr, "parse_lkjxmltag_equal: b is <");
+        exit(1);
+    }
+    b = b->next;
+    while (a != NULL && b != NULL) {
+        if (!token_equal(a, b)) {
+            return false;
+        } else if (token_equal_str(a, ">")) {
+            return true;
         } else {
-            fprintf(stderr, "Expected primary expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
+            a = a->next;
+            b = b->next;
+        }
+    }
+    return false;
+}
+
+bool parse_lkjxmltag_equal_str(token_t* a, const char* b) {
+    if (a == NULL || !token_equal_str(a, "<")) {
+        return false;
+    }
+    a = a->next;
+    return token_equal_str(a, b);
+}
+
+bool parse_lkjxmltag_ispair(token_t* a, token_t* b) {
+    if (a == NULL) {
+        return false;
+    }
+    a = a->next;
+    if (b == NULL) {
+        return false;
+    }
+    b = b->next;
+    if (b == NULL) {
+        return false;
+    }
+    b = b->next;
+    while (a != NULL && b != NULL) {
+        if (!token_equal(a, b)) {
+            return false;
+        } else if (token_equal_str(a, ">")) {
+            return true;
+        } else {
+            a = a->next;
+            b = b->next;
+        }
+    }
+    return false;
+}
+
+void parse_primary(token_t** token_itr, node_t* parent) {
+    if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
+        node_t* node = parse_new(NODETYPE_INT);
+        node->value.i64 = token_to_i64(*token_itr);
+        parse_pushback(parent, node);
+        *token_itr = (*token_itr)->next;
+    } else {
+        fprintf(stderr, "Expected primary expression but got '%.*s'\n next: '%.*s'\n", (*token_itr)->size, (*token_itr)->data, (*token_itr)->next != NULL ? (*token_itr)->next->size : 0, (*token_itr)->next != NULL ? (*token_itr)->next->data : "");
+        exit(1);
+    }
+}
+
+void parse_skip_lkjxmltag(token_t** token_itr) {
+    while (!token_equal_str(*token_itr, ">")) {
+        *token_itr = (*token_itr)->next;
+    }
+    *token_itr = (*token_itr)->next;
+}
+
+void parse_lkjxml(token_t** token_itr, node_t* parent) {
+    if (!token_equal_str(*token_itr, "<")) {
+        parse_primary(token_itr, parent);
+        return;
+    }
+    token_t* base = *token_itr;
+    primitive_t* primitive_found = NULL;
+    for (primitive_t* primitive_itr = primitive_binary_table; primitive_itr->str != NULL; primitive_itr++) {
+        if (parse_lkjxmltag_equal_str(*token_itr, primitive_itr->str)) {
+            primitive_found = primitive_itr;
+            break;
+        }
+    }
+    if (parse_lkjxmltag_equal_str(*token_itr, "return")) {
+        node_t* node = parse_new(NODETYPE_RETURN);
+        parse_pushback(parent, node);
+        parse_skip_lkjxmltag(token_itr);
+        parse_lkjxml(token_itr, node);
+        if (!parse_lkjxmltag_ispair(base, *token_itr)) {
+            fprintf(stderr, "Expected </%.*s> but got '%.*s'\n", base->next->size, base->next->data, (*token_itr)->size, (*token_itr)->data);
             exit(1);
         }
-        if(*token_itr == NULL) {
-            break;
+        parse_skip_lkjxmltag(token_itr);
+    } else if (parse_lkjxmltag_equal_str(*token_itr, "let")) {
+        fprintf(stderr, "let tag not implemented\n");
+        exit(1);
+    } else if (primitive_found != NULL) {
+        node_t* node = parse_new(primitive_found->type);
+        parse_pushback(parent, node);
+        parse_skip_lkjxmltag(token_itr);
+        parse_lkjxml(token_itr, node);
+        parse_lkjxml(token_itr, node);
+        if (!parse_lkjxmltag_ispair(base, *token_itr)) {
+            fprintf(stderr, "Expected </%.*s> but got '%.*s'\n", base->next->size, base->next->data, (*token_itr)->size, (*token_itr)->data);
+            exit(1);
         }
-        if (!token_equal_str(*token_itr, ",")) {
-            break;
-        }
-        *token_itr = (*token_itr)->next;
+        parse_skip_lkjxmltag(token_itr);
+    } else {
+        fprintf(stderr, "Unknown tag: '%.*s'\n", base->size, base->data);
+        exit(1);
     }
 }
 
 node_t* parse(token_t* token) {
     node_t* node_root = parse_new(NODETYPE_BLOCK);
     token_t* token_itr = token;
-    parse_exprlist(&token_itr, node_root);
+    parse_lkjxml(&token_itr, node_root);
     return node_root;
 }
 
@@ -255,108 +327,15 @@ object_t eval(node_t* node) {
             return (object_t){.type = NODETYPE_INT, .value = {.i64 = node->value.i64}};
         }
         case NODETYPE_RETURN: {
+            // Placeholder for return value
             return eval(node->child_begin);
         }
-        case NODETYPE_IDENT: {
-            // TODO: implement
-        }
         case NODETYPE_ADD: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 + eval(rhs).value.i64}};
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(node->child_begin).value.i64 + eval(node->child_rbegin).value.i64}};
         }
-        case NODETYPE_SUB: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 - eval(rhs).value.i64}};
-        }
-        case NODETYPE_MUL: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 * eval(rhs).value.i64}};
-        }
-        case NODETYPE_DIV: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 / eval(rhs).value.i64}};
-        }
-        case NODETYPE_MOD: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 % eval(rhs).value.i64}};
-        }
-        case NODETYPE_EQ: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 == eval(rhs).value.i64}};
-        }
-        case NODETYPE_NEQ: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 != eval(rhs).value.i64}};
-        }
-        case NODETYPE_LT: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 < eval(rhs).value.i64}};
-        }
-        case NODETYPE_LTE: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 <= eval(rhs).value.i64}};
-        }
-        case NODETYPE_GT: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 > eval(rhs).value.i64}};
-        }
-        case NODETYPE_GTE: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 >= eval(rhs).value.i64}};
-        }
-        case NODETYPE_AND: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 && eval(rhs).value.i64}};
-        }
-        case NODETYPE_OR: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 || eval(rhs).value.i64}};
-        }
-        case NODETYPE_BITAND: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 & eval(rhs).value.i64}};
-        }
-        case NODETYPE_BITOR: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 | eval(rhs).value.i64}};
-        }
-        case NODETYPE_BITXOR: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 ^ eval(rhs).value.i64}};
-        }
-        case NODETYPE_SHL: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 << eval(rhs).value.i64}};
-        }
-        case NODETYPE_SHR: {
-            node_t* lhs = node->child_begin->child_begin;
-            node_t* rhs = node->child_begin->child_rbegin;
-            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 >> eval(rhs).value.i64}};
-        }
-        case NODETYPE_ASSIGN: {
-            // TODO: implement
-        }
-        default: {
-            fprintf(stderr, "Evaluation not implemented for node type %d\n", node->type);
+        default:
+            fprintf(stderr, "TODO: Eval\n");
             exit(1);
-        }
     }
 }
 
