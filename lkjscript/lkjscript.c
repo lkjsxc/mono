@@ -225,6 +225,9 @@ void parse_exprlist(token_t** token_itr, node_t* parent) {
             fprintf(stderr, "Expected primary expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
             exit(1);
         }
+        if(*token_itr == NULL) {
+            break;
+        }
         if (!token_equal_str(*token_itr, ",")) {
             break;
         }
@@ -258,58 +261,94 @@ object_t eval(node_t* node) {
             // TODO: implement
         }
         case NODETYPE_ADD: {
-            return (object_t){.type = NODETYPE_ADD, .value = {.i64 = eval(node->child_begin).value.i64 + eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 + eval(rhs).value.i64}};
         }
         case NODETYPE_SUB: {
-            return (object_t){.type = NODETYPE_SUB, .value = {.i64 = eval(node->child_begin).value.i64 - eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 - eval(rhs).value.i64}};
         }
         case NODETYPE_MUL: {
-            return (object_t){.type = NODETYPE_MUL, .value = {.i64 = eval(node->child_begin).value.i64 * eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 * eval(rhs).value.i64}};
         }
         case NODETYPE_DIV: {
-            return (object_t){.type = NODETYPE_DIV, .value = {.i64 = eval(node->child_begin).value.i64 / eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 / eval(rhs).value.i64}};
         }
         case NODETYPE_MOD: {
-            return (object_t){.type = NODETYPE_MOD, .value = {.i64 = eval(node->child_begin).value.i64 % eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 % eval(rhs).value.i64}};
         }
         case NODETYPE_EQ: {
-            return (object_t){.type = NODETYPE_EQ, .value = {.i64 = eval(node->child_begin).value.i64 == eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 == eval(rhs).value.i64}};
         }
         case NODETYPE_NEQ: {
-            return (object_t){.type = NODETYPE_NEQ, .value = {.i64 = eval(node->child_begin).value.i64 != eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 != eval(rhs).value.i64}};
         }
         case NODETYPE_LT: {
-            return (object_t){.type = NODETYPE_LT, .value = {.i64 = eval(node->child_begin).value.i64 < eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 < eval(rhs).value.i64}};
         }
         case NODETYPE_LTE: {
-            return (object_t){.type = NODETYPE_LTE, .value = {.i64 = eval(node->child_begin).value.i64 <= eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 <= eval(rhs).value.i64}};
         }
         case NODETYPE_GT: {
-            return (object_t){.type = NODETYPE_GT, .value = {.i64 = eval(node->child_begin).value.i64 > eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 > eval(rhs).value.i64}};
         }
         case NODETYPE_GTE: {
-            return (object_t){.type = NODETYPE_GTE, .value = {.i64 = eval(node->child_begin).value.i64 >= eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 >= eval(rhs).value.i64}};
         }
         case NODETYPE_AND: {
-            return (object_t){.type = NODETYPE_AND, .value = {.i64 = eval(node->child_begin).value.i64 && eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 && eval(rhs).value.i64}};
         }
         case NODETYPE_OR: {
-            return (object_t){.type = NODETYPE_OR, .value = {.i64 = eval(node->child_begin).value.i64 || eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 || eval(rhs).value.i64}};
         }
         case NODETYPE_BITAND: {
-            return (object_t){.type = NODETYPE_BITAND, .value = {.i64 = eval(node->child_begin).value.i64 & eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 & eval(rhs).value.i64}};
         }
         case NODETYPE_BITOR: {
-            return (object_t){.type = NODETYPE_BITOR, .value = {.i64 = eval(node->child_begin).value.i64 | eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 | eval(rhs).value.i64}};
         }
         case NODETYPE_BITXOR: {
-            return (object_t){.type = NODETYPE_BITXOR, .value = {.i64 = eval(node->child_begin).value.i64 ^ eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 ^ eval(rhs).value.i64}};
         }
         case NODETYPE_SHL: {
-            return (object_t){.type = NODETYPE_SHL, .value = {.i64 = eval(node->child_begin).value.i64 << eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 << eval(rhs).value.i64}};
         }
         case NODETYPE_SHR: {
-            return (object_t){.type = NODETYPE_SHR, .value = {.i64 = eval(node->child_begin).value.i64 >> eval(node->child_rbegin).value.i64}};
+            node_t* lhs = node->child_begin->child_begin;
+            node_t* rhs = node->child_begin->child_rbegin;
+            return (object_t){.type = NODETYPE_INT, .value = {.i64 = eval(lhs).value.i64 >> eval(rhs).value.i64}};
         }
         case NODETYPE_ASSIGN: {
             // TODO: implement
@@ -329,7 +368,6 @@ int main(int argc, char* argv[]) {
     const char* src = readsrc(argv[1]);
     token_t* token = tokenize(src);
     node_t* node = parse(token);
-    return 0;
     object_t result = eval(node);
     printf("result: %ld\n", result.value.i64);
     return 0;
