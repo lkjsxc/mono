@@ -164,7 +164,7 @@ static const char* readsrc(const char* path) {
     char* buf = malloc(n + 4);
     buf[0] = '(';
     fread(buf + 1, 1, n, file);
-    memcpy(buf + n + 1, ")\n\0", 3);
+    memcpy(buf + 1 + n, ")\n\0", 3);
     fclose(file);
     return buf;
 }
@@ -242,77 +242,80 @@ static void parse_node_addmember(node_t* parent, node_t* node) {
 }
 
 static void parse_expr(token_t** token_itr, node_t* parent) {
-    primitive_t* primitive_found = NULL;
-    varinfo_t* varinfo_found = NULL;
-    fninfo_t* fninfo_found = NULL;
-    structinfo_t* structinfo_found = NULL;
-    for (primitive_t* primitive_itr = primitive_table; primitive_itr->str != NULL; primitive_itr++) {
-        if (token_equal_str(*token_itr, primitive_itr->str)) {
-            primitive_found = primitive_itr;
-            break;
+    while (1) {
+        primitive_t* primitive_found = NULL;
+        varinfo_t* varinfo_found = NULL;
+        fninfo_t* fninfo_found = NULL;
+        structinfo_t* structinfo_found = NULL;
+        for (primitive_t* primitive_itr = primitive_table; primitive_itr->str != NULL; primitive_itr++) {
+            if (token_equal_str(*token_itr, primitive_itr->str)) {
+                primitive_found = primitive_itr;
+                break;
+            }
         }
-    }
-    for (node_t* parent_itr = parent; parent_itr != NULL; parent_itr = parent_itr->parent) {
-        for (node_t* node_itr = parent_itr->child_begin; node_itr != NULL; node_itr = node_itr->next) {
-            if(node_itr->type == NODE_TYPE_DECL_VAR || node_itr->type == NODE_TYPE_DECL_FN || node_itr->type == NODE_TYPE_DECL_STRUCT) {
-                if(varinfo_found == NULL && token_equal(node_itr->value.var->token, *token_itr)) {
+        for (node_t* parent_itr = parent; parent_itr != NULL; parent_itr = parent_itr->parent) {
+            for (node_t* node_itr = parent_itr->child_begin; node_itr != NULL; node_itr = node_itr->next) {
+                if (varinfo_found == NULL && node_itr->type == NODE_TYPE_DECL_VAR && token_equal(node_itr->value.var->token, *token_itr)) {
                     varinfo_found = node_itr->value.var;
                 }
-                if(fninfo_found == NULL && token_equal(node_itr->value.fn->token, *token_itr)) {
+                if (fninfo_found == NULL && node_itr->type == NODE_TYPE_DECL_FN && token_equal(node_itr->value.fn->token, *token_itr)) {
                     fninfo_found = node_itr->value.fn;
                 }
-                if(structinfo_found == NULL && token_equal(node_itr->value.structinfo->token, *token_itr)) {
+                if (structinfo_found == NULL && node_itr->type == NODE_TYPE_DECL_STRUCT && token_equal(node_itr->value.structinfo->token, *token_itr)) {
                     structinfo_found = node_itr->value.structinfo;
                 }
             }
         }
-    }
-    if (primitive_found != NULL) {
-        node_t* node = parse_node_new(primitive_found->type);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-        parse_expr(token_itr, node);
-    } else if (varinfo_found != NULL) {
-        // Placeholder for variable
-    } else if (fninfo_found != NULL) {
-        // Placeholder for function
-    } else if (structinfo_found != NULL) {
-        // Placeholder for struct
-    } else if (token_equal_str(*token_itr, "(")) {
-        node_t* node = parse_node_new(NODE_TYPE_BLOCK);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-        while (!token_equal_str(*token_itr, ")")) {
+        if (primitive_found != NULL) {
+            node_t* node = parse_node_new(primitive_found->type);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
             parse_expr(token_itr, node);
+        } else if (varinfo_found != NULL) {
+            // Placeholder for variable
+        } else if (fninfo_found != NULL) {
+            // Placeholder for function
+        } else if (structinfo_found != NULL) {
+            // Placeholder for struct
+        } else if (token_equal_str(*token_itr, "(")) {
+            node_t* node = parse_node_new(NODE_TYPE_BLOCK);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
+            while (!token_equal_str(*token_itr, ")")) {
+                parse_expr(token_itr, node);
+            }
+            *token_itr = (*token_itr)->next;
+        } else if (token_equal_str(*token_itr, "var")) {
+            // Placeholder for variable
+            node_t* node = parse_var_new(*token_itr);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
+        } else if (token_equal_str(*token_itr, "fn")) {
+            // Placeholder for function
+            node_t* node = parse_fn_new(*token_itr);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
+        } else if (token_equal_str(*token_itr, "struct")) {
+            // Placeholder for struct
+            node_t* node = parse_struct_new(*token_itr);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
+        } else if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
+            node_t* node = parse_node_new(NODE_TYPE_I64);
+            node->value.i64 = token_to_i64(*token_itr);
+            parse_node_addmember(parent, node);
+            *token_itr = (*token_itr)->next;
+        } else {
+            fprintf(stderr, "Expected expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
+            exit(1);
+        }
+        if (*token_itr == NULL) {
+            break;
+        } else if (!token_equal_str(*token_itr, ",")) {
+            break;
+        } else {
             *token_itr = (*token_itr)->next;
         }
-        *token_itr = (*token_itr)->next;
-        if(*token_itr == NULL) {
-            return;
-        }
-    } else if (token_equal_str(*token_itr, "var")) {
-        // Placeholder for variable
-        node_t* node = parse_var_new(*token_itr);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-    } else if (token_equal_str(*token_itr, "fn")) {
-        // Placeholder for function
-        node_t* node = parse_fn_new(*token_itr);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-    } else if (token_equal_str(*token_itr, "struct")) {
-        // Placeholder for struct
-        node_t* node = parse_struct_new(*token_itr);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-    } else if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
-        node_t* node = parse_node_new(NODE_TYPE_I64);
-        node->value.i64 = token_to_i64(*token_itr);
-        parse_node_addmember(parent, node);
-        *token_itr = (*token_itr)->next;
-    } else {
-        fprintf(stderr, "Expected expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
-        exit(1);
     }
 }
 
@@ -339,7 +342,7 @@ static object_t eval(node_t* node) {
             return eval(node->child_begin);
         }
         case NODE_TYPE_ADD: {
-            return (object_t){.type = NODE_TYPE_I64, .value = {.i64 = eval(node->child_begin).value.i64 + eval(node->child_rbegin).value.i64}};
+            return (object_t){.type = NODE_TYPE_I64, .value = {.i64 = eval(node->child_begin->child_begin).value.i64 + eval(node->child_begin->child_rbegin).value.i64}};
         }
         default:
             fprintf(stderr, "TODO: Eval\n");
@@ -355,7 +358,6 @@ int main(int argc, char* argv[]) {
     const char* src = readsrc(argv[1]);
     token_t* token = tokenize(src);
     node_t* node = parse(token);
-    return 0;
     object_t result = eval(node);
     printf("result: %ld\n", result.value.i64);
     return 0;
