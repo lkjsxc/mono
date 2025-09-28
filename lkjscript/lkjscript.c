@@ -75,7 +75,8 @@ struct primitive_t {
     nodetype_t type;
 };
 
-primitive_t primitive_binary_table[] = {
+primitive_t primitive_table[] = {
+    {"return", NODETYPE_RETURN},
     {"add", NODETYPE_ADD},
     {"sub", NODETYPE_SUB},
     {"mul", NODETYPE_MUL},
@@ -97,8 +98,6 @@ primitive_t primitive_binary_table[] = {
     {"assign", NODETYPE_ASSIGN},
     {NULL, NODETYPE_NULL},
 };
-
-void parse_lkjxml(token_t** token_itr, node_t* parent);
 
 bool token_equal(token_t* a, token_t* b) {
     if (a->size != b->size) {
@@ -128,10 +127,10 @@ const char* readsrc(const char* path) {
     fseek(file, 0, SEEK_END);
     long n = ftell(file);
     fseek(file, 0, SEEK_SET);
-    char* buf = malloc(n + 2);
-    fread(buf, 1, n, file);
-    buf[n + 0] = '\n';
-    buf[n + 1] = '\0';
+    char* buf = malloc(n + 4);
+    buf[0] = '(';
+    fread(buf + 1, 1, n, file);
+    memcpy(buf + 1 + n, ")\n\0", 3);
     fclose(file);
     return buf;
 }
@@ -154,7 +153,7 @@ token_t* tokenize(const char* src) {
             while (*src_itr != '\n') {
                 src_itr += 1;
             }
-        } else if (strchr("<>/.,", *src_itr) != NULL) {
+        } else if (strchr("().,", *src_itr) != NULL) {
             tokenize_pushback(&token_rbegin, src_itr, 1);
             src_itr += 1;
         } else if (strchr("0123456789abcdefghijklmnopqrstuvwxyz_", *src_itr) != NULL) {
@@ -187,130 +186,49 @@ void parse_pushback(node_t* parent, node_t* node) {
     parent->child_rbegin = node;
 }
 
-bool parse_lkjxmltag_equal(token_t* a, token_t* b) {
-    if (a == NULL || !token_equal_str(a, "<")) {
-        fprintf(stderr, "parse_lkjxmltag_equal: a is NULL or not <");
-        exit(1);
-    }
-    a = a->next;
-    if (b == NULL || !token_equal_str(b, "<")) {
-        fprintf(stderr, "parse_lkjxmltag_equal: b is <");
-        exit(1);
-    }
-    b = b->next;
-    while (a != NULL && b != NULL) {
-        if (!token_equal(a, b)) {
-            return false;
-        } else if (token_equal_str(a, ">")) {
-            return true;
-        } else {
-            a = a->next;
-            b = b->next;
+void parse_expr(token_t** token_itr, node_t* parent) {
+    while (1) {
+        primitive_t* primitive_found = NULL;
+        for (primitive_t* primitive_itr = primitive_table; primitive_itr->str != NULL; primitive_itr++) {
+            if (token_equal_str(*token_itr, primitive_itr->str)) {
+                primitive_found = primitive_itr;
+                break;
+            }
         }
-    }
-    return false;
-}
-
-bool parse_lkjxmltag_equal_str(token_t* a, const char* b) {
-    if (a == NULL || !token_equal_str(a, "<")) {
-        return false;
-    }
-    a = a->next;
-    return token_equal_str(a, b);
-}
-
-bool parse_lkjxmltag_ispair(token_t* a, token_t* b) {
-    if (a == NULL) {
-        return false;
-    }
-    a = a->next;
-    if (b == NULL) {
-        return false;
-    }
-    b = b->next;
-    if (b == NULL) {
-        return false;
-    }
-    b = b->next;
-    while (a != NULL && b != NULL) {
-        if (!token_equal(a, b)) {
-            return false;
-        } else if (token_equal_str(a, ">")) {
-            return true;
+        if (primitive_found != NULL) {
+            node_t* node = parse_new(primitive_found->type);
+            parse_pushback(parent, node);
+            *token_itr = (*token_itr)->next;
+            parse_expr(token_itr, node);
+        } else if (token_equal_str(*token_itr, "(")) {
+            *token_itr = (*token_itr)->next;
+            while (!token_equal_str(*token_itr, ")")) {
+                parse_expr(token_itr, parent);
+            }
+            *token_itr = (*token_itr)->next;
+        } else if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
+            node_t* node = parse_new(NODETYPE_INT);
+            node->value.i64 = token_to_i64(*token_itr);
+            parse_pushback(parent, node);
+            *token_itr = (*token_itr)->next;
         } else {
-            a = a->next;
-            b = b->next;
+            fprintf(stderr, "Expected expression but got '%.*s'\n", (*token_itr)->size, (*token_itr)->data);
+            exit(1);
         }
-    }
-    return false;
-}
-
-void parse_primary(token_t** token_itr, node_t* parent) {
-    if (strchr("0123456789", (*token_itr)->data[0]) != NULL) {
-        node_t* node = parse_new(NODETYPE_INT);
-        node->value.i64 = token_to_i64(*token_itr);
-        parse_pushback(parent, node);
-        *token_itr = (*token_itr)->next;
-    } else {
-        fprintf(stderr, "Expected primary expression but got '%.*s'\n next: '%.*s'\n", (*token_itr)->size, (*token_itr)->data, (*token_itr)->next != NULL ? (*token_itr)->next->size : 0, (*token_itr)->next != NULL ? (*token_itr)->next->data : "");
-        exit(1);
-    }
-}
-
-void parse_skip_lkjxmltag(token_t** token_itr) {
-    while (!token_equal_str(*token_itr, ">")) {
-        *token_itr = (*token_itr)->next;
-    }
-    *token_itr = (*token_itr)->next;
-}
-
-void parse_lkjxml(token_t** token_itr, node_t* parent) {
-    if (!token_equal_str(*token_itr, "<")) {
-        parse_primary(token_itr, parent);
-        return;
-    }
-    token_t* base = *token_itr;
-    primitive_t* primitive_found = NULL;
-    for (primitive_t* primitive_itr = primitive_binary_table; primitive_itr->str != NULL; primitive_itr++) {
-        if (parse_lkjxmltag_equal_str(*token_itr, primitive_itr->str)) {
-            primitive_found = primitive_itr;
+        if(*token_itr == NULL) {
             break;
+        } else if(!token_equal_str(*token_itr, ",")) {
+            break;
+        } else {
+            *token_itr = (*token_itr)->next;
         }
-    }
-    if (parse_lkjxmltag_equal_str(*token_itr, "return")) {
-        node_t* node = parse_new(NODETYPE_RETURN);
-        parse_pushback(parent, node);
-        parse_skip_lkjxmltag(token_itr);
-        parse_lkjxml(token_itr, node);
-        if (!parse_lkjxmltag_ispair(base, *token_itr)) {
-            fprintf(stderr, "Expected </%.*s> but got '%.*s'\n", base->next->size, base->next->data, (*token_itr)->size, (*token_itr)->data);
-            exit(1);
-        }
-        parse_skip_lkjxmltag(token_itr);
-    } else if (parse_lkjxmltag_equal_str(*token_itr, "let")) {
-        fprintf(stderr, "let tag not implemented\n");
-        exit(1);
-    } else if (primitive_found != NULL) {
-        node_t* node = parse_new(primitive_found->type);
-        parse_pushback(parent, node);
-        parse_skip_lkjxmltag(token_itr);
-        parse_lkjxml(token_itr, node);
-        parse_lkjxml(token_itr, node);
-        if (!parse_lkjxmltag_ispair(base, *token_itr)) {
-            fprintf(stderr, "Expected </%.*s> but got '%.*s'\n", base->next->size, base->next->data, (*token_itr)->size, (*token_itr)->data);
-            exit(1);
-        }
-        parse_skip_lkjxmltag(token_itr);
-    } else {
-        fprintf(stderr, "Unknown tag: '%.*s'\n", base->size, base->data);
-        exit(1);
     }
 }
 
 node_t* parse(token_t* token) {
     node_t* node_root = parse_new(NODETYPE_BLOCK);
     token_t* token_itr = token;
-    parse_lkjxml(&token_itr, node_root);
+    parse_expr(&token_itr, node_root);
     return node_root;
 }
 
