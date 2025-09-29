@@ -98,6 +98,7 @@ export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 
 export const DEFAULT_MEMORY = {
   state: "analyzing",
+  iteration: 0,
   working_memory: {} as Record<string, string>,
   storage: {} as Record<string, string>,
 };

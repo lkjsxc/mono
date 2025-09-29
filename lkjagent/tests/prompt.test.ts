@@ -75,7 +75,8 @@ describe("buildPrompt", () => {
   it("embeds storage and working memory content into the prompt", () => {
     const memory: AgentMemorySnapshot = {
       state: "analyzing",
-      workingMemory: {
+        iteration: 0,
+        workingMemory: {
         entries: {
           "draft,iteration_2": "Outline chapter headings",
         },
@@ -97,7 +98,8 @@ describe("buildPrompt", () => {
   it("commands the model to respond with the strict XML envelope", () => {
     const memory: AgentMemorySnapshot = {
       state: "analyzing",
-      workingMemory: {
+        iteration: 0,
+        workingMemory: {
         entries: {
           "system,iteration_0": "Iteration 0 failed: Agent response did not specify next state",
         },
@@ -127,6 +129,7 @@ describe("buildPrompt", () => {
 
     const memory: AgentMemorySnapshot = {
       state: "analyzing",
+        iteration: 0,
       workingMemory: { entries: {} },
       storage: { entries: {} },
     };
@@ -148,6 +151,7 @@ describe("buildPrompt", () => {
 
     const memory: AgentMemorySnapshot = {
       state: "creating",
+        iteration: 0,
       workingMemory: { entries: {} },
       storage: { entries: {} },
     };

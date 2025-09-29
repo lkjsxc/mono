@@ -38,6 +38,7 @@ describe("applyPaging", () => {
   it("moves low-priority entries into storage when threshold exceeded", () => {
     const memory: AgentMemorySnapshot = {
       state: "creating",
+      iteration: 0,
       workingMemory: {
         entries: {
           "general,iteration_0": "X".repeat(300),

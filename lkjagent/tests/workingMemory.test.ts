@@ -4,6 +4,7 @@ import { clampWorkingMemoryEntries } from "../src/memory/working.js";
 
 const buildMemory = (entries: Record<string, string>): AgentMemorySnapshot => ({
   state: "analyzing",
+  iteration: 0,
   workingMemory: { entries },
   storage: { entries: {} },
 });

@@ -78,15 +78,16 @@ export const runAgentLoop = async (
 ): Promise<void> => {
   const limit = resolveIterationLimit(config);
   let memory = initialMemory;
-  let iteration = 0;
+  let iteration = initialMemory.iteration ?? 0;
   const backoff = options.backoffMs ?? DEFAULT_BACKOFF_MS;
 
   while (limit === undefined || iteration < limit) {
     try {
       const result = await executeIteration(config, memory, iteration);
-      memory = result.memory;
+      const nextIteration = iteration + 1;
+      memory = { ...result.memory, iteration: nextIteration };
       await persistMemory(memory);
-      iteration += 1;
+      iteration = nextIteration;
     } catch (error) {
       console.error("[lkjagent] iteration failed", error);
       await sleep(backoff);

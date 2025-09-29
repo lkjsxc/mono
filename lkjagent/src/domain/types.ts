@@ -10,6 +10,7 @@ export interface StorageMemory {
 
 export interface AgentMemorySnapshot {
   readonly state: string;
+  readonly iteration: number;
   readonly workingMemory: WorkingMemory;
   readonly storage: StorageMemory;
 }

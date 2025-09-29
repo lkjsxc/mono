@@ -48,6 +48,7 @@ const baseConfig: AgentConfig = {
 
 const buildMemory = (): AgentMemorySnapshot => ({
   state: "analyzing",
+  iteration: 0,
   workingMemory: { entries: {} },
   storage: { entries: {} },
 });
@@ -109,6 +110,7 @@ describe("executeIteration", () => {
 
     const memory: AgentMemorySnapshot = {
       ...buildMemory(),
+      iteration: 3,
       workingMemory: {
         entries: {
           "alpha,iteration_1": "First",

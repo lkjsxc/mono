@@ -5,6 +5,7 @@ import { addWorkingMemoryEntry } from "../src/memory/working.js";
 
 const buildMemory = (): AgentMemorySnapshot => ({
   state: "analyzing",
+  iteration: 0,
   workingMemory: { entries: {} },
   storage: { entries: {} },
 });
