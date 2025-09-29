@@ -7,12 +7,23 @@ vi.mock("../src/io/http.js", () => ({
   postJson: vi.fn(),
 }));
 
+vi.mock("../src/io/file.js", () => ({
+  appendToFile: vi.fn(),
+}));
+
 type MockedHttp = {
   postJson: ReturnType<typeof vi.fn>;
 };
 
 const loadHttp = async (): Promise<MockedHttp> =>
   (await import("../src/io/http.js")) as unknown as MockedHttp;
+
+type MockedFile = {
+  appendToFile: ReturnType<typeof vi.fn>;
+};
+
+const loadFile = async (): Promise<MockedFile> =>
+  (await import("../src/io/file.js")) as unknown as MockedFile;
 
 const loadClient = async () => import("../src/llm/client.js");
 
@@ -45,6 +56,8 @@ describe("requestCompletion", () => {
   beforeEach(async () => {
     const { postJson } = await loadHttp();
     postJson.mockReset();
+    const { appendToFile } = await loadFile();
+    appendToFile.mockReset();
     originalFlag = process.env.LKJAGENT_DISABLE_OFFLINE_FALLBACK;
     delete process.env.LKJAGENT_DISABLE_OFFLINE_FALLBACK;
   });
@@ -70,12 +83,14 @@ describe("requestCompletion", () => {
     const xml = extractAgentXml(response);
     const parsed = interpretAgentXml(xml);
     expect(parsed.state).toBe("creating");
-    expect(parsed.action.type).toBe("working_memory_add");
-    if (parsed.action.type !== "working_memory_add") {
+    expect(parsed.actions).toHaveLength(1);
+    const [action] = parsed.actions;
+    expect(action.type).toBe("working_memory_add");
+    if (action.type !== "working_memory_add") {
       throw new Error("expected working_memory_add fallback action");
     }
-  expect(parsed.action.tags).toBe("system,offline");
-    expect(parsed.action.value).toContain("Offline fallback engaged");
+    expect(action.tags).toBe("system,offline");
+    expect(action.value).toContain("Offline fallback engaged");
 
     warn.mockRestore();
   });
@@ -90,5 +105,37 @@ describe("requestCompletion", () => {
     await expect(requestCompletion(config, "Prompt", "analyzing")).rejects.toThrow(
       "service down",
     );
+  });
+
+  it("logs prompts and responses when logging is enabled", async () => {
+    const { postJson } = await loadHttp();
+    postJson.mockResolvedValue({
+      content: "<agent><state>creating</state><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft</value></action></agent>",
+    });
+
+    const { appendToFile } = await loadFile();
+    appendToFile.mockResolvedValue(undefined);
+
+    const loggingConfig: AgentConfig = {
+      ...config,
+      llm: {
+        ...config.llm,
+        logging: {
+          enabled: true,
+          file: "logs/log.txt",
+        },
+      },
+    };
+
+    const { requestCompletion } = await loadClient();
+    await requestCompletion(loggingConfig, "Prompt body", "creating");
+
+    expect(appendToFile).toHaveBeenCalledTimes(2);
+    expect(appendToFile.mock.calls[0][0]).toBe("logs/log.txt");
+    expect(appendToFile.mock.calls[0][1]).toContain("[OUTBOUND]");
+    expect(appendToFile.mock.calls[0][1]).toContain("Prompt body");
+    expect(appendToFile.mock.calls[1][0]).toBe("logs/log.txt");
+    expect(appendToFile.mock.calls[1][1]).toContain("[INBOUND]");
+    expect(appendToFile.mock.calls[1][1]).toContain("<agent>");
   });
 });

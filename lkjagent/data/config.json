@@ -17,6 +17,10 @@
         "top_k": 20,
         "min_p": 0.0
       }
+    },
+    "logging": {
+      "enabled": true,
+      "file": "data/log.txt"
     }
   },
   

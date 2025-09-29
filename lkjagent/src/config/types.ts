@@ -13,11 +13,19 @@ const LlmOptimizationModesSchema = z.object({
   action_mode: LlmOptimizationSchema.optional(),
 });
 
+const LlmLoggingSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    file: z.string().min(1).optional(),
+  })
+  .optional();
+
 const LlmConfigSchema = z.object({
   endpoint: z.string().min(1),
   model: z.string().min(1),
   context_window: z.number().int().positive().optional(),
   optimization: LlmOptimizationModesSchema.optional(),
+  logging: LlmLoggingSchema,
 });
 
 const RoleConfigSchema = z.object({
