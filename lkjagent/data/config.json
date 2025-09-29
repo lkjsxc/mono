@@ -162,6 +162,12 @@
           "role_mastery": "Embody complete expertise in your domain",
           "progressive_evolution": "Become more capable with each iteration"
         },
+
+        "memory_storage_rules": {
+          "key_format": "Keys in working memory and storage are comma-separated tag strings (no hierarchy).",
+          "value_format": "Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.",
+          "entry_policy": "Keep each entry self-contained so it can stand alone when retrieved from memory."
+        },
         
         "output_format": {
           "structure_pattern": "agent_with_state_and_action",

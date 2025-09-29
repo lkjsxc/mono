@@ -117,6 +117,9 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("Allowed action types: working_memory_add, working_memory_remove, storage_save, storage_load, storage_search");
     expect(prompt).toContain("Allowed states: analyzing, creating");
     expect(prompt).toContain("Include <value> content only when the action requires it; otherwise leave it empty.");
+    expect(prompt).toContain("=== MEMORY STORAGE RULES ===");
+    expect(prompt).toContain("Keys in working memory and storage are comma-separated tag strings (no hierarchy).");
+    expect(prompt).toContain("Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.");
   });
 
   it("mentions the working memory cleanup window when configured", () => {

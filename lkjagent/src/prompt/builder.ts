@@ -286,6 +286,13 @@ export const buildPrompt = (
   const guidance = buildStateGuidance(config, state);
   sections.push("\n\n=== CURRENT OBJECTIVE ===\n" + guidance);
 
+  sections.push(
+    "\n\n=== MEMORY STORAGE RULES ===\n" +
+      "- Keys in working memory and storage are comma-separated tag strings (no hierarchy).\n" +
+      "- Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.\n" +
+      "- Keep entries self-contained so they can stand alone when retrieved.",
+  );
+
   const currentStateSection = buildCurrentStateSection(state);
   sections.push("\n\n" + currentStateSection);
 
