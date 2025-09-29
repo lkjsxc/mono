@@ -13,6 +13,18 @@ const LlmOptimizationModesSchema = z.object({
   action_mode: LlmOptimizationSchema.optional(),
 });
 
+const PromptFormatSchema = z.object({
+  template: z.string().min(1),
+  item_template: z.string().min(1),
+  empty_working_memory: z.string().min(1).optional(),
+});
+
+const PromptSchema = z.object({
+  global: z.string().min(1),
+  states: z.record(z.string().min(1)),
+  format: PromptFormatSchema,
+});
+
 const LlmLoggingSchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -95,7 +107,7 @@ export const AgentConfigSchema = z.object({
   agent: z.object({
     roles: RolesSchema,
     memory_system: MemorySystemSchema.optional(),
-    prompts: z.any().optional(),
+    prompts: PromptSchema,
     states: AgentStatesSchema.optional(),
     paging_limit: PagingLimitSchema.optional(),
     iteration_limit: IterationLimitSchema,
@@ -103,6 +115,7 @@ export const AgentConfigSchema = z.object({
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
+export type PromptConfig = z.infer<typeof PromptSchema>;
 
 export const DEFAULT_MEMORY = {
   state: "analyzing",
