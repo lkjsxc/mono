@@ -168,7 +168,7 @@
           "action_wrapper": "action",
           "action_fields": ["type", "tags", "value"],
           "states": ["analyzing", "creating", "organizing", "synthesizing", "evolving"],
-          "actions": ["memory_add", "memory_remove", "storage_save", "storage_load", "storage_search", "enhance_knowledge"],
+          "actions": ["working_memory_add", "working_memory_remove", "storage_save", "storage_load", "storage_search"],
           "value_policy": "Rich, detailed content maximizing insight density"
         }
       },

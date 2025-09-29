@@ -1,10 +1,19 @@
-FROM gcc:12 as builder
-COPY ./src/ /app/src
-COPY ./Makefile /app
-
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
-RUN make
+ENV NODE_ENV=production
 
-FROM scratch
-COPY --from=builder /app/build/lkjagent /lkjagent
-ENTRYPOINT ["/lkjagent"]
+FROM base AS deps
+COPY package.json package-lock.json* tsconfig.json vitest.config.ts ./
+RUN npm install --include=dev
+
+FROM deps AS build
+COPY src ./src
+COPY tests ./tests
+RUN npm run build
+
+FROM base AS runtime
+COPY --from=build /app/dist ./dist
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev && npm cache clean --force
+COPY data ./data
+CMD ["node", "dist/index.js"]

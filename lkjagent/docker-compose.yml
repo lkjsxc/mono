@@ -3,14 +3,9 @@ services:
     build: .
     image: lkjagent:latest
     container_name: lkjagent
+    working_dir: /app
     volumes:
-      - ./data:/data
-    networks:
-      - lkjsxc_network
-    restart: unless-stopped
+      - ./data:/app/data
     environment:
-      - REVOLUTIONARY_MODE=true
-
-networks:
-  lkjsxc_network:
-    name: lkjsxc_network
+      - NODE_ENV=production
+    restart: unless-stopped
