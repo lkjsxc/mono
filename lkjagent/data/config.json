@@ -70,6 +70,7 @@
       "working_memory": {
         "target_utilization": 0.75,
         "max_context_tokens": 96000,
+        "auto_cleanup_limit": 24,
         "priority_factors": {
           "recency": 0.4,
           "relevance": 0.35,

@@ -28,6 +28,10 @@ npm start
 
 > **Note:** When installing dependencies on Windows/WSL, ensure you are using a Node.js binary that supports UNC paths (e.g., install Node directly inside WSL). If you rely on the Windows `npm`, use `npm install --ignore-scripts` to skip native binaries and run `npm rebuild esbuild --platform=linux --arch=x64` inside WSL afterwards.
 
+### Working memory auto-cleanup
+
+Set `agent.memory_system.working_memory.auto_cleanup_limit` in `data/config.json` to automatically trim older working-memory actions after each iteration. The agent keeps only the most recent _N_ entries, encouraging important knowledge to be promoted into long-term storage.
+
 ## Testing
 
 ```bash

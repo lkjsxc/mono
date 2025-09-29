@@ -1,6 +1,7 @@
 import type { AgentConfig } from "../config/types.js";
 import type { AgentMemorySnapshot } from "../domain/types.js";
 import { toTagArray } from "../domain/tags.js";
+import { resolveWorkingMemoryCleanupLimit } from "../memory/cleanup.js";
 
 export interface PromptBuildResult {
   readonly prompt: string;
@@ -196,6 +197,19 @@ const buildStateGuidance = (config: AgentConfig, state: string): string => {
 const buildCurrentStateSection = (state: string): string =>
   ["=== CURRENT STATE ===", state || "analyzing"].join("\n");
 
+const buildCleanupSection = (config: AgentConfig): string | undefined => {
+  const limit = resolveWorkingMemoryCleanupLimit(config);
+  if (limit === undefined) {
+    return undefined;
+  }
+  const itemLabel = limit === 1 ? "1 item" : `${limit} items`;
+  return [
+    "=== MEMORY MAINTENANCE ===",
+    `Working memory automatically retains only the most recent ${itemLabel}.`,
+    "Promote enduring insights to long-term storage to keep them beyond this window.",
+  ].join("\n");
+};
+
 const buildOutputFormatSection = (config: AgentConfig): string => {
   const foundation = getUniversalFoundation(config);
   const format = foundation?.output_format ?? {};
@@ -274,6 +288,11 @@ export const buildPrompt = (
 
   const currentStateSection = buildCurrentStateSection(state);
   sections.push("\n\n" + currentStateSection);
+
+  const cleanupSection = buildCleanupSection(config);
+  if (cleanupSection) {
+    sections.push("\n\n" + cleanupSection);
+  }
 
   const outputFormatSection = buildOutputFormatSection(config);
   sections.push("\n\n" + outputFormatSection);

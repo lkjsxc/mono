@@ -54,6 +54,7 @@ const MemorySystemSchema = z.object({
     .object({
       target_utilization: z.number().min(0).max(1).optional(),
       max_context_tokens: z.number().int().positive().optional(),
+      auto_cleanup_limit: z.number().int().nonnegative().optional(),
     })
     .optional(),
   paging: z

@@ -6,6 +6,7 @@ import { extractAgentXml } from "../process/parser.js";
 import { interpretAgentXml } from "../process/interpreter.js";
 import { executeAction } from "../actions/execute.js";
 import { applyPaging } from "../memory/paging.js";
+import { applyWorkingMemoryCleanup } from "../memory/cleanup.js";
 import { sleep } from "../io/time.js";
 import { persistMemory } from "../config/load.js";
 import { addWorkingMemoryEntry } from "../memory/working.js";
@@ -25,8 +26,9 @@ export const executeIteration = async (
     const xml = extractAgentXml(response);
     const parsed = interpretAgentXml(xml);
 
-    let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
-    updatedMemory = executeAction(updatedMemory, parsed.action, iteration);
+  let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
+  updatedMemory = executeAction(updatedMemory, parsed.action, iteration);
+  updatedMemory = applyWorkingMemoryCleanup(updatedMemory, config);
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {
@@ -45,12 +47,8 @@ export const executeIteration = async (
     console.error("[lkjagent] iteration pipeline error", error);
 
     let updatedMemory: AgentMemorySnapshot = { ...memory, state: "analyzing" };
-    updatedMemory = addWorkingMemoryEntry(
-      updatedMemory,
-      fallbackAction.tags,
-      fallbackAction.value,
-      iteration,
-    );
+    updatedMemory = addWorkingMemoryEntry(updatedMemory, fallbackAction.tags, fallbackAction.value, iteration);
+    updatedMemory = applyWorkingMemoryCleanup(updatedMemory, config);
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {

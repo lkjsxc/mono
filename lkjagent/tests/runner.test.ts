@@ -92,4 +92,39 @@ describe("executeIteration", () => {
     expect(entries[key]).toContain("network unreachable");
     expect(entries[key]).toContain("Iteration 1 failed");
   });
+
+  it("trims working memory according to the auto cleanup limit", async () => {
+    const { requestCompletion } = await loadLlmClient();
+    requestCompletion.mockResolvedValue({
+      content:
+        "<agent><state>creating</state><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft a new narrative.</value></action></agent>",
+    });
+
+    const limitedConfig: AgentConfig = JSON.parse(JSON.stringify(baseConfig));
+    limitedConfig.agent.memory_system = {
+      working_memory: {
+        auto_cleanup_limit: 2,
+      },
+    };
+
+    const memory: AgentMemorySnapshot = {
+      ...buildMemory(),
+      workingMemory: {
+        entries: {
+          "alpha,iteration_1": "First",
+          "beta,iteration_2": "Second",
+        },
+      },
+    };
+
+    const { executeIteration } = await import("../src/agent/runner.js");
+    const result = await executeIteration(limitedConfig, memory, 5);
+
+    const entries = result.memory.workingMemory.entries;
+    const keys = Object.keys(entries);
+    expect(keys).toHaveLength(2);
+    expect(keys.some((key) => key.includes("iteration_2"))).toBe(true);
+    expect(keys.some((key) => key.includes("iteration_5"))).toBe(true);
+    expect(keys.some((key) => key.includes("iteration_1"))).toBe(false);
+  });
 });

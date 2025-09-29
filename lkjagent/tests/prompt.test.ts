@@ -117,6 +117,25 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("Include <value> content only when the action requires it; otherwise leave it empty.");
   });
 
+  it("mentions the working memory cleanup window when configured", () => {
+    const limitConfig: AgentConfig = JSON.parse(JSON.stringify(config));
+    limitConfig.agent.memory_system = {
+      working_memory: {
+        auto_cleanup_limit: 3,
+      },
+    };
+
+    const memory: AgentMemorySnapshot = {
+      state: "analyzing",
+      workingMemory: { entries: {} },
+      storage: { entries: {} },
+    };
+
+    const { prompt } = buildPrompt(limitConfig, memory, "analyzing");
+    expect(prompt).toContain("=== MEMORY MAINTENANCE ===");
+    expect(prompt).toContain("Working memory automatically retains only the most recent 3 items.");
+  });
+
   it("canonicalizes legacy action names when constructing instructions", () => {
     const legacyConfig = JSON.parse(JSON.stringify(config)) as AgentConfig;
     const foundation = (legacyConfig.agent.prompts as any).universal_foundation;

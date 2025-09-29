@@ -29,6 +29,7 @@ src/
     working.ts             # Working-memory CRUD operations (pure functions)
     storage.ts             # Storage CRUD and subset matching utilities
     paging.ts              # Automatic paging strategy (returns updated memory)
+    cleanup.ts             # Config-driven working memory retention controls
   actions/
     execute.ts             # Dispatch table for agent actions
     workingMemory.ts       # working_memory_add/remove implementations
