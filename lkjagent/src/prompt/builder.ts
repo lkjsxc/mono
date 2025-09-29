@@ -17,7 +17,7 @@ interface RoleContext {
 
 const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
 
-const DEFAULT_ALLOWED_STATES = ["analyzing", "creating", "organizing", "synthesizing", "evolving"] as const;
+const DEFAULT_ALLOWED_STATES = ["analyzing", "creating", "organizing", "synthesizing", "evolving", "paging"] as const;
 const DEFAULT_ALLOWED_ACTIONS = [
   "working_memory_add",
   "working_memory_remove",
@@ -76,8 +76,50 @@ const canonicalizeStateList = (values: unknown): string[] => {
 const renderTemplate = (template: string, context: Record<string, string>): string =>
   template.replace(/\{([^}]+)\}/g, (_, key: string) => context[key] ?? "");
 
+const collectRuleValues = (value: unknown): string[] => {
+  if (!value || typeof value !== "object") return [];
+  return Object.values(value as Record<string, unknown>)
+    .map((item) => (item === undefined || item === null ? "" : String(item)))
+    .filter((line) => line.length > 0);
+};
+
+const renderBulletSection = (title: string, lines: readonly string[]): string | undefined => {
+  if (!lines.length) return undefined;
+  return [
+    `=== ${title} ===`,
+    ...lines.map((line) => (line.startsWith("- ") ? line : `- ${line}`)),
+  ].join("\n");
+};
+
 const getUniversalFoundation = (config: AgentConfig): any =>
   (config.agent.prompts as any)?.universal_foundation ?? {};
+
+const buildMemoryStorageRulesSection = (config: AgentConfig): string => {
+  const foundation = getUniversalFoundation(config);
+  const configured = collectRuleValues(foundation?.memory_storage_rules);
+  const defaults: string[] = [
+    "Keys in working memory and storage are comma-separated tag strings (no hierarchy).",
+    "Tags must use lowercase ASCII characters and underscores only; convert spaces and punctuation to underscores before saving.",
+    "The system appends an iteration_{n} tag automatically—never remove or rename it.",
+    "Values must remain single-level Markdown strings. Avoid JSON, XML, CSV, or other serialized formats.",
+    "Keep values under ~100 tokens and split longer thoughts into multiple entries.",
+    "Each entry should stand alone when later retrieved.",
+  ];
+  const lines = configured.length > 0 ? configured : defaults;
+  return renderBulletSection("MEMORY STORAGE RULES", lines) ?? "";
+};
+
+const buildSafetySection = (config: AgentConfig): string | undefined => {
+  const foundation = getUniversalFoundation(config);
+  const lines = collectRuleValues(foundation?.safety_and_constraints);
+  return renderBulletSection("SAFETY & CONSTRAINTS", lines);
+};
+
+const buildQualitySection = (config: AgentConfig): string | undefined => {
+  const foundation = getUniversalFoundation(config);
+  const lines = collectRuleValues(foundation?.quality);
+  return renderBulletSection("QUALITY", lines);
+};
 
 const extractRoleContext = (config: AgentConfig): RoleContext => {
   const roleId = config.agent.roles.active_role;
@@ -214,7 +256,8 @@ const buildOutputFormatSection = (config: AgentConfig): string => {
   const foundation = getUniversalFoundation(config);
   const format = foundation?.output_format ?? {};
   const stateTag = typeof format?.state_tag === "string" ? format.state_tag : "state";
-  const actionWrapper = typeof format?.action_wrapper === "string" ? format.action_wrapper : "action";
+  const actionWrapper = typeof format?.action_wrapper === "string" ? format.action_wrapper : "actions";
+  const actionElement = typeof (format as any)?.action_element === "string" ? (format as any).action_element : "action";
   const actionFields = Array.isArray(format?.action_fields) && format.action_fields.length > 0
     ? format.action_fields.map(String)
     : ["type", "tags", "value"];
@@ -227,7 +270,12 @@ const buildOutputFormatSection = (config: AgentConfig): string => {
     "<agent>",
     `  <${stateTag}>[next_state]</${stateTag}>`,
     `  <${actionWrapper}>`,
-  ...actionFields.map((field: string) => `    <${field}>[${field}_value]</${field}>`),
+    `    <${actionElement}>`,
+    ...actionFields.map((field: string) => `      <${field}>[${field}_value_1]</${field}>`),
+    `    </${actionElement}>`,
+    `    <${actionElement}>`,
+    ...actionFields.map((field: string) => `      <${field}>[${field}_value_2]</${field}>`),
+    `    </${actionElement}>`,
     `  </${actionWrapper}>`,
     "</agent>",
   ].join("\n");
@@ -235,10 +283,14 @@ const buildOutputFormatSection = (config: AgentConfig): string => {
   const rules: string[] = [
     "Rules:",
     "- Do not include markdown, explanations, or additional text outside the <agent> root element.",
-    "- Set <state> to the exact next state you will enter.",
+    "- Set <state> to the exact next state you will enter (use 'paging' whenever working memory grows).",
     `- Allowed states: ${allowedStates.join(", ")}`,
     `- Allowed action types: ${allowedActions.join(", ")}`,
-    "- Tags must be comma-separated without extraneous spaces or commentary.",
+    `- Place one or more <${actionElement}> elements inside <${actionWrapper}> in the order you want them executed.`,
+    "- Tags must be comma-separated lowercase ASCII with underscores; no spaces or commentary.",
+    "- The system automatically appends an iteration_{n} tag—do not omit or rename it.",
+    "- Keep each <value> under ~100 tokens; split content across multiple actions or storage saves when longer.",
+    "- Never emit JSON, XML, or CSV formatted strings inside <value>; rewrite them as plain Markdown text.",
     "- Ensure the XML is well-formed and valid UTF-8.",
   ];
 
@@ -286,12 +338,18 @@ export const buildPrompt = (
   const guidance = buildStateGuidance(config, state);
   sections.push("\n\n=== CURRENT OBJECTIVE ===\n" + guidance);
 
-  sections.push(
-    "\n\n=== MEMORY STORAGE RULES ===\n" +
-      "- Keys in working memory and storage are comma-separated tag strings (no hierarchy).\n" +
-      "- Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.\n" +
-      "- Keep entries self-contained so they can stand alone when retrieved.",
-  );
+  const memorySection = buildMemoryStorageRulesSection(config);
+  sections.push("\n\n" + memorySection);
+
+  const safetySection = buildSafetySection(config);
+  if (safetySection) {
+    sections.push("\n\n" + safetySection);
+  }
+
+  const qualitySection = buildQualitySection(config);
+  if (qualitySection) {
+    sections.push("\n\n" + qualitySection);
+  }
 
   const currentStateSection = buildCurrentStateSection(state);
   sections.push("\n\n" + currentStateSection);
@@ -305,7 +363,7 @@ export const buildPrompt = (
   sections.push("\n\n" + outputFormatSection);
 
   sections.push(
-    "\n\nRespond with your next action in the specified XML format, maximizing insight and creative depth.",
+    "\n\nRespond with your next actions in the specified XML format, maximizing insight and creative depth.",
   );
 
   const prompt = sections.join("\n");

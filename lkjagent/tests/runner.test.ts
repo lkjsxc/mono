@@ -63,18 +63,21 @@ describe("executeIteration", () => {
     const { requestCompletion } = await loadLlmClient();
     requestCompletion.mockResolvedValue({
       content:
-        "<agent><state>creating</state><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft a new narrative.</value></action></agent>",
+        "<agent><state>creating</state><actions><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft a new narrative.</value></action></actions></agent>",
     });
 
     const { executeIteration } = await import("../src/agent/runner.js");
     const result = await executeIteration(baseConfig, buildMemory(), 3);
 
-    expect(result.nextState).toBe("creating");
+    expect(result.nextState).toBe("paging");
+    expect(result.actions).toHaveLength(1);
     const entries = result.memory.workingMemory.entries;
     const keys = Object.keys(entries);
     expect(keys).toHaveLength(1);
     expect(keys[0]).toBe("idea,story,iteration_3");
     expect(entries[keys[0]]).toBe("Draft a new narrative.");
+    expect(result.memory.storage.entries).toHaveProperty("idea,story");
+    expect(result.memory.storage.entries["idea,story"]).toBe("Draft a new narrative.");
   });
 
   it("records an error entry when the LLM request fails", async () => {
@@ -84,7 +87,8 @@ describe("executeIteration", () => {
     const { executeIteration } = await import("../src/agent/runner.js");
     const result = await executeIteration(baseConfig, buildMemory(), 1);
 
-    expect(result.nextState).toBe("analyzing");
+  expect(result.nextState).toBe("paging");
+  expect(result.actions).toHaveLength(1);
     const entries = result.memory.workingMemory.entries;
     const keys = Object.keys(entries);
     expect(keys).toHaveLength(1);
@@ -98,7 +102,7 @@ describe("executeIteration", () => {
     const { requestCompletion } = await loadLlmClient();
     requestCompletion.mockResolvedValue({
       content:
-        "<agent><state>creating</state><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft a new narrative.</value></action></agent>",
+        "<agent><state>creating</state><actions><action><type>working_memory_add</type><tags>story,idea</tags><value>Draft a new narrative.</value></action></actions></agent>",
     });
 
     const limitedConfig: AgentConfig = JSON.parse(JSON.stringify(baseConfig));
@@ -126,7 +130,7 @@ describe("executeIteration", () => {
     const keys = Object.keys(entries);
     expect(keys).toHaveLength(2);
     expect(keys.some((key) => key.includes("iteration_2"))).toBe(true);
-    expect(keys.some((key) => key.includes("iteration_5"))).toBe(true);
+  expect(keys.some((key) => key.includes("iteration_5"))).toBe(true);
     expect(keys.some((key) => key.includes("iteration_1"))).toBe(false);
   });
 });

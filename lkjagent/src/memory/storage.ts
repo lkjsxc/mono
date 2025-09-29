@@ -1,6 +1,6 @@
 import { normalizeTags, searchTagsInEntry } from "../domain/tags.js";
 import type { AgentMemorySnapshot } from "../domain/types.js";
-import { addWorkingMemoryEntry } from "./working.js";
+import { addWorkingMemoryEntry, stripIterationSuffix } from "./working.js";
 
 const withStorageEntries = (
   memory: AgentMemorySnapshot,
@@ -70,4 +70,19 @@ export const searchStorage = (
     rawValue && rawValue.length ? rawValue : "any"
   }]`;
   return addWorkingMemoryEntry(current, "search_results,summary", summaryValue, iteration);
+};
+
+export const archiveWorkingEntries = (
+  memory: AgentMemorySnapshot,
+  keys: readonly string[],
+): AgentMemorySnapshot => {
+  if (keys.length === 0) return memory;
+  let current = memory;
+  for (const key of keys) {
+    const storageKey = stripIterationSuffix(key) || key;
+    const value = current.workingMemory.entries[key];
+    if (value === undefined) continue;
+    current = saveToStorage(current, storageKey, value);
+  }
+  return current;
 };

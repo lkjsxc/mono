@@ -60,7 +60,7 @@ const parseAction = (raw: any): AgentAction => {
 
 export interface ParsedAgentResponse {
   readonly state: string;
-  readonly action: AgentAction;
+  readonly actions: AgentAction[];
 }
 
 export const interpretAgentXml = (xml: string): ParsedAgentResponse => {
@@ -75,11 +75,39 @@ export const interpretAgentXml = (xml: string): ParsedAgentResponse => {
     throw new Error("Agent response did not specify next state");
   }
 
-  const actionNode = normalizeNode(root?.action ?? root?.agent?.action);
-  if (!actionNode) {
-    throw new Error("Agent response did not include an action node");
+  const actionsNode = root?.actions ?? root?.action ?? root?.agent?.actions ?? root?.agent?.action;
+  if (!actionsNode) {
+    throw new Error("Agent response did not include any action nodes");
   }
 
-  const action = parseAction(actionNode);
-  return { state, action };
+  const normalized = normalizeNode(actionsNode);
+  let candidateNodes: unknown[];
+
+  if (Array.isArray(normalized?.action)) {
+    candidateNodes = normalized.action as unknown[];
+  } else if (Array.isArray(normalized)) {
+    candidateNodes = normalized as unknown[];
+  } else if (normalized?.action !== undefined) {
+    candidateNodes = [normalized.action];
+  } else {
+    candidateNodes = [normalized];
+  }
+
+  const actions = candidateNodes
+    .map((candidate: unknown) => {
+      try {
+        return parseAction(candidate);
+      } catch (error) {
+        throw error instanceof Error
+          ? error
+          : new Error(`Failed to parse action: ${String(error)}`);
+      }
+    })
+    .filter((action: AgentAction | undefined): action is AgentAction => Boolean(action));
+
+  if (actions.length === 0) {
+    throw new Error("Agent response did not include any parsable actions");
+  }
+
+  return { state, actions };
 };

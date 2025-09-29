@@ -102,10 +102,10 @@ export const applyPaging = (
     const storageKey = candidate.key;
     const storageValue = candidate.value;
 
-    current = writeStorageEntry(current, storageKey, storageValue);
-    const updatedWorking = removeKey(current.workingMemory.entries, candidate.key);
-    current = withWorkingEntries(current, updatedWorking);
-    current = { ...current, state: "thinking" };
+  current = writeStorageEntry(current, storageKey, storageValue);
+  const updatedWorking = removeKey(current.workingMemory.entries, candidate.key);
+  current = withWorkingEntries(current, updatedWorking);
+  current = { ...current, state: "paging" };
     size = workingMemorySize(current);
   }
 

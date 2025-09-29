@@ -165,18 +165,37 @@
 
         "memory_storage_rules": {
           "key_format": "Keys in working memory and storage are comma-separated tag strings (no hierarchy).",
+          "tag_character_policy": "Use lowercase ASCII letters, digits, and underscore characters only. Convert spaces, hyphens, and other punctuation to underscores before saving.",
+          "tag_separators": "Use a single comma ',' as the delimiter between tags; no trailing commas or double separators.",
+          "automatic_iteration_tag": "The system automatically appends an iteration_{n} tag; do not remove or rename it.",
           "value_format": "Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.",
+          "format_warnings": "Never emit JSON, XML, CSV, or other structured serialization inside <value>; doing so will be treated as a violation.",
+          "length_warning": "Aim to keep values under ~100 tokens. If additional detail is required, split the content across multiple entries with distinct tags.",
           "entry_policy": "Keep each entry self-contained so it can stand alone when retrieved from memory."
+        },
+
+        "safety_and_constraints": {
+          "tag_preservation": "Avoid renaming or mutating existing tags unless absolutely necessary; preserve established naming for traceability.",
+          "working_memory_growth": "Whenever working memory would increase, transition to the paging state and archive the prior context into storage with matching tags.",
+          "value_guardrails": "Reject or rewrite values that resemble JSON, XML, or CSV; ensure they remain plain Markdown strings.",
+          "traceability": "Every decision must remain traceable. Promote key insights to storage instead of deleting them outright."
+        },
+
+        "quality": {
+          "clarity": "Keep explanations direct, specific, and minimal in verbosity while preserving necessary detail.",
+          "trace_logging": "Leave concise, high-signal summaries of your reasoning steps in working memory for future iterations.",
+          "multi_action_planning": "Plan sequences of complementary actions; execute them together when beneficial to reduce iteration churn.",
+          "evidence": "Reference the tags you touch so downstream readers can audit the history."
         },
         
         "output_format": {
           "structure_pattern": "agent_with_state_and_action",
           "state_tag": "state",
-          "action_wrapper": "action",
+          "action_wrapper": "actions",
           "action_fields": ["type", "tags", "value"],
-          "states": ["analyzing", "creating", "organizing", "synthesizing", "evolving"],
+    "states": ["analyzing", "creating", "organizing", "synthesizing", "evolving", "paging"],
           "actions": ["working_memory_add", "working_memory_remove", "storage_save", "storage_load", "storage_search"],
-          "value_policy": "Rich, detailed content maximizing insight density"
+          "value_policy": "Rich, detailed content maximizing insight density while respecting token and formatting guardrails"
         }
       },
       

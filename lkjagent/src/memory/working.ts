@@ -18,6 +18,13 @@ const extractIteration = (key: string): number | undefined => {
   return Number.isFinite(value) ? value : undefined;
 };
 
+export const stripIterationSuffix = (key: string): string => {
+  const marker = ",iteration_";
+  const index = key.lastIndexOf(marker);
+  if (index < 0) return key;
+  return key.slice(0, index);
+};
+
 const orderWorkingMemoryKeys = (entries: Record<string, string>): string[] =>
   Object.keys(entries).sort((a, b) => {
     const iterationA = extractIteration(a) ?? Number.MAX_SAFE_INTEGER;

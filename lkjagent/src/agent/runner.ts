@@ -10,6 +10,7 @@ import { applyWorkingMemoryCleanup } from "../memory/cleanup.js";
 import { sleep } from "../io/time.js";
 import { persistMemory } from "../config/load.js";
 import { addWorkingMemoryEntry } from "../memory/working.js";
+import { archiveWorkingEntries } from "../memory/storage.js";
 
 const DEFAULT_BACKOFF_MS = 5_000;
 
@@ -26,15 +27,34 @@ export const executeIteration = async (
     const xml = extractAgentXml(response);
     const parsed = interpretAgentXml(xml);
 
-  let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
-  updatedMemory = executeAction(updatedMemory, parsed.action, iteration);
-  updatedMemory = applyWorkingMemoryCleanup(updatedMemory, config);
+    let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
+    const newWorkingKeys = new Set<string>();
+
+    for (const action of parsed.actions) {
+      const beforeKeys = new Set(Object.keys(updatedMemory.workingMemory.entries));
+      updatedMemory = executeAction(updatedMemory, action, iteration);
+      const afterKeys = Object.keys(updatedMemory.workingMemory.entries);
+      for (const key of afterKeys) {
+        if (!beforeKeys.has(key)) {
+          newWorkingKeys.add(key);
+        }
+      }
+    }
+
+    let nextState = parsed.state;
+    if (newWorkingKeys.size > 0) {
+      updatedMemory = archiveWorkingEntries(updatedMemory, [...newWorkingKeys]);
+      updatedMemory = { ...updatedMemory, state: "paging" };
+      nextState = "paging";
+    }
+
+    updatedMemory = applyWorkingMemoryCleanup(updatedMemory, config);
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {
       memory: updatedMemory,
-      action: parsed.action,
-      nextState: parsed.state,
+      actions: parsed.actions,
+      nextState,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -47,14 +67,20 @@ export const executeIteration = async (
     console.error("[lkjagent] iteration pipeline error", error);
 
     let updatedMemory: AgentMemorySnapshot = { ...memory, state: "analyzing" };
-    updatedMemory = addWorkingMemoryEntry(updatedMemory, fallbackAction.tags, fallbackAction.value, iteration);
+  updatedMemory = addWorkingMemoryEntry(updatedMemory, fallbackAction.tags, fallbackAction.value, iteration);
+  const previousKeys = new Set(Object.keys(memory.workingMemory.entries));
+  const failureKeys = Object.keys(updatedMemory.workingMemory.entries).filter((key) => !previousKeys.has(key));
+    updatedMemory = archiveWorkingEntries(updatedMemory, failureKeys);
+    if (failureKeys.length > 0) {
+      updatedMemory = { ...updatedMemory, state: "paging" };
+    }
     updatedMemory = applyWorkingMemoryCleanup(updatedMemory, config);
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {
       memory: updatedMemory,
-      action: fallbackAction,
-      nextState: "analyzing",
+      actions: [fallbackAction],
+      nextState: failureKeys.length > 0 ? "paging" : "analyzing",
     };
   }
 };

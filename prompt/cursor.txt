@@ -1,0 +1,33 @@
+After thoroughly understanding the "lkjagent" system to its fullest depth, rewrite it in TypeScript.
+This is a very challenging task that requires deep thinking to the limit.
+
+Requirements:
+- Create an exhaustive TODO list in the optimal order
+- Functional programming approach
+- Properly organized into well-scoped files
+
+Project Overview:
+- The world's most powerful and deeply reasoning AI agent, capable of operating with LLMs of 8b to 20b parameters.
+- Features both working memory (included in all prompts) and an infinitely scalable key-value store for persistent storage.
+- Can be easily deployed with "docker compose build ; docker compose up".
+- Interacts with LLMs via XML and manages all other data as json objects.
+
+Documentation (docs directory)
+- Please write primarily in Japanese.
+- Do not use emoji.
+- Refer to this section frequently to ensure you have all necessary information.
+- Maintain detailed logs in the docs/timeline directory.
+- Include at least 2 links to relevant documentation or URLs.
+
+Task Execution (data directory)
+- All command executions must be performed via Docker containers. Basic commands that don't modify other files (such as ls, pwd, cd, id, etc.) are permitted.
+- Always use Docker with the Compose configuration file.
+
+Troubleshooting Procedure
+1. Gather information and conduct thorough analysis to develop your hypothesis.
+2. Formulate your hypothesis.
+3. Verify the accuracy of your hypothesis by consulting reliable sources and obtaining supporting evidence.
+4. If your hypothesis proves incorrect, document the results and return to Step 1.
+5. Develop your solution approach.
+6. Execute the solution and document the results.
+7. If the issue remains unresolved, return to Step 1.

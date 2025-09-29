@@ -40,6 +40,8 @@ export type AgentAction =
       readonly value?: string;
     };
 
+export type AgentActions = readonly AgentAction[];
+
 export interface AgentContext {
   readonly config: AgentConfig;
   readonly memory: AgentMemorySnapshot;
@@ -47,7 +49,7 @@ export interface AgentContext {
 
 export interface AgentIterationResult {
   readonly memory: AgentMemorySnapshot;
-  readonly action: AgentAction;
+  readonly actions: AgentActions;
   readonly nextState: string;
 }
 

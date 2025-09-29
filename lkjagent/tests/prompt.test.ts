@@ -114,12 +114,21 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("Respond with EXACTLY the following XML structure");
     expect(prompt).toContain("<agent>");
     expect(prompt).toContain("<state>[next_state]</state>");
+    expect(prompt).toContain("<actions>");
+    expect(prompt).toContain("<action>");
     expect(prompt).toContain("Allowed action types: working_memory_add, working_memory_remove, storage_save, storage_load, storage_search");
     expect(prompt).toContain("Allowed states: analyzing, creating");
     expect(prompt).toContain("Include <value> content only when the action requires it; otherwise leave it empty.");
     expect(prompt).toContain("=== MEMORY STORAGE RULES ===");
     expect(prompt).toContain("Keys in working memory and storage are comma-separated tag strings (no hierarchy).");
-    expect(prompt).toContain("Values must be single-level strings; prefer concise Markdown formatting over nested lists or JSON.");
+    expect(prompt).toContain("Tags must use lowercase ASCII characters and underscores only; convert spaces and punctuation to underscores before saving.");
+    expect(prompt).toContain("Values must remain single-level Markdown strings. Avoid JSON, XML, CSV, or other serialized formats.");
+    expect(prompt).toContain("Keep values under ~100 tokens and split longer thoughts into multiple entries.");
+    expect(prompt).toContain("=== SAFETY & CONSTRAINTS ===");
+    expect(prompt).toContain("Avoid renaming or mutating existing tags unless absolutely necessary; preserve established naming for traceability.");
+    expect(prompt).toContain("=== QUALITY ===");
+    expect(prompt).toContain("Leave concise, high-signal summaries of your reasoning steps in working memory for future iterations.");
+    expect(prompt).toContain("Respond with your next actions in the specified XML format");
   });
 
   it("mentions the working memory cleanup window when configured", () => {

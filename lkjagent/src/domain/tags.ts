@@ -1,6 +1,18 @@
 const TAG_SEPARATOR = ",";
 
+const TAG_ALLOWED_PATTERN = /[^a-z0-9_]/g;
+
 const trim = (value: string): string => value.trim();
+
+const sanitizeTag = (value: string): string => {
+  if (!value) return "";
+  let normalized = value.trim().toLowerCase();
+  normalized = normalized.replace(/[\s-]+/g, "_");
+  normalized = normalized.replace(TAG_ALLOWED_PATTERN, "");
+  normalized = normalized.replace(/_+/g, "_");
+  normalized = normalized.replace(/^_+|_+$/g, "");
+  return normalized;
+};
 
 const unique = <T>(values: readonly T[]): T[] => {
   const seen = new Set<T>();
@@ -21,7 +33,9 @@ export const toTagArray = (tags: string | readonly string[] | undefined | null):
     : String(tags)
         .split(TAG_SEPARATOR)
         .map(trim);
-  const filtered = array.filter((value): value is string => value.length > 0);
+  const filtered = array
+    .map((value): string => sanitizeTag(value))
+    .filter((value): value is string => value.length > 0);
   return unique(filtered).sort((a, b) => a.localeCompare(b));
 };
 
