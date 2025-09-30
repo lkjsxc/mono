@@ -3,6 +3,7 @@ services:
     build: .
     image: lkjagent:latest
     container_name: lkjagent
+    user: "1000:1000"
     working_dir: /app
     volumes:
       - ./data:/app/data

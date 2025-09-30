@@ -1,13 +1,37 @@
 {
   "state": "paging",
-  "iteration": 12,
+  "iteration": 40,
   "working_memory": {
-    "search_results,summary,iteration_9": "found 0 matches for tags:[initial,prompt] value:[any]",
-    "iteration_10,no_matches_found,search_results,summary,iteration_11": "failed to locate initial/prompt tags in storage; consider expanding search parameters or verifying tag syntax"
+    "offline,system,iteration_16": "Offline fallback engaged: fetch failed. Prompt summary: <agent_prompt> <purpose>SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML m...",
+    "offline,system,iteration_17": "Offline fallback engaged: fetch failed. Prompt summary: <agent_prompt> <purpose>SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML m...",
+    "offline,system,iteration_18": "Offline fallback engaged: Request failed with status 404. Prompt summary: <agent_prompt> <purpose>SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML m...",
+    "offline,system,iteration_19": "Offline fallback engaged: Request failed with status 404. Prompt summary: <agent_prompt> <purpose>SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML m...",
+    "search_results,summary,iteration_20": "found 0 matches for tags:[initial,offline,prompt,system] value:[any]",
+    "error,system,iteration_21": "Iteration 21 failed: Agent response did not specify next state",
+    "error,system,iteration_22": "Iteration 22 failed: Agent response did not specify next state",
+    "error,system,iteration_23": "Iteration 23 failed: Agent response did not specify next state",
+    "error,system,iteration_24": "Iteration 24 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_25": "Iteration 25 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_26": "Iteration 26 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_27": "Iteration 27 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_28": "Iteration 28 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_29": "Iteration 29 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_30": "Iteration 30 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_31": "Iteration 31 failed: Unsupported action type 'fetch' in agent response",
+    "error,system,iteration_32": "Iteration 32 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_33": "Iteration 33 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_34": "Iteration 34 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_35": "Iteration 35 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_36": "Iteration 36 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_37": "Iteration 37 failed: Agent response did not specify next state",
+    "error,system,iteration_38": "Iteration 38 failed: Unsupported action type '' in agent response",
+    "error,system,iteration_39": "Iteration 39 failed: Unsupported action type '' in agent response"
   },
   "storage": {
-    "search_results,summary": "found 0 matches for tags:[initial,prompt] value:[any]",
+    "search_results,summary": "found 0 matches for tags:[initial,offline,prompt,system] value:[any]",
     "iteration_10,search_results": "found 0 matches for tags:[initial,prompt] value:[any]",
-    "iteration_10,no_matches_found,search_results,summary": "failed to locate initial/prompt tags in storage; consider expanding search parameters or verifying tag syntax"
+    "iteration_10,no_matches_found,search_results,summary": "failed to locate initial/prompt tags in storage; consider expanding search parameters or verifying tag syntax",
+    "offline,system": "Offline fallback engaged: Request failed with status 404. Prompt summary: <agent_prompt> <purpose>SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML m...",
+    "error,system": "Iteration 39 failed: Unsupported action type '' in agent response"
   }
 }
