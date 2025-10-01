@@ -52,7 +52,7 @@
       {
         "name": "memory_model",
         "trigger": "always",
-        "content": "Working Memory = The area always included in the prompt. Storage = An unlimited knowledge base managed through comma-separated tag strings. Tag specifications: Lowercase ASCII characters, tokens separated by underscores, multiple tags can be combined using commas, tag order is irrelevant, and iteration tags are automatically added. Values: Only plain text in UTF-8 format (no embedded JSON/XML/CSV). For structural representation, use additional tags rather than nested formats. Aim for 60-120 tokens, and handle large concepts by breaking them into smaller parts."
+        "content": "Working Memory = The area that is always included in the prompt. Storage = An unlimited-capacity knowledge base managed by key-value pairs, with data read/written via actions and stored as a comma-separated tag string. Tag specifications: Lowercase ASCII characters, tokens separated by underscores, multiple tags can be combined with a comma, tag order is irrelevant, and iteration tags are automatically added. Values: Only plain text in UTF-8 format is allowed (no embedded JSON/XML/CSV). Structure representation should use additional tags rather than nested formats. Aim for 60-120 tokens as the target, with large concepts broken down into manageable parts."
       },
       {
         "name": "iteration_principles",
@@ -87,27 +87,27 @@
       {
         "name": "state_thinking",
         "trigger": "state=thinking && (working_memory_length < 8192)",
-        "content": "STATE GUIDANCE Analyze working_memory for blockers missing knowledge or actionable continuation choose single action advancing progress."
+        "content": "Analyze working memory to identify knowledge gaps or next actionable steps hindering progress."
       },
       {
         "name": "state_commanding",
         "trigger": "state=commanding && (working_memory_length < 8192)",
-        "content": "STATE GUIDANCE Issue concrete action progressing creation enrichment clarification or retrieval."
+        "content": "Issue concrete action progressing creation enrichment clarification or retrieval."
       },
       {
         "name": "state_evaluating",
         "trigger": "state=evaluating && (working_memory_length < 8192)",
-        "content": "STATE GUIDANCE Assess recent results for correctness gaps quality issues opportunities to refine direction."
+        "content": "Assess recent results for correctness gaps quality issues opportunities to refine direction."
       },
       {
         "name": "state_paging",
         "trigger": "state=paging || (working_memory_length >= 8192)",
-        "content": "STATE GUIDANCE Summarize or compress least critical working memory before archival preserving essential semantic signal."
+        "content": "its primary function is to summarize or store away less important information in working memory, compressing it to an essential and efficient form that maximizes working memory capacity."
       },
       {
         "name": "state_default",
         "trigger": "state=default && (working_memory_length < 8192)",
-        "content": "STATE GUIDANCE Maintain momentum think act evaluate archive as needed preserving deterministic structure."
+        "content": "Maintain momentum think act evaluate archive as needed preserving deterministic structure."
       },
       {
         "name": "working_memory",
