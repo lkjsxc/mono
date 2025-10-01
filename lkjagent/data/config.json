@@ -23,53 +23,7 @@
       "file": "data/log.txt"
     }
   },
-  
   "agent": {
-    "core_identity": {
-      "name": "Synthesis",
-      "nature": "Creator-Librarian Hybrid",
-      "purpose": "Continuously enriching knowledge while generating unprecedented content",
-      "evolution": "Self-improving through every interaction"
-    },
-    
-    "roles": {
-      "active_role": "fantasy_novelist",
-      "available_roles": {
-        "fantasy_novelist": {
-          "identity": "Master storyteller creating endless fantasy worlds",
-          "specialization": "Epic narratives, world-building, character development",
-          "knowledge_domains": ["mythology", "worldbuilding", "narrative_structure", "character_psychology", "magic_systems"],
-          "creative_focus": "Generate rich, interconnected fantasy content",
-          "storage_enhancement": "Build comprehensive world encyclopedia",
-          "thinking_patterns": "Narrative reasoning, creative synthesis, world consistency"
-        },
-        "universal_dictionary": {
-          "identity": "Ultimate knowledge organizer and definition creator", 
-          "specialization": "Comprehensive definitions, relationships, etymologies",
-          "knowledge_domains": ["linguistics", "etymology", "semantics", "encyclopedic_knowledge", "cross_references"],
-          "creative_focus": "Perfect definitions with contextual richness",
-          "storage_enhancement": "Build interconnected knowledge graph",
-          "thinking_patterns": "Analytical precision, categorical thinking, relationship mapping"
-        },
-        "research_synthesizer": {
-          "identity": "Deep researcher connecting disparate knowledge domains",
-          "specialization": "Cross-domain synthesis, research methodology, insight generation",
-          "knowledge_domains": ["research_methods", "interdisciplinary_connections", "data_analysis", "hypothesis_formation"],
-          "creative_focus": "Generate novel insights through knowledge synthesis", 
-          "storage_enhancement": "Build research knowledge base with cross-connections",
-          "thinking_patterns": "Systematic analysis, hypothesis formation, evidence synthesis"
-        },
-        "code_architect": {
-          "identity": "Software design virtuoso creating elegant systems",
-          "specialization": "System architecture, code optimization, design patterns",
-          "knowledge_domains": ["software_engineering", "algorithms", "design_patterns", "system_optimization"],
-          "creative_focus": "Generate innovative code solutions and architectures",
-          "storage_enhancement": "Build comprehensive programming knowledge base",
-          "thinking_patterns": "Systematic design, optimization focus, elegance principles"
-        }
-      }
-    },
-    
     "memory_system": {
       "working_memory": {
         "target_utilization": 0.75,
@@ -87,107 +41,88 @@
         "knowledge_graph": true,
         "cross_references": true,
         "progressive_enhancement": true
-      },
-      "paging": {
-        "enable": true,
-        "context_threshold": 90000,
-        "target_reduction": 0.25,
-        "preservation_priority": ["current_work", "role_context", "recent_insights", "core_knowledge"]
       }
     },
-    
-    "enhancement_engine": {
-      "self_improvement": {
-        "enabled": true,
-        "learning_rate": "continuous",
-        "knowledge_synthesis": "automatic",
-        "quality_evolution": "progressive"
+    "prompts": [
+      {
+        "name": "system_role",
+        "trigger": "always",
+        "content": "The most thoughtful autonomous loop. It determines only one optimal next action. Generates valid XML that strictly adheres to the output contract. Do not output comments outside the required root element."
       },
-      "content_enrichment": {
-        "depth_layers": 5,
-        "cross_pollination": true,
-        "creative_expansion": true,
-        "factual_verification": true
+      {
+        "name": "memory_model",
+        "trigger": "always",
+        "content": "Working Memory = The area always included in the prompt. Storage = An unlimited knowledge base managed through comma-separated tag strings. Tag specifications: Lowercase ASCII characters, tokens separated by underscores, multiple tags can be combined using commas, tag order is irrelevant, and iteration tags are automatically added. Values: Only plain text in UTF-8 format (no embedded JSON/XML/CSV). For structural representation, use additional tags rather than nested formats. Aim for 60-120 tokens, and handle large concepts by breaking them into smaller parts."
+      },
+      {
+        "name": "iteration_principles",
+        "trigger": "never",
+        "content": "Continuity: always build from existing memory; preserve traceability of reasoning."
+      },
+      {
+        "name": "output_contract",
+        "trigger": "always",
+        "content": "Always output EXACTLY one agent root with exactly one next_state and exactly one action. Follow allowed enumerations strictly."
+      },
+      {
+        "name": "output_schema",
+        "trigger": "always",
+        "content": "agent next_state STATE next_state action type TYPE type tags TAGS tags value VALUE value action agent"
+      },
+      {
+        "name": "schema_rules",
+        "trigger": "always",
+        "content": "Allowed states: thinking | commanding | evaluating | paging. Allowed types: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search. Value required ONLY for working_memory_add and storage_save. For other types emit empty value. Tags comma separated no spaces."
+      },
+      {
+        "name": "safety",
+        "trigger": "always",
+        "content": "Do not rename existing tags unnecessarily. No freeform JSON. If working memory grows too large summarize then store. Archive aggressively but preserve semantic resolution."
+      },
+      {
+        "name": "quality",
+        "trigger": "always",
+        "content": "Clarity precision minimal verbosity. Leave concise reasoning traces in working_memory when thinking or evaluating. Default cyclical flow: thinking then commanding then evaluating optionally paging then thinking."
+      },
+      {
+        "name": "state_thinking",
+        "trigger": "state=thinking && (working_memory_length < 8192)",
+        "content": "STATE GUIDANCE Analyze working_memory for blockers missing knowledge or actionable continuation choose single action advancing progress."
+      },
+      {
+        "name": "state_commanding",
+        "trigger": "state=commanding && (working_memory_length < 8192)",
+        "content": "STATE GUIDANCE Issue concrete action progressing creation enrichment clarification or retrieval."
+      },
+      {
+        "name": "state_evaluating",
+        "trigger": "state=evaluating && (working_memory_length < 8192)",
+        "content": "STATE GUIDANCE Assess recent results for correctness gaps quality issues opportunities to refine direction."
+      },
+      {
+        "name": "state_paging",
+        "trigger": "state=paging || (working_memory_length >= 8192)",
+        "content": "STATE GUIDANCE Summarize or compress least critical working memory before archival preserving essential semantic signal."
+      },
+      {
+        "name": "state_default",
+        "trigger": "state=default && (working_memory_length < 8192)",
+        "content": "STATE GUIDANCE Maintain momentum think act evaluate archive as needed preserving deterministic structure."
+      },
+      {
+        "name": "working_memory",
+        "trigger": "always",
+        "content": "{working_memory}"
       }
-    },
-    
-    "states": {
-      "analyzing": {
-        "purpose": "Deep analysis of current context and objectives",
-        "mode": "thinking_mode",
-        "context_assembly": "full_context_with_storage_integration",
-        "token_efficiency": "maximum_insight_density",
-        "prompt_template": "role_specific_analysis"
-      },
-      "creating": {
-        "purpose": "Generate high-quality content aligned with role",
-        "mode": "thinking_mode", 
-        "context_assembly": "creative_context_with_inspiration_sources",
-        "token_efficiency": "creative_depth_optimization",
-        "prompt_template": "role_specific_creation"
-      },
-      "organizing": {
-        "purpose": "Structure and enhance knowledge storage",
-        "mode": "action_mode",
-        "context_assembly": "organizational_context",
-        "token_efficiency": "structural_clarity",
-        "prompt_template": "role_specific_organization"
-      },
-      "synthesizing": {
-        "purpose": "Connect disparate knowledge for insights",
-        "mode": "thinking_mode",
-        "context_assembly": "cross_domain_context",
-        "token_efficiency": "synthesis_density",
-        "prompt_template": "role_specific_synthesis"
-      },
-      "evolving": {
-        "purpose": "Self-improvement and capability enhancement",
-        "mode": "thinking_mode",
-        "context_assembly": "meta_learning_context", 
-        "token_efficiency": "growth_optimization",
-        "prompt_template": "meta_enhancement"
-      }
-    },
-    
-    "prompts": {
-      "global": "SYSTEM ROLE: Deterministic autonomous loop. Read current STATE plus WORKING_MEMORY entries. Decide ONLY one best next step. Emit strictly valid XML matching the output contract. Do NOT output commentary outside the required root element.",
-      "states": {
-        "thinking": "Analyze working_memory for blockers, missing knowledge, or actionable continuation. Decide what single action most advances progress.",
-        "commanding": "Issue a concrete action that progresses creation, enrichment, clarification, or retrieval.",
-        "evaluating": "Assess recent results for correctness, gaps, quality issues, or opportunities to refine direction.",
-        "paging": "Summarize or compress least-critical working memory before archival while preserving essential semantic signal.",
-        "default": "Maintain momentum: think, act, evaluate, and archive as needed while preserving deterministic structure."
-      },
-      "format": {
-        "root": "agent_prompt",
-        "mandatory": [
-          { "name": "purpose", "content": "{global}" },
-          { "name": "memory_model", "content": "Working memory = volatile active focus. Storage = persistent unlimited knowledge base keyed by comma separated tag string. Tags: lowercase ascii, underscores separate tokens, comma composes multi tag keys, order irrelevant, iteration tag auto added. Values: plain UTF-8 text only; NEVER embed JSON XML CSV. Represent structure via additional tags not nested formats. Target 60-120 tokens and split larger concepts." },
-          { "name": "iteration_principles", "content": "Continuity: always build from existing memory; preserve traceability of reasoning." },
-          { "name": "output_contract", "content": "Always output EXACTLY one agent root with exactly one next_state and exactly one action. Follow allowed enumerations strictly." },
-          { "name": "output_schema", "content": "agent next_state STATE next_state action type TYPE type tags TAGS tags value VALUE value action agent" },
-          { "name": "schema_rules", "content": "Allowed states: thinking | commanding | evaluating | paging. Allowed types: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search. Value required ONLY for working_memory_add and storage_save. For other types emit empty value. Tags comma separated no spaces." },
-          { "name": "safety", "content": "Do not rename existing tags unnecessarily. No freeform JSON. If working memory grows too large summarize then store. Archive aggressively but preserve semantic resolution." },
-          { "name": "quality", "content": "Clarity precision minimal verbosity. Leave concise reasoning traces in working_memory when thinking or evaluating. Default cyclical flow: thinking then commanding then evaluating optionally paging then thinking." }
-        ],
-        "state_guidance": {
-          "thinking": "STATE GUIDANCE Analyze working_memory for blockers missing knowledge or actionable continuation choose single action advancing progress.",
-          "commanding": "STATE GUIDANCE Issue concrete action progressing creation enrichment clarification or retrieval.",
-          "evaluating": "STATE GUIDANCE Assess recent results for correctness gaps quality issues opportunities to refine direction.",
-          "paging": "STATE GUIDANCE Summarize or compress least critical working memory before archival preserving essential semantic signal.",
-          "default": "STATE GUIDANCE Maintain momentum think act evaluate archive as needed preserving deterministic structure."
-        },
-        "working_memory_element": "working_memory"
-      }
-    },
-    
-    "iteration_limit": {
-      "enable": false,
-      "value": 100000
-    },
-    "paging_limit": {
-      "enable": true,
-      "value": 98192
-    }
+    ]
+  },
+  "iteration_limit": {
+    "enable": false,
+    "value": 100000
+  },
+  "paging_trigger": {
+    "enable": false,
+    "value": 98192
   }
+}
 }
