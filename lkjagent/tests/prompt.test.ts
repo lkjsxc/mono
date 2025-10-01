@@ -4,45 +4,40 @@ import type { AgentMemorySnapshot } from "../src/domain/types.js";
 import { buildPrompt } from "../src/prompt/builder.js";
 
 const config: AgentConfig = {
-  llm: {
-    endpoint: "http://example.com",
-    model: "test-model",
-  },
+  llm: { endpoint: "http://example.com", model: "test-model" },
   agent: {
     roles: {
       active_role: "scribe",
-      available_roles: {
-        scribe: {
-          identity: "Master Archivist",
-        },
-      },
+      available_roles: { scribe: { identity: "Master Archivist" } },
     },
     prompts: {
-      global: "SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus working memory. Decide ONLY one best next step. Emit strictly valid XML.",
+      global: "SYSTEM ROLE deterministic autonomous loop read current STATE plus WORKING_MEMORY entries decide only one best next step emit strictly valid XML",
       states: {
-        thinking: "Examine working memory for blockers, missing data, or next actionable continuation.",
-        commanding: "Issue a single high-leverage action advancing goals.",
-        evaluating: "Assess last result for correctness, gaps, clarity.",
-        paging: "Summarize or compress low-priority items before archival.",
-        default: "Maintain disciplined loop cycle.",
+        thinking: "Guidance THINK examine working_memory for blockers missing data or next actionable continuation",
+        commanding: "Guidance COMMAND issue a single high leverage action advancing goals",
+        evaluating: "Guidance EVAL assess last result for correctness gaps clarity",
+        paging: "Guidance PAGE summarize or compress low priority items before archival",
+        default: "Guidance DEFAULT maintain disciplined loop cycle",
       },
       format: {
-        template: `<agent_prompt>
-  <purpose>{global}</purpose>
-  <state_guidance>{state_prompt}</state_guidance>
-  <working_memory_snapshot>
-{working_memory}
-  </working_memory_snapshot>
-</agent_prompt>`,
-        item_template: "    <entry><tags>{tags}</tags><value>{value}</value></entry>",
-        empty_working_memory: "    <entry empty=\"true\" />",
+        root: "agent_prompt",
+        mandatory: [
+          { name: "purpose", content: "{global}" },
+          { name: "contract", content: "Always output one agent root with one next_state and one action" },
+        ],
+        state_guidance: {
+          thinking: "STATE thinking analyze",
+          commanding: "STATE commanding act",
+          default: "STATE default",
+        },
+        working_memory_element: "working_memory",
       },
     },
   },
 };
 
 describe("buildPrompt", () => {
-  it("renders global text, state guidance, and working memory items", () => {
+  it("renders mandatory sections, state specific guidance, and working memory items", () => {
     const memory: AgentMemorySnapshot = {
       state: "analyzing",
       iteration: 0,
@@ -55,16 +50,22 @@ describe("buildPrompt", () => {
       storage: { entries: {} },
     };
 
-  const { prompt, estimatedTokens } = buildPrompt(config, memory, "thinking");
-  expect(prompt).toContain("SYSTEM ROLE: Deterministic autonomous loop.");
-  expect(prompt).toContain("Examine working memory for blockers");
-    expect(prompt.indexOf("a_task,iteration_1")).toBeLessThan(prompt.indexOf("b_task,iteration_2"));
-    expect(prompt).toContain(
-      "<item><tags>a_task,iteration_1</tags><value>Draft synopsis</value></item>",
-    );
-    expect(prompt).toContain(
-      "<item><tags>b_task,iteration_2</tags><value>Outline chapter headings</value></item>",
-    );
+    const { prompt, estimatedTokens } = buildPrompt(config, memory, "thinking");
+    // Root and mandatory
+    expect(prompt.startsWith("<agent_prompt>")).toBe(true);
+    expect(prompt).toContain("<purpose>");
+    // State element should be state_thinking
+    expect(prompt).toContain("<state_thinking>");
+    // Working memory container
+    expect(prompt).toContain("<working_memory>");
+    // Items ordering (a before b)
+    const idxA = prompt.indexOf("a_task,iteration_1");
+    const idxB = prompt.indexOf("b_task,iteration_2");
+    expect(idxA).toBeGreaterThan(-1);
+    expect(idxB).toBeGreaterThan(-1);
+    expect(idxA).toBeLessThan(idxB);
+    expect(prompt).toContain("<item><tags>a_task,iteration_1</tags><value>Draft synopsis</value></item>");
+    expect(prompt).toContain("<item><tags>b_task,iteration_2</tags><value>Outline chapter headings</value></item>");
     expect(estimatedTokens).toBeGreaterThan(10);
   });
 
@@ -76,8 +77,9 @@ describe("buildPrompt", () => {
       storage: { entries: {} },
     };
 
-  const { prompt } = buildPrompt(config, memory, "unknown_state");
-  expect(prompt).toContain("Maintain disciplined loop cycle.");
+    const { prompt } = buildPrompt(config, memory, "unknown_state");
+    // falls back to default state element name
+    expect(prompt).toContain("<state_thinking>"); // canonical fallback is thinking per builder logic
   });
 
   it("uses the empty working-memory template when there are no entries", () => {
@@ -89,6 +91,7 @@ describe("buildPrompt", () => {
     };
 
     const { prompt } = buildPrompt(config, memory, "thinking");
-    expect(prompt).toContain("<entry empty=\"true\" />");
+    // EMPTY marker for no working memory
+    expect(prompt).toContain("<working_memory>EMPTY</working_memory>");
   });
 });

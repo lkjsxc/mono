@@ -13,16 +13,41 @@ const LlmOptimizationModesSchema = z.object({
   action_mode: LlmOptimizationSchema.optional(),
 });
 
-const PromptFormatSchema = z.object({
+// Legacy prompt schema (string template with substitution)
+const PromptFormatLegacySchema = z.object({
   template: z.string().min(1),
   item_template: z.string().min(1),
   empty_working_memory: z.string().min(1).optional(),
 });
 
+// New JSON driven prompt assembly schema.
+// We build an attributeless XML document with ordered <prompt> root and child elements representing sections.
+// Sections ordering rules (applied in builder):
+// 1. mandatory sections (always present)
+// 2. conditional state sections (state-specific guidance)
+// 3. working memory content section (constructed at runtime)
+// Each section has a name and raw text content (no angle brackets required in config; builder wraps automatically).
+const PromptSectionSchema = z.object({
+  name: z.string().min(1),
+  content: z.string().default("")
+});
+
+const PromptFormatStructuredSchema = z.object({
+  // Required always-included sections defined statically.
+  mandatory: z.array(PromptSectionSchema).default([]),
+  // stateGuidance maps state name -> section content (will be wrapped as <state name="STATE"> but without attributes per requirements; so we actually create <state_STATE>)
+  state_guidance: z.record(z.string().min(1)).default({}),
+  // Name to use for working memory container element (defaults to working_memory)
+  working_memory_element: z.string().min(1).default("working_memory"),
+  // Optional root element override (defaults to prompt)
+  root: z.string().min(1).default("prompt"),
+});
+
 const PromptSchema = z.object({
   global: z.string().min(1),
   states: z.record(z.string().min(1)),
-  format: PromptFormatSchema,
+  // Accept legacy or structured format
+  format: z.union([PromptFormatLegacySchema, PromptFormatStructuredSchema]),
 });
 
 const LlmLoggingSchema = z
@@ -116,6 +141,7 @@ export const AgentConfigSchema = z.object({
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 export type PromptConfig = z.infer<typeof PromptSchema>;
+export type PromptSectionConfig = z.infer<typeof PromptSectionSchema>;
 
 export const DEFAULT_MEMORY = {
   state: "analyzing",

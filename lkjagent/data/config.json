@@ -150,7 +150,7 @@
     },
     
     "prompts": {
-      "global": "SYSTEM ROLE: Deterministic autonomous loop. Read current <state> plus <working_memory> entries. Decide ONLY one best next step. Emit strictly valid XML matching the output contract. Do NOT output commentary outside the required root element.",
+      "global": "SYSTEM ROLE: Deterministic autonomous loop. Read current STATE plus WORKING_MEMORY entries. Decide ONLY one best next step. Emit strictly valid XML matching the output contract. Do NOT output commentary outside the required root element.",
       "states": {
         "thinking": "Analyze working_memory for blockers, missing knowledge, or actionable continuation. Decide what single action most advances progress.",
         "commanding": "Issue a concrete action that progresses creation, enrichment, clarification, or retrieval.",
@@ -159,9 +159,25 @@
         "default": "Maintain momentum: think, act, evaluate, and archive as needed while preserving deterministic structure."
       },
       "format": {
-        "template": "<agent_prompt>\n  <purpose>{global}</purpose>\n  <state_guidance>{state_prompt}</state_guidance>\n  <memory_model>\n    Working memory = volatile active focus. Storage = persistent unlimited knowledge base (keyed by comma-separated tag string).\n    Tags: lowercase ascii, underscores for intra-token separation, comma to compose multi-tag keys. Order doesn't matter. Iteration tag auto-added.\n    Values: plain UTF-8 text only; NEVER embed JSON, XML, CSV. Represent structure through additional tags, not nested formats. Target ~60-120 tokens; split larger concepts.\n  </memory_model>\n  <iteration_principles>Continuity: always build from existing memory; preserve traceability of reasoning.</iteration_principles>\n  <output_contract>Always output EXACTLY one <agent> root with exactly one <next_state> and exactly one <action>. Follow allowed enumerations strictly.</output_contract>\n  <output_schema><![CDATA[<agent>\n  <next_state>STATE</next_state>\n  <action>\n    <type>TYPE</type>\n    <tags>TAGS</tags>\n    <value>VALUE</value>\n  </action>\n</agent>]]></output_schema>\n  <schema_rules>Allowed states: thinking | commanding | evaluating | paging. Allowed types: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search. Value required ONLY for working_memory_add + storage_save. For other types emit empty <value></value>. Tags = comma-separated, no spaces.</schema_rules>\n  <safety>Do not rename existing tags unnecessarily. No freeform JSON. If working memory grows too large, summarize then store. Archive aggressively but preserve semantic resolution.</safety>\n  <quality>Clarity, precision, minimal verbosity. Leave concise reasoning traces in working_memory when thinking/evaluating. Default cyclical flow: thinking → commanding → evaluating → (paging if needed) → thinking.</quality>\n  <working_memory_snapshot>\n{working_memory}\n  </working_memory_snapshot>\n</agent_prompt>",
-        "item_template": "    <entry><tags>{tags}</tags><value>{value}</value></entry>",
-        "empty_working_memory": "    <entry empty=\"true\" />"
+        "root": "agent_prompt",
+        "mandatory": [
+          { "name": "purpose", "content": "{global}" },
+          { "name": "memory_model", "content": "Working memory = volatile active focus. Storage = persistent unlimited knowledge base keyed by comma separated tag string. Tags: lowercase ascii, underscores separate tokens, comma composes multi tag keys, order irrelevant, iteration tag auto added. Values: plain UTF-8 text only; NEVER embed JSON XML CSV. Represent structure via additional tags not nested formats. Target 60-120 tokens and split larger concepts." },
+          { "name": "iteration_principles", "content": "Continuity: always build from existing memory; preserve traceability of reasoning." },
+          { "name": "output_contract", "content": "Always output EXACTLY one agent root with exactly one next_state and exactly one action. Follow allowed enumerations strictly." },
+          { "name": "output_schema", "content": "agent next_state STATE next_state action type TYPE type tags TAGS tags value VALUE value action agent" },
+          { "name": "schema_rules", "content": "Allowed states: thinking | commanding | evaluating | paging. Allowed types: working_memory_add | working_memory_remove | storage_load | storage_save | storage_search. Value required ONLY for working_memory_add and storage_save. For other types emit empty value. Tags comma separated no spaces." },
+          { "name": "safety", "content": "Do not rename existing tags unnecessarily. No freeform JSON. If working memory grows too large summarize then store. Archive aggressively but preserve semantic resolution." },
+          { "name": "quality", "content": "Clarity precision minimal verbosity. Leave concise reasoning traces in working_memory when thinking or evaluating. Default cyclical flow: thinking then commanding then evaluating optionally paging then thinking." }
+        ],
+        "state_guidance": {
+          "thinking": "STATE GUIDANCE Analyze working_memory for blockers missing knowledge or actionable continuation choose single action advancing progress.",
+          "commanding": "STATE GUIDANCE Issue concrete action progressing creation enrichment clarification or retrieval.",
+          "evaluating": "STATE GUIDANCE Assess recent results for correctness gaps quality issues opportunities to refine direction.",
+          "paging": "STATE GUIDANCE Summarize or compress least critical working memory before archival preserving essential semantic signal.",
+          "default": "STATE GUIDANCE Maintain momentum think act evaluate archive as needed preserving deterministic structure."
+        },
+        "working_memory_element": "working_memory"
       }
     },
     
