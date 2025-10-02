@@ -1,6 +1,7 @@
 {
   "state": "thinking",
   "iteration": 0,
-  "working_memory": {"goal":"assemble an encyclopedia"},
+  "action_serial": 0,
+  "working_memory": {"goal": "Create an encyclopedia. Add all concepts to storage in dictionary order."},
   "storage": {}
 }
