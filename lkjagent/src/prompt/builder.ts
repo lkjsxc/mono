@@ -109,9 +109,9 @@ const buildPromptFromEntries = (
       if (content.includes("{working_memory}")) {
         const wm = Object.entries(memory.workingMemory.entries)
           .sort(([a], [b]) => a.localeCompare(b))
-          .map(([tags, value]) => `${tags}: ${value}`)
-          .join("\n");
-        content = content.replace("{working_memory}", wm.length ? wm : "EMPTY");
+          .map(([tags, value]) => `<item><tags>${tags}</tags><value>${value}</value></item>`)
+          .join("");
+        content = content.replace("{working_memory}", wm.length ? wm : "<empty/>");
       }
   included.push(`<${entry.name}>${passthrough(content)}</${entry.name}>`);
     }
