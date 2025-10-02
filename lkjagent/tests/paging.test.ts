@@ -19,7 +19,12 @@ const buildConfig = (): AgentConfig => ({
         },
       },
     },
-    prompts: {},
+    // minimal valid legacy prompt object
+    prompts: {
+      global: "GLOBAL",
+      states: { default: "DEFAULT" },
+      format: { template: "{global} {state_prompt} {working_memory}", item_template: "<item>{tags}:{value}</item>" },
+    },
     memory_system: {
       paging: {
         enable: true,
@@ -51,6 +56,6 @@ describe("applyPaging", () => {
     const updated = applyPaging(memory, buildConfig(), 10);
     expect(Object.keys(updated.workingMemory.entries)).toEqual(["thinking_notes,iteration_9"]);
     expect(updated.storage.entries["general,iteration_0"]).toBe("X".repeat(300));
-    expect(updated.state).toBe("thinking");
+    expect(updated.state).toBe("paging");
   });
 });

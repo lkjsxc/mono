@@ -1,6 +1,6 @@
 {
   "state": "thinking",
   "iteration": 0,
-  "working_memory": {},
+  "working_memory": {"goal":"assemble an encyclopedia"},
   "storage": {}
 }

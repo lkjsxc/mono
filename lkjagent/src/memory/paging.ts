@@ -54,14 +54,15 @@ const workingMemorySize = (memory: AgentMemorySnapshot): number =>
   JSON.stringify(memory.workingMemory.entries).length;
 
 const getThreshold = (config: AgentConfig): number | undefined => {
-  const pagingLimit = config.agent.paging_limit;
-  if (pagingLimit?.enable && pagingLimit.value) {
-    return pagingLimit.value;
-  }
-  const memoryPaging = config.agent.memory_system?.paging;
-  if (memoryPaging?.enable && memoryPaging.context_threshold) {
-    return memoryPaging.context_threshold;
-  }
+  // New top-level paging_trigger has priority
+  const topTrigger: any = (config as any).paging_trigger;
+  if (topTrigger?.enable && topTrigger.value) return topTrigger.value;
+  // Legacy nested paging_limit inside agent
+  const pagingLimit = (config.agent as any).paging_limit;
+  if (pagingLimit?.enable && pagingLimit.value) return pagingLimit.value;
+  // Legacy memory system threshold
+  const memoryPaging = (config.agent as any).memory_system?.paging;
+  if (memoryPaging?.enable && memoryPaging.context_threshold) return memoryPaging.context_threshold;
   return undefined;
 };
 

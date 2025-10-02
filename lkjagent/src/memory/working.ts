@@ -10,6 +10,7 @@ const withUpdatedWorkingMemory = (
 });
 
 const extractIteration = (key: string): number | undefined => {
+  // backward compatibility: still parse old iteration_ suffix for ordering
   const marker = "iteration_";
   const index = key.lastIndexOf(marker);
   if (index < 0) return undefined;
@@ -19,10 +20,13 @@ const extractIteration = (key: string): number | undefined => {
 };
 
 export const stripIterationSuffix = (key: string): string => {
-  const marker = ",iteration_";
-  const index = key.lastIndexOf(marker);
-  if (index < 0) return key;
-  return key.slice(0, index);
+  const markerOld = ",iteration_";
+  const markerNew = ",action_";
+  let index = key.lastIndexOf(markerOld);
+  if (index >= 0) return key.slice(0, index);
+  index = key.lastIndexOf(markerNew);
+  if (index >= 0) return key.slice(0, index);
+  return key;
 };
 
 const orderWorkingMemoryKeys = (entries: Record<string, string>): string[] =>
@@ -39,10 +43,10 @@ export const addWorkingMemoryEntry = (
   memory: AgentMemorySnapshot,
   rawTags: string,
   value: string,
-  iteration: number,
+  actionSerial: number,
 ): AgentMemorySnapshot => {
   const normalizedTags = normalizeTags(rawTags);
-  const key = `${normalizedTags}${normalizedTags ? "," : ""}iteration_${iteration}`;
+  const key = `${normalizedTags}${normalizedTags ? "," : ""}action_${actionSerial}`;
   return withUpdatedWorkingMemory(memory, {
     ...memory.workingMemory.entries,
     [key]: value,

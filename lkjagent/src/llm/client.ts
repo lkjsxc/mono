@@ -92,12 +92,13 @@ const buildOfflineResponse = (state: string, prompt: string, error: unknown): Ch
   const safeMessage = escapeXml(message);
   const safeSummary = escapeXml(summarizePrompt(prompt));
 
+  // interpreter が期待する構造: <agent><state>...</state><actions><action>...</action></actions></agent>
   const content =
-    `<agent><state>${safeState}</state><action>` +
+    `<agent><state>${safeState}</state><actions><action>` +
     `<type>working_memory_add</type>` +
     `<tags>system,offline</tags>` +
     `<value>Offline fallback engaged: ${safeMessage}. Prompt summary: ${safeSummary}</value>` +
-    `</action></agent>`;
+    `</action></actions></agent>`;
 
   return { content };
 };

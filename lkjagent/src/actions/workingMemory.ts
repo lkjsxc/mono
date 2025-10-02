@@ -5,8 +5,8 @@ export const executeWorkingMemoryAdd = (
   memory: AgentMemorySnapshot,
   tags: string,
   value: string,
-  iteration: number,
-): AgentMemorySnapshot => addWorkingMemoryEntry(memory, tags, value, iteration);
+  actionSerial: number,
+): AgentMemorySnapshot => addWorkingMemoryEntry(memory, tags, value, actionSerial);
 
 export const executeWorkingMemoryRemove = (
   memory: AgentMemorySnapshot,

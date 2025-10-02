@@ -13,20 +13,18 @@ const LlmOptimizationModesSchema = z.object({
   action_mode: LlmOptimizationSchema.optional(),
 });
 
-// Legacy prompt schema (string template with substitution)
+// ---------------------------------------------------------------------------
+// LEGACY PROMPT SCHEMA (template-based)
+// ---------------------------------------------------------------------------
 const PromptFormatLegacySchema = z.object({
   template: z.string().min(1),
   item_template: z.string().min(1),
   empty_working_memory: z.string().min(1).optional(),
 });
 
-// New JSON driven prompt assembly schema.
-// We build an attributeless XML document with ordered <prompt> root and child elements representing sections.
-// Sections ordering rules (applied in builder):
-// 1. mandatory sections (always present)
-// 2. conditional state sections (state-specific guidance)
-// 3. working memory content section (constructed at runtime)
-// Each section has a name and raw text content (no angle brackets required in config; builder wraps automatically).
+// ---------------------------------------------------------------------------
+// STRUCTURED PROMPT SCHEMA (legacy structured variant)
+// ---------------------------------------------------------------------------
 const PromptSectionSchema = z.object({
   name: z.string().min(1),
   content: z.string().default("")
@@ -43,12 +41,24 @@ const PromptFormatStructuredSchema = z.object({
   root: z.string().min(1).default("prompt"),
 });
 
+// Legacy object prompt configuration (v1)
 const PromptSchema = z.object({
   global: z.string().min(1),
   states: z.record(z.string().min(1)),
-  // Accept legacy or structured format
   format: z.union([PromptFormatLegacySchema, PromptFormatStructuredSchema]),
 });
+
+// ---------------------------------------------------------------------------
+// NEW PROMPT ENTRY ARRAY (v2)
+// Each entry declares name, trigger expression, and content.
+// trigger: "always" | "never" | expression using state, working_memory_length
+// ---------------------------------------------------------------------------
+export const PromptEntrySchema = z.object({
+  name: z.string().min(1),
+  trigger: z.string().min(1),
+  content: z.string().default("")
+});
+export const PromptEntryArraySchema = z.array(PromptEntrySchema);
 
 const LlmLoggingSchema = z
   .object({
@@ -110,42 +120,79 @@ const MemorySystemSchema = z.object({
       preservation_priority: z.array(z.string()).optional(),
     })
     .optional(),
+  storage: z
+    .object({
+      unlimited_capacity: z.boolean().optional(),
+      auto_enrichment: z.boolean().optional(),
+      knowledge_graph: z.boolean().optional(),
+      cross_references: z.boolean().optional(),
+      progressive_enhancement: z.boolean().optional(),
+    })
+    .optional(),
 });
 
-const IterationLimitSchema = z
+const EnableValueSchema = z
   .object({
     enable: z.boolean().optional(),
     value: z.number().int().positive().optional(),
   })
   .optional();
 
-const PagingLimitSchema = z
-  .object({
-    enable: z.boolean().optional(),
-    value: z.number().int().positive().optional(),
-  })
-  .optional();
+const IterationLimitSchema = EnableValueSchema; // legacy nested or top-level
+const PagingLimitSchema = EnableValueSchema;    // legacy nested paging_limit
+const PagingTriggerSchema = EnableValueSchema;  // new top-level paging_trigger
 
-export const AgentConfigSchema = z.object({
-  version: z.string().optional(),
-  llm: LlmConfigSchema,
-  agent: z.object({
-    roles: RolesSchema,
-    memory_system: MemorySystemSchema.optional(),
-    prompts: PromptSchema,
-    states: AgentStatesSchema.optional(),
-    paging_limit: PagingLimitSchema.optional(),
-    iteration_limit: IterationLimitSchema,
-  }),
+// Legacy agent block (v1)
+const AgentLegacySchema = z.object({
+  roles: RolesSchema,
+  memory_system: MemorySystemSchema.optional(),
+  prompts: PromptSchema,
+  states: AgentStatesSchema.optional(),
+  paging_limit: PagingLimitSchema.optional(),
+  iteration_limit: IterationLimitSchema.optional(),
 });
+
+// New agent block (v2) — minimal: memory_system + prompts array
+const AgentV2Schema = z.object({
+  memory_system: MemorySystemSchema.optional(),
+  prompts: PromptEntryArraySchema,
+});
+
+export const AgentConfigSchema = z
+  .object({
+    version: z.string().optional(),
+    llm: LlmConfigSchema,
+    agent: z.union([AgentLegacySchema, AgentV2Schema]),
+    iteration_limit: IterationLimitSchema.optional(),
+    paging_trigger: PagingTriggerSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    // Guard against conflicting iteration limits
+    const top = value.iteration_limit;
+    const nested: any = (value.agent as any).iteration_limit;
+    if (top && nested) {
+      const tVal = top.value ?? undefined;
+      const nVal = nested.value ?? undefined;
+      if (tVal !== nVal) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["iteration_limit"],
+          message: "Conflicting iteration_limit definitions (top-level vs agent.iteration_limit)",
+        });
+      }
+    }
+  });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 export type PromptConfig = z.infer<typeof PromptSchema>;
 export type PromptSectionConfig = z.infer<typeof PromptSectionSchema>;
+export type PromptEntryConfig = z.infer<typeof PromptEntrySchema>;
 
 export const DEFAULT_MEMORY = {
   state: "analyzing",
   iteration: 0,
+  // 新規: アクション単位の一意シリアル。iteration ループとは独立し連番付与。
+  action_serial: 0,
   working_memory: {} as Record<string, string>,
   storage: {} as Record<string, string>,
 };
@@ -164,3 +211,9 @@ export interface PromptFoundation {
   purpose?: string;
   knowledgeDomains?: string[];
 }
+
+// Runtime helpers to discriminate prompt formats
+export const isPromptEntryArray = (p: unknown): p is PromptEntryConfig[] =>
+  Array.isArray(p) && p.every(e => typeof e === "object" && !!e && "name" in e && "trigger" in e);
+export const isLegacyPromptObject = (p: unknown): p is PromptConfig =>
+  typeof p === "object" && !!p && !Array.isArray(p) && (p as any).global && (p as any).states;

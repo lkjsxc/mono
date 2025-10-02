@@ -52,7 +52,7 @@
       {
         "name": "memory_model",
         "trigger": "always",
-        "content": "Working Memory = The area that is always included in the prompt. Storage = An unlimited-capacity knowledge base managed by key-value pairs, with data read/written via actions and stored as a comma-separated tag string. Tag specifications: Lowercase ASCII characters, tokens separated by underscores, multiple tags can be combined with a comma, tag order is irrelevant, and iteration tags are automatically added. Values: Only plain text in UTF-8 format is allowed (no embedded JSON/XML/CSV). Structure representation should use additional tags rather than nested formats. Aim for 60-120 tokens as the target, with large concepts broken down into manageable parts."
+        "content": "Working Memory is The area that is always included in the prompt. Storage is An unlimited-capacity knowledge base managed by key-value pairs, with data read/written via actions and stored as a comma-separated tag string. Tag specifications: Lowercase ASCII characters, tokens separated by underscores, multiple tags can be combined with a comma, tag order is irrelevant, and iteration tags are automatically added. Values: Only plain text in UTF-8 format is allowed (no embedded JSON/XML/CSV). Structure representation should use additional tags rather than nested formats. Aim for 60-120 tokens as the target, with large concepts broken down into manageable parts."
       },
       {
         "name": "iteration_principles",
@@ -67,7 +67,7 @@
       {
         "name": "output_schema",
         "trigger": "always",
-        "content": "agent next_state STATE next_state action type TYPE type tags TAGS tags value VALUE value action agent"
+        "content": "<agent> <next_state>STATE</next_state> <action> <type>TYPE</type> <tags>TAGS</tags> <value>VALUE</value> </action> </agent>"
       },
       {
         "name": "schema_rules",
@@ -124,5 +124,4 @@
     "enable": false,
     "value": 98192
   }
-}
 }

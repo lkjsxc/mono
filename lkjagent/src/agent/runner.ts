@@ -27,12 +27,14 @@ export const executeIteration = async (
     const xml = extractAgentXml(response);
     const parsed = interpretAgentXml(xml);
 
-    let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
+  let updatedMemory: AgentMemorySnapshot = { ...memory, state: parsed.state };
+  let actionSerial = memory.actionSerial ?? 0;
     const newWorkingKeys = new Set<string>();
 
     for (const action of parsed.actions) {
       const beforeKeys = new Set(Object.keys(updatedMemory.workingMemory.entries));
-      updatedMemory = executeAction(updatedMemory, action, iteration);
+      actionSerial += 1;
+      updatedMemory = executeAction(updatedMemory, action, iteration, actionSerial);
       const afterKeys = Object.keys(updatedMemory.workingMemory.entries);
       for (const key of afterKeys) {
         if (!beforeKeys.has(key)) {
@@ -52,7 +54,7 @@ export const executeIteration = async (
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {
-      memory: updatedMemory,
+      memory: { ...updatedMemory, actionSerial },
       actions: parsed.actions,
       nextState,
     };
@@ -67,7 +69,8 @@ export const executeIteration = async (
     console.error("[lkjagent] iteration pipeline error", error);
 
     let updatedMemory: AgentMemorySnapshot = { ...memory, state: "analyzing" };
-  updatedMemory = addWorkingMemoryEntry(updatedMemory, fallbackAction.tags, fallbackAction.value, iteration);
+    const actionSerial = (memory.actionSerial ?? 0) + 1;
+    updatedMemory = addWorkingMemoryEntry(updatedMemory, fallbackAction.tags, fallbackAction.value, actionSerial);
   const previousKeys = new Set(Object.keys(memory.workingMemory.entries));
   const failureKeys = Object.keys(updatedMemory.workingMemory.entries).filter((key) => !previousKeys.has(key));
     updatedMemory = archiveWorkingEntries(updatedMemory, failureKeys);
@@ -78,7 +81,7 @@ export const executeIteration = async (
     updatedMemory = applyPaging(updatedMemory, config, iteration);
 
     return {
-      memory: updatedMemory,
+      memory: { ...updatedMemory, actionSerial },
       actions: [fallbackAction],
       nextState: failureKeys.length > 0 ? "paging" : "analyzing",
     };
@@ -86,10 +89,12 @@ export const executeIteration = async (
 };
 
 const resolveIterationLimit = (config: AgentConfig): number | undefined => {
-  const limit = config.agent.iteration_limit;
-  if (limit?.enable && limit.value) {
-    return limit.value;
-  }
+  // Prefer top-level iteration_limit
+  const top: any = (config as any).iteration_limit;
+  if (top?.enable && top.value) return top.value;
+  // fallback legacy nested
+  const nested: any = (config.agent as any).iteration_limit;
+  if (nested?.enable && nested.value) return nested.value;
   return undefined;
 };
 

@@ -11,6 +11,8 @@ export interface StorageMemory {
 export interface AgentMemorySnapshot {
   readonly state: string;
   readonly iteration: number;
+  // アクションごとにインクリメントされるユニーク連番
+  readonly actionSerial: number;
   readonly workingMemory: WorkingMemory;
   readonly storage: StorageMemory;
 }

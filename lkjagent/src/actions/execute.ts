@@ -37,11 +37,12 @@ export const executeAction = (
   memory: AgentMemorySnapshot,
   action: AgentAction,
   iteration: number,
+  actionSerial: number,
 ): AgentMemorySnapshot => {
   switch (action.type) {
     case "working_memory_add":
       warnOnValueFormat(action.type, action.tags, action.value);
-      return executeWorkingMemoryAdd(memory, action.tags, action.value, iteration);
+      return executeWorkingMemoryAdd(memory, action.tags, action.value, actionSerial);
     case "working_memory_remove":
       return executeWorkingMemoryRemove(memory, action.tags);
     case "storage_save":
