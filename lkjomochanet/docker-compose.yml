@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  server:
+    build: .
+    command: ["./social-network", "server"]
+    ports:
+      - "8080:8080"
+    container_name: social-network-server
+    networks:
+      - social-network
+
+  client:
+    build: .
+    command: ["./social-network", "client"]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    container_name: social-network-client
+    environment:
+      - SERVER_HOST=server
+    networks:
+      - social-network
+
+networks:
+  social-network:
+    driver: bridge
