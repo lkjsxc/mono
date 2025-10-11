@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Social Network</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .post-form { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .feed { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .message { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .timestamp { color: #666; font-size: 0.9em; }
+        .content { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Simple Social Network</h1>
+    
+    <div class="post-form">
+        <h3>Post a Message</h3>
+        <textarea id="message" placeholder="Your message" rows="3" required></textarea>
+        <button onclick="postMessage()">Post Message</button>
+    </div>
+    
+    <div class="feed">
+        <h3>Global Feed</h3>
+        <button onclick="loadFeed()">Refresh Feed</button>
+        <div id="feed">Loading...</div>
+    </div>
+    
+    <script>
+        function postMessage() {
+            const message = document.getElementById('message').value;
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            fetch('/api/post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('message').value = '';
+                    loadFeed();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error posting message: ' + error);
+            });
+        }
+        
+        function loadFeed() {
+            fetch('/api/feed')
+            .then(response => response.json())
+            .then(data => {
+                const feed = document.getElementById('feed');
+                if (data.messages && data.messages.length > 0) {
+                    feed.innerHTML = data.messages.map(msg => 
+                        `<div class="message">
+                            <div class="timestamp">${new Date(msg.timestamp * 1000).toLocaleString()}</div>
+                            <div class="content">${msg.content}</div>
+                        </div>`
+                    ).join('');
+                } else {
+                    feed.innerHTML = '<p>No messages yet. Be the first to post!</p>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('feed').innerHTML = '<p>Error loading feed: ' + error + '</p>';
+            });
+        }
+        
+        // Load feed on page load
+        loadFeed();
+    </script>
+</body>
+</html>

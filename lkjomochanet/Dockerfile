@@ -2,7 +2,7 @@ FROM gcc:latest
 
 WORKDIR /app
 
-COPY main.c .
+COPY main.c index.html .
 
 RUN gcc -o social-network main.c
 

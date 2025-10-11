@@ -22,6 +22,7 @@ typedef struct {
 
 static Message messages[MAX_MESSAGES];
 static int message_count = 0;
+static char html_content[BUFFER_SIZE * 10]; // Buffer for HTML content
 
 // Server functions
 void handle_post(int client_socket, char* buffer);
@@ -31,6 +32,7 @@ int run_server();
 
 // Client functions
 int connect_to_server();
+int load_html_file();
 void serve_html(int client_socket);
 void handle_api_post(int client_socket, char* body);
 void handle_api_feed(int client_socket);
@@ -218,95 +220,23 @@ int connect_to_server() {
     return server_socket;
 }
 
-void serve_html(int client_socket) {
-    char html[] = 
-        "<!DOCTYPE html>\n"
-        "<html>\n"
-        "<head>\n"
-        "    <title>Simple Social Network</title>\n"
-        "    <style>\n"
-        "        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }\n"
-        "        .post-form { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }\n"
-        "        .feed { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; }\n"
-        "        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }\n"
-        "        button { background: #007bff; color: white; border: none; cursor: pointer; }\n"
-        "        button:hover { background: #0056b3; }\n"
-        "        .message { border-bottom: 1px solid #eee; padding: 10px 0; }\n"
-        "        .timestamp { color: #666; font-size: 0.9em; }\n"
-        "        .content { margin: 5px 0; }\n"
-        "    </style>\n"
-        "</head>\n"
-        "<body>\n"
-        "    <h1>Simple Social Network</h1>\n"
-        "    \n"
-        "    <div class=\"post-form\">\n"
-        "        <h3>Post a Message</h3>\n"
-        "        <textarea id=\"message\" placeholder=\"Your message\" rows=\"3\" required></textarea>\n"
-        "        <button onclick=\"postMessage()\">Post Message</button>\n"
-        "    </div>\n"
-        "    \n"
-        "    <div class=\"feed\">\n"
-        "        <h3>Global Feed</h3>\n"
-        "        <button onclick=\"loadFeed()\">Refresh Feed</button>\n"
-        "        <div id=\"feed\">Loading...</div>\n"
-        "    </div>\n"
-        "    \n"
-        "    <script>\n"
-        "        function postMessage() {\n"
-        "            const message = document.getElementById('message').value;\n"
-        "            \n"
-        "            if (!message) {\n"
-        "                alert('Please enter a message');\n"
-        "                return;\n"
-        "            }\n"
-        "            \n"
-        "            fetch('/api/post', {\n"
-        "                method: 'POST',\n"
-        "                headers: { 'Content-Type': 'application/json' },\n"
-        "                body: JSON.stringify({ message: message })\n"
-        "            })\n"
-        "            .then(response => response.json())\n"
-        "            .then(data => {\n"
-        "                if (data.status === 'success') {\n"
-        "                    document.getElementById('message').value = '';\n"
-        "                    loadFeed();\n"
-        "                } else {\n"
-        "                    alert('Error: ' + data.error);\n"
-        "                }\n"
-        "            })\n"
-        "            .catch(error => {\n"
-        "                alert('Error posting message: ' + error);\n"
-        "            });\n"
-        "        }\n"
-        "        \n"
-        "        function loadFeed() {\n"
-        "            fetch('/api/feed')\n"
-        "            .then(response => response.json())\n"
-        "            .then(data => {\n"
-        "                const feed = document.getElementById('feed');\n"
-        "                if (data.messages && data.messages.length > 0) {\n"
-        "                    feed.innerHTML = data.messages.map(msg => \n"
-        "                        `<div class=\"message\">\n"
-        "                            <div class=\"timestamp\">${new Date(msg.timestamp * 1000).toLocaleString()}</div>\n"
-        "                            <div class=\"content\">${msg.content}</div>\n"
-        "                        </div>`\n"
-        "                    ).join('');\n"
-        "                } else {\n"
-        "                    feed.innerHTML = '<p>No messages yet. Be the first to post!</p>';\n"
-        "                }\n"
-        "            })\n"
-        "            .catch(error => {\n"
-        "                document.getElementById('feed').innerHTML = '<p>Error loading feed: ' + error + '</p>';\n"
-        "            });\n"
-        "        }\n"
-        "        \n"
-        "        // Load feed on page load\n"
-        "        loadFeed();\n"
-        "    </script>\n"
-        "</body>\n"
-        "</html>";
+int load_html_file() {
+    FILE* file = fopen("index.html", "r");
+    if (!file) {
+        printf("Error: Could not open index.html\n");
+        return -1;
+    }
     
-    send_http_response(client_socket, 200, "text/html", html);
+    size_t bytes_read = fread(html_content, 1, sizeof(html_content) - 1, file);
+    html_content[bytes_read] = '\0';
+    fclose(file);
+    
+    printf("Loaded HTML file (%zu bytes)\n", bytes_read);
+    return 0;
+}
+
+void serve_html(int client_socket) {
+    send_http_response(client_socket, 200, "text/html", html_content);
 }
 
 void handle_api_post(int client_socket, char* body) {
@@ -506,6 +436,12 @@ void serve_http_request(int client_socket) {
 }
 
 int run_client() {
+    // Load HTML file at startup
+    if (load_html_file() < 0) {
+        printf("Failed to load HTML file. Exiting.\n");
+        exit(1);
+    }
+    
     int server_socket, client_socket;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);

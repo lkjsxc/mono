@@ -97,7 +97,8 @@ The client provides these HTTP endpoints:
 - Client mode: HTTP server using raw sockets, proxies requests to backend
 - Stores up to 100 messages in memory
 - Handles one client at a time (simple iterative server)
-- Serves embedded HTML with JavaScript
+- Loads HTML interface from `index.html` file at startup
+- Serves HTML with JavaScript for web interface
 
 ### Limitations
 - No persistent storage (messages lost on restart)
@@ -122,6 +123,7 @@ This project demonstrates:
 ```
 lkjomochanet/
 ├── main.c              # Unified server and client implementation
+├── index.html          # Web interface HTML file
 ├── Dockerfile          # Single container definition
 ├── docker-compose.yml  # Multi-container setup
 └── README.md          # This file
